@@ -2,13 +2,143 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8" />
-  <title>Golf App</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Golftrix</title>
+  <!-- Google Fonts para tipografía tecnológica -->
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@700&display=swap" rel="stylesheet">
+  <style>
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background: #f2f2f2;
+      color: #333;
+    }
+
+    header {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: linear-gradient(90deg, #007f00, #00cc44);
+      padding: 20px;
+    }
+
+    header img {
+      height: 50px;
+      margin-right: 20px;
+    }
+
+    header h1 {
+      font-family: 'Orbitron', sans-serif;
+      color: white;
+      margin: 0;
+      font-size: 2rem;
+    }
+
+    .hero {
+      text-align: center;
+    }
+
+    .hero img {
+      width: 100%;
+      max-height: 300px;
+      object-fit: cover;
+    }
+
+    .buttons {
+      margin: 20px 0;
+      display: flex;
+      justify-content: center;
+      gap: 20px;
+      flex-wrap: wrap;
+    }
+
+    .btn {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      background: linear-gradient(90deg, #007f00, #00cc44);
+      color: white;
+      border: none;
+      padding: 12px 24px;
+      border-radius: 50px;
+      font-size: 1rem;
+      cursor: pointer;
+      text-decoration: none;
+      transition: transform 0.2s;
+    }
+
+    .btn:hover {
+      transform: scale(1.05);
+    }
+
+    .description {
+      padding: 20px;
+      text-align: center;
+      max-width: 800px;
+      margin: 0 auto;
+    }
+
+    .description h2 {
+      font-size: 1.8rem;
+      margin-bottom: 10px;
+    }
+
+    .description p {
+      font-size: 1rem;
+      line-height: 1.6;
+    }
+
+    footer {
+      background: #007f00;
+      color: white;
+      text-align: center;
+      padding: 15px;
+      font-size: 0.9rem;
+    }
+
+    @media (max-width: 600px) {
+      header {
+        flex-direction: column;
+        text-align: center;
+      }
+      header img {
+        margin: 0 0 10px 0;
+      }
+    }
+  </style>
 </head>
 <body>
-  <h1>Golf App 🎯</h1>
-  <input type="text" id="playerName" placeholder="Nombre del jugador" />
-  <button id="saveBtn">Guardar Jugador</button>
 
-  <script type="module" src="./app.js"></script>
+  <header>
+    <img src="logo_golftrix.png" alt="Golftrix Logo">
+    <h1>GOLFTRIX</h1>
+  </header>
+
+  <div class="hero">
+    <img src="campo_f.png" alt="Bienvenido">
+    <div class="buttons">
+      <a href="#" class="btn">
+        <!-- Ícono de iniciar sesión (puedes usar SVG o Emoji) -->
+        🔑 Iniciar Sesión
+      </a>
+      <a href="#" class="btn">
+        <!-- Ícono de registrar usuario -->
+        📝 Registrar Usuario
+      </a>
+    </div>
+  </div>
+
+  <div class="description">
+    <h2>Una nueva forma de vivir el golf</h2>
+    <p>
+      Golftrix es tu compañero digital para el campo de golf. Lleva el control de tus modos de juego, gestiona tus estadísticas personales y analiza tu rendimiento como nunca antes. Diseñado para que disfrutes cada swing, cada golpe y cada ronda con la mejor tecnología. ¡Convierte cada juego en una experiencia única y más competitiva!
+    </p>
+  </div>
+
+  <footer>
+    © 2025 Golftrix - Todos los derechos reservados.
+  </footer>
+
 </body>
 </html>
+
