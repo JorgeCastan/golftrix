@@ -48,7 +48,6 @@
 
     .hero {
       position: relative;
-      text-align: center;
     }
 
     .hero img {
@@ -69,19 +68,20 @@
     }
 
     .hero-content {
-      position: absolute;
-      bottom: 20%;
-      left: 50%;
-      transform: translateX(-50%);
-      color: white;
-      z-index: 2;
-    }
+        position: absolute;
+        bottom: 20%;
+        left: 50%;
+        transform: translateX(-50%);
+        color: white;
+        text-align: center;
+        padding: 0 20px;
+      }
 
     .hero-content h2 {
-      font-size: 2rem;
-      margin-bottom: 20px;
-      font-family: 'Orbitron', sans-serif;
-    }
+        font-size: 2rem;
+        margin-bottom: 20px;
+        font-family: 'Orbitron', sans-serif;
+      }
 
     .buttons {
       display: flex;
@@ -184,6 +184,27 @@
       header h1 {
         font-size: 2rem;
       }
+
+    .hero-content {
+        position: static;
+        transform: none;
+        color: #333;
+        padding: 20px 20px 0 20px;
+      }
+
+      .hero-content h2 {
+        color: #333;
+      }
+
+      .hero-content .buttons {
+        flex-direction: column;
+        margin-top: 10px;
+      }
+
+      header img {
+        margin: 0 0 10px 0;
+      }
+
     }
   </style>
 </head>
@@ -200,16 +221,18 @@
       <h2>Bienvenido a Golftrix<br>Selecciona una opción para comenzar</h2>
       <div class="buttons">
         <a href="#" class="btn">
-          <span class="btn-icon"><img src="icon_login.png" alt="Iniciar"></span>
-          Iniciar Sesión
+          <!-- Ícono de iniciar sesión -->
+          🔑 Iniciar Sesión
         </a>
         <a href="#" class="btn">
-          <span class="btn-icon"><img src="icon_register.png" alt="Registrar"></span>
-          Registrar Usuario
+          <!-- Ícono de registrar usuario -->
+          📝 Registrar Usuario
         </a>
       </div>
     </div>
   </div>
+
+
 
   <div class="description">
     <h2>Una nueva forma de vivir el golf</h2>
