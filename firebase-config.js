@@ -1,10 +1,10 @@
 // firebase-config.js
 
-// Importa Firebase App y Firestore desde la CDN oficial
+// ✅ Importa Firebase App y Firestore desde la CDN oficial
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
 import { getFirestore } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
-// Tu configuración real de Golftrix
+// ✅ Tu configuración real de Golftrix
 const firebaseConfig = {
   apiKey: "AIzaSyBF6hDLo2-llMoFO35IMI1yK0bjOwJzjoY",
   authDomain: "golftrix-880ec.firebaseapp.com",
@@ -15,11 +15,12 @@ const firebaseConfig = {
   measurementId: "G-DH1Q8SDMPM"
 };
 
-// Inicializa la app
+// ✅ Inicializa la app principal de Firebase
 const app = initializeApp(firebaseConfig);
 
-// Inicializa Firestore (Base de datos)
+// ✅ Inicializa Firestore (Base de datos)
 const db = getFirestore(app);
 
-// Exporta `db` para usarlo en otros archivos
-export { db };
+// ✅ Exporta `app` y `db` para que otros archivos los importen correctamente
+export { app, db };
+
