@@ -93,6 +93,15 @@
       flex-wrap: wrap;
     }
 
+    .desktop-buttons {
+      display: flex;
+    }
+
+    .mobile-buttons {
+      display: none;
+    }
+
+
     .btn {
       display: flex;
       align-items: center;
@@ -203,16 +212,16 @@
       /* Ya tienes: header flex-direction */
       .hero-content {
         position: absolute;
-        top: 50%;
+        top: 35%;  /* Súbelo un poco más */
         left: 50%;
         transform: translate(-50%, -50%);
         width: 90%;
       }
 
-
       .hero-content h2 {
         font-size: 1.8rem;
       }
+
 
       .hero::after {
         display: none; /* Quita el degradado negro solo en móvil */
@@ -232,6 +241,28 @@
       }
     }
 
+    .desktop-buttons {
+  display: none;
+}
+
+.mobile-buttons {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin: 20px auto;
+}
+.desktop-buttons {
+  display: none;
+}
+
+.mobile-buttons {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin: 20px auto;
+}
+
+
   </style>
 </head>
 <body>
@@ -242,23 +273,32 @@
   </header>
 
   <div class="hero">
-    <img src="campo_f.png" alt="Bienvenido">
-    <div class="hero-content">
-        <h2>Bienvenido a Golftrix<br>Selecciona una opción para comenzar</h2>
-      </div>
-
-      <div class="buttons">
-        <a href="#" class="btn">
-          <span class="btn-icon"><img src="icon_login.png" alt="Iniciar"></span>
-          Iniciar Sesión
-        </a>
-        <a href="#" class="btn">
-          <span class="btn-icon"><img src="icon_register.png" alt="Registrar"></span>
-          Registrar Usuario
-        </a>
-      </div>
-
+  <img src="campo_f.png" alt="Bienvenido">
+  <div class="hero-content">
+    <h2>Bienvenido a Golftrix<br>Selecciona una opción para comenzar</h2>
+    <div class="buttons desktop-buttons">
+      <a href="#" class="btn">
+        <span class="btn-icon"><img src="icon_login.png" alt="Iniciar"></span>
+        Iniciar Sesión
+      </a>
+      <a href="#" class="btn">
+        <span class="btn-icon"><img src="icon_register.png" alt="Registrar"></span>
+        Registrar Usuario
+      </a>
     </div>
+  </div>
+  <div class="buttons mobile-buttons">
+    <a href="#" class="btn">
+      <span class="btn-icon"><img src="icon_login.png" alt="Iniciar"></span>
+      Iniciar Sesión
+    </a>
+    <a href="#" class="btn">
+      <span class="btn-icon"><img src="icon_register.png" alt="Registrar"></span>
+      Registrar Usuario
+    </a>
+  </div>
+</div>
+
 
   <div class="description">
     <h2>Una nueva forma de vivir el golf</h2>
