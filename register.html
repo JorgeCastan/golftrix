@@ -86,69 +86,76 @@
     </div>
     <button class="btn" onclick="register()">Registrarse</button>
     <button class="btn" onclick="registerGoogle()">Registrarse con Google</button>
+    <br><br>
+    <a class="btn" href="login.html">Iniciar Sesión</a>
+    <a class="btn" href="index.html">Volver al Inicio</a>
   </div>
+
 
   <!-- Firebase SDKs -->
   <script type="module">
-  import { app, db } from './firebase-config.js';
-  import { getAuth, createUserWithEmailAndPassword, GoogleAuthProvider, signInWithPopup } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
-  import { doc, setDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+    import { app, db } from './firebase-config.js';
+    import { getAuth, createUserWithEmailAndPassword, GoogleAuthProvider, signInWithPopup } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+    import { doc, setDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
-  const auth = getAuth(app);
-  const provider = new GoogleAuthProvider();
+    const auth = getAuth(app);
+    const provider = new GoogleAuthProvider();
 
-  window.register = async function() {
-    const name = document.getElementById('name').value.trim();
-    const lastname = document.getElementById('lastname').value.trim();
-    const email = document.getElementById('email').value.trim();
-    const password = document.getElementById('password').value.trim();
-    const terms = document.getElementById('terms').checked;
+    window.register = async function() {
+      const name = document.getElementById('name').value.trim();
+      const lastname = document.getElementById('lastname').value.trim();
+      const email = document.getElementById('email').value.trim();
+      const password = document.getElementById('password').value.trim();
+      const terms = document.getElementById('terms').checked;
 
-    if (!terms) {
-      alert("Debes aceptar los términos y condiciones");
-      return;
-    }
-
-    try {
-      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-      const user = userCredential.user;
-
-      await setDoc(doc(db, "users", user.uid), {
-        name: name,
-        lastname: lastname,
-        email: email,
-        role: "user"
-      });
-
-      alert("¡Registro exitoso!");
-    } catch (error) {
-      alert(error.message);
-    }
-  }
-
-  window.registerGoogle = async function() {
-    try {
-      const result = await signInWithPopup(auth, provider);
-      const user = result.user;
-
-      let role = "user";
-      if (user.email === "jorgecastantercero@gmail.com") {
-        role = "admin";
+      if (!terms) {
+        alert("Debes aceptar los términos y condiciones");
+        return;
       }
 
-      await setDoc(doc(db, "users", user.uid), {
-        name: user.displayName,
-        lastname: "",
-        email: user.email,
-        role: role
-      });
+      try {
+        const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+        const user = userCredential.user;
 
-      alert(`Bienvenido ${role}!`);
-    } catch (error) {
-      alert(error.message);
+        await setDoc(doc(db, "users", user.uid), {
+          name: name,
+          lastname: lastname,
+          email: email,
+          role: "user"
+        });
+
+        alert("¡Registro exitoso!");
+        window.location.href = "login.html";  // 👈 Redirige a login
+      } catch (error) {
+        alert(error.message);
+      }
     }
-  }
-</script>
+
+    window.registerGoogle = async function() {
+      try {
+        const result = await signInWithPopup(auth, provider);
+        const user = result.user;
+
+        let role = "user";
+        if (user.email === "jorgecastantercero@gmail.com") {
+          role = "admin";
+        }
+
+        await setDoc(doc(db, "users", user.uid), {
+          name: user.displayName,
+          lastname: "",
+          email: user.email,
+          role: role
+        });
+
+        alert(`¡Bienvenido ${role}!`);
+        window.location.href = "index.html";  // 👈 Redirige al inicio
+      } catch (error) {
+        alert(error.message);
+      }
+    }
+  </script>
+
 
 </body>
 </html>
