@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Iniciar Sesión - Golftrix</title>
+  <link rel="icon" href="logo_golftrix.png" type="image/png" />
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@700&display=swap" rel="stylesheet" />
+  <style>
+    body {
+      margin: 0;
+      font-family: 'Orbitron', sans-serif;
+      background: url('registro.png') no-repeat center center/cover;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+    }
+
+    .login-container {
+      background: rgba(255, 255, 255, 0.9);
+      padding: 40px;
+      border-radius: 10px;
+      max-width: 400px;
+      width: 90%;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+      text-align: center;
+    }
+
+    h1 {
+      margin-bottom: 20px;
+      color: #007f00;
+    }
+
+    input[type="email"],
+    input[type="password"] {
+      width: 100%;
+      padding: 12px;
+      margin: 10px 0;
+      border: 1px solid #ccc;
+      border-radius: 5px;
+      font-family: Arial, sans-serif;
+    }
+
+    .remember {
+      display: flex;
+      align-items: center;
+      font-size: 0.9rem;
+      margin: 10px 0;
+      color: #333;
+    }
+
+    .remember input {
+      margin-right: 10px;
+    }
+
+    .btn {
+      display: inline-block;
+      background: linear-gradient(90deg, #007f00, #00cc44);
+      color: white;
+      border: none;
+      padding: 12px 20px;
+      margin: 10px 5px;
+      border-radius: 50px;
+      cursor: pointer;
+      font-family: 'Orbitron', sans-serif;
+      text-decoration: none;
+    }
+
+    .btn:hover {
+      transform: scale(1.05);
+    }
+  </style>
+</head>
+<body>
+  <div class="login-container">
+    <h1>Iniciar Sesión</h1>
+    <input type="email" id="email" placeholder="Correo Electrónico" required />
+    <input type="password" id="password" placeholder="Contraseña" required />
+    <div class="remember">
+      <input type="checkbox" id="remember" />
+      <label for="remember">Mantener sesión iniciada</label>
+    </div>
+    <button class="btn" onclick="login()">Entrar</button>
+    <button class="btn" onclick="loginGoogle()">Entrar con Google</button>
+    <br><br>
+    <a class="btn" href="register.html">Crear Cuenta</a>
+    <a class="btn" href="index.html">Volver al Inicio</a>
+  </div>
+
+  <!-- Firebase SDKs -->
+  <script type="module">
+    import { app, db } from './firebase-config.js';
+    import { getAuth, setPersistence, browserLocalPersistence, browserSessionPersistence, signInWithEmailAndPassword, GoogleAuthProvider, signInWithPopup } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+    import { getDoc, doc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+    const auth = getAuth(app);
+    const provider = new GoogleAuthProvider();
+
+    window.login = async function() {
+      const email = document.getElementById('email').value.trim();
+      const password = document.getElementById('password').value.trim();
+      const remember = document.getElementById('remember').checked;
+
+      const persistenceType = remember ? browserLocalPersistence : browserSessionPersistence;
+
+      try {
+        await setPersistence(auth, persistenceType);
+        const userCredential = await signInWithEmailAndPassword(auth, email, password);
+        const user = userCredential.user;
+
+        // Verificar que exista en Firestore
+        const userDoc = await getDoc(doc(db, "users", user.uid));
+        if (!userDoc.exists()) {
+          alert("Usuario no registrado en base de datos.");
+          return;
+        }
+
+        alert("¡Inicio de sesión exitoso!");
+        window.location.href = "dashboard.html"; // Redirige al dashboard
+      } catch (error) {
+        alert(error.message);
+      }
+    }
+
+    window.loginGoogle = async function() {
+      const remember = document.getElementById('remember').checked;
+      const persistenceType = remember ? browserLocalPersistence : browserSessionPersistence;
+
+      try {
+        await setPersistence(auth, persistenceType);
+        const result = await signInWithPopup(auth, provider);
+        const user = result.user;
+
+        // Verificar que exista en Firestore
+        const userDoc = await getDoc(doc(db, "users", user.uid));
+        if (!userDoc.exists()) {
+          alert("Tu cuenta de Google no está registrada.");
+          return;
+        }
+
+        alert(`¡Bienvenido de nuevo!`);
+        window.location.href = "dashboard.html"; // Redirige al dashboard
+      } catch (error) {
+        alert(error.message);
+      }
+    }
+  </script>
+</body>
+</html>
