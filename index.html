@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
+  <link rel="icon" href="logo_golftrix.png" type="image/png">
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Golftrix</title>
@@ -173,18 +174,30 @@
     }
 
     @media (max-width: 600px) {
-      header {
+
+      /* Ya tienes: header flex-direction */
+      .hero-content {
+        position: static;
+        transform: none;
+        margin: 20px auto;
+      }
+
+      .hero-content h2 {
+        font-size: 1.5rem;
+      }
+
+      /* Hacemos que los botones se salgan de la imagen */
+      .hero .buttons {
+        position: static;
+        margin: 20px auto;
+      }
+
+      .buttons {
         flex-direction: column;
-        text-align: center;
-      }
-      header img {
-        margin: 0 0 10px 0;
-        height: 60px;
-      }
-      header h1 {
-        font-size: 2rem;
+        align-items: center;
       }
     }
+
   </style>
 </head>
 <body>
