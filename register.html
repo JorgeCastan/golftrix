@@ -90,78 +90,65 @@
 
   <!-- Firebase SDKs -->
   <script type="module">
-    // Importa Firebase desde el CDN
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-app.js";
-    import { getAuth, createUserWithEmailAndPassword, GoogleAuthProvider, signInWithPopup } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-auth.js";
-    import { getFirestore, doc, setDoc } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore.js";
+  import { app, db } from './firebase-config.js';
+  import { getAuth, createUserWithEmailAndPassword, GoogleAuthProvider, signInWithPopup } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+  import { doc, setDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
-    // TODO: REEMPLAZA POR TUS CREDENCIALES FIREBASE
-    const firebaseConfig = {
-      apiKey: "TU_API_KEY",
-      authDomain: "TU_AUTH_DOMAIN",
-      projectId: "TU_PROJECT_ID",
-      storageBucket: "TU_STORAGE_BUCKET",
-      messagingSenderId: "TU_SENDER_ID",
-      appId: "TU_APP_ID"
-    };
+  const auth = getAuth(app);
+  const provider = new GoogleAuthProvider();
 
-    const app = initializeApp(firebaseConfig);
-    const auth = getAuth(app);
-    const db = getFirestore(app);
-    const provider = new GoogleAuthProvider();
+  window.register = async function() {
+    const name = document.getElementById('name').value.trim();
+    const lastname = document.getElementById('lastname').value.trim();
+    const email = document.getElementById('email').value.trim();
+    const password = document.getElementById('password').value.trim();
+    const terms = document.getElementById('terms').checked;
 
-    window.register = async function() {
-      const name = document.getElementById('name').value.trim();
-      const lastname = document.getElementById('lastname').value.trim();
-      const email = document.getElementById('email').value.trim();
-      const password = document.getElementById('password').value.trim();
-      const terms = document.getElementById('terms').checked;
-
-      if (!terms) {
-        alert("Debes aceptar los términos y condiciones");
-        return;
-      }
-
-      try {
-        const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-        const user = userCredential.user;
-
-        await setDoc(doc(db, "users", user.uid), {
-          name: name,
-          lastname: lastname,
-          email: email,
-          role: "user"
-        });
-
-        alert("¡Registro exitoso!");
-      } catch (error) {
-        alert(error.message);
-      }
+    if (!terms) {
+      alert("Debes aceptar los términos y condiciones");
+      return;
     }
 
-    window.registerGoogle = async function() {
-      try {
-        const result = await signInWithPopup(auth, provider);
-        const user = result.user;
+    try {
+      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+      const user = userCredential.user;
 
-        // Si es TU cuenta, márcala como admin
-        let role = "user";
-        if (user.email === "TUCORREOADMIN@dominio.com") {
-          role = "admin";
-        }
+      await setDoc(doc(db, "users", user.uid), {
+        name: name,
+        lastname: lastname,
+        email: email,
+        role: "user"
+      });
 
-        await setDoc(doc(db, "users", user.uid), {
-          name: user.displayName,
-          lastname: "",
-          email: user.email,
-          role: role
-        });
-
-        alert(`Bienvenido ${role}!`);
-      } catch (error) {
-        alert(error.message);
-      }
+      alert("¡Registro exitoso!");
+    } catch (error) {
+      alert(error.message);
     }
-  </script>
+  }
+
+  window.registerGoogle = async function() {
+    try {
+      const result = await signInWithPopup(auth, provider);
+      const user = result.user;
+
+      let role = "user";
+      if (user.email === "jorgecastantercero@gmail.com") {
+        role = "admin";
+      }
+
+      await setDoc(doc(db, "users", user.uid), {
+        name: user.displayName,
+        lastname: "",
+        email: user.email,
+        role: role
+      });
+
+      alert(`Bienvenido ${role}!`);
+    } catch (error) {
+      alert(error.message);
+    }
+  }
+</script>
+
 </body>
 </html>
