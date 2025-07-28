@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Registro - Golftrix</title>
+  <link rel="icon" href="logo_golftrix.png" type="image/png" />
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@700&display=swap" rel="stylesheet" />
+  <style>
+    body {
+      margin: 0;
+      font-family: 'Orbitron', sans-serif;
+      background: url('registro.png') no-repeat center center/cover;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+    }
+
+    .register-container {
+      background: rgba(255, 255, 255, 0.9);
+      padding: 40px;
+      border-radius: 10px;
+      max-width: 400px;
+      width: 90%;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+      text-align: center;
+    }
+
+    h1 {
+      margin-bottom: 20px;
+      color: #007f00;
+    }
+
+    input[type="text"],
+    input[type="email"],
+    input[type="password"] {
+      width: 100%;
+      padding: 12px;
+      margin: 10px 0;
+      border: 1px solid #ccc;
+      border-radius: 5px;
+      font-family: Arial, sans-serif;
+    }
+
+    .terms {
+      display: flex;
+      align-items: center;
+      font-size: 0.9rem;
+      margin: 10px 0;
+      color: #333;
+    }
+
+    .terms input {
+      margin-right: 10px;
+    }
+
+    .btn {
+      display: inline-block;
+      background: linear-gradient(90deg, #007f00, #00cc44);
+      color: white;
+      border: none;
+      padding: 12px 20px;
+      margin: 10px 5px;
+      border-radius: 50px;
+      cursor: pointer;
+      font-family: 'Orbitron', sans-serif;
+      text-decoration: none;
+    }
+
+    .btn:hover {
+      transform: scale(1.05);
+    }
+  </style>
+</head>
+<body>
+  <div class="register-container">
+    <h1>Crear Cuenta</h1>
+    <input type="text" id="name" placeholder="Nombre" required />
+    <input type="text" id="lastname" placeholder="Apellidos" required />
+    <input type="email" id="email" placeholder="Correo Electrónico" required />
+    <input type="password" id="password" placeholder="Contraseña" required />
+    <div class="terms">
+      <input type="checkbox" id="terms" required />
+      <label for="terms">Acepto los Términos y Condiciones</label>
+    </div>
+    <button class="btn" onclick="register()">Registrarse</button>
+    <button class="btn" onclick="registerGoogle()">Registrarse con Google</button>
+  </div>
+
+  <!-- Firebase SDKs -->
+  <script type="module">
+    // Importa Firebase desde el CDN
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-app.js";
+    import { getAuth, createUserWithEmailAndPassword, GoogleAuthProvider, signInWithPopup } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-auth.js";
+    import { getFirestore, doc, setDoc } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore.js";
+
+    // TODO: REEMPLAZA POR TUS CREDENCIALES FIREBASE
+    const firebaseConfig = {
+      apiKey: "TU_API_KEY",
+      authDomain: "TU_AUTH_DOMAIN",
+      projectId: "TU_PROJECT_ID",
+      storageBucket: "TU_STORAGE_BUCKET",
+      messagingSenderId: "TU_SENDER_ID",
+      appId: "TU_APP_ID"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+    const provider = new GoogleAuthProvider();
+
+    window.register = async function() {
+      const name = document.getElementById('name').value.trim();
+      const lastname = document.getElementById('lastname').value.trim();
+      const email = document.getElementById('email').value.trim();
+      const password = document.getElementById('password').value.trim();
+      const terms = document.getElementById('terms').checked;
+
+      if (!terms) {
+        alert("Debes aceptar los términos y condiciones");
+        return;
+      }
+
+      try {
+        const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+        const user = userCredential.user;
+
+        await setDoc(doc(db, "users", user.uid), {
+          name: name,
+          lastname: lastname,
+          email: email,
+          role: "user"
+        });
+
+        alert("¡Registro exitoso!");
+      } catch (error) {
+        alert(error.message);
+      }
+    }
+
+    window.registerGoogle = async function() {
+      try {
+        const result = await signInWithPopup(auth, provider);
+        const user = result.user;
+
+        // Si es TU cuenta, márcala como admin
+        let role = "user";
+        if (user.email === "TUCORREOADMIN@dominio.com") {
+          role = "admin";
+        }
+
+        await setDoc(doc(db, "users", user.uid), {
+          name: user.displayName,
+          lastname: "",
+          email: user.email,
+          role: role
+        });
+
+        alert(`Bienvenido ${role}!`);
+      } catch (error) {
+        alert(error.message);
+      }
+    }
+  </script>
+</body>
+</html>
