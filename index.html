@@ -249,6 +249,29 @@
       margin: 20px auto;
     }
 
+    .hero {
+      position: relative;
+      text-align: center;
+    }
+
+    .hero .overlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(255, 255, 255, 0.5); /* Ajusta opacidad a tu gusto */
+      z-index: 1;
+    }
+
+    .hero-content {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      z-index: 2; /* Asegura que esté arriba de la capa blanca */
+    }
+
 
   </style>
 </head>
@@ -261,6 +284,8 @@
 
   <div class="hero">
   <img src="campo_f.png" alt="Bienvenido">
+  <!-- Nueva capa blanca semi transparente -->
+  <div class="overlay"></div>
   <div class="hero-content">
     <h2>Bienvenido a Golftrix<br>Selecciona una opción para comenzar</h2>
     <div class="buttons desktop-buttons">
@@ -314,6 +339,22 @@
   <footer>
     © 2025 Golftrix - Todos los derechos reservados.
   </footer>
+
+<!-- Firebase SDK + Redirección si hay sesión -->
+<script type="module">
+  import { app } from './firebase-config.js';
+  import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+
+  const auth = getAuth(app);
+
+  onAuthStateChanged(auth, (user) => {
+    if (user) {
+      // Si hay usuario logueado, redirige al dashboard
+      window.location.href = "dashboard.html";
+    }
+  });
+</script>
+
 
 </body>
 </html>
