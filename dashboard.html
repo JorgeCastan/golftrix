@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Dashboard - Golftrix</title>
+  <link rel="icon" href="logo_golftrix.png" type="image/png" />
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@700&display=swap" rel="stylesheet" />
+  <style>
+    body {
+      margin: 0;
+      font-family: 'Orbitron', sans-serif;
+      background: #f2f2f2;
+      display: flex;
+      flex-direction: column;
+      min-height: 100vh;
+    }
+
+    header {
+      background: linear-gradient(90deg, #007f00, #00cc44);
+      box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+      color: white;
+      display: flex;
+      align-items: center;
+      padding: 20px;
+    }
+
+    header img {
+      height: 50px;
+      margin-right: 15px;
+    }
+
+    header h1 {
+      font-size: 1.8rem;
+    }
+
+    main {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 30px 20px 100px;
+    }
+
+    .new-game {
+      background: linear-gradient(90deg, #007f00, #00cc44);
+      color: white;
+      border: none;
+      border-radius: 50px;
+      padding: 20px 40px;
+      margin: 40px 0 20px;
+      font-family: 'Orbitron', sans-serif;
+      font-size: 1.2rem;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      cursor: pointer;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+      position: relative;
+    }
+
+    .new-game img.icon {
+      background: #000;
+      border-radius: 50%;
+      padding: 10px;
+      height: 40px;
+      width: 40px;
+      object-fit: contain;
+      margin-bottom: 10px;
+    }
+
+    .divider {
+      display: flex;
+      align-items: center;
+      margin: 40px 0 20px;
+      width: 100%;
+      max-width: 600px;
+    }
+
+    .divider::before,
+    .divider::after {
+      content: "";
+      flex: 1;
+      height: 1px;
+      background: #333;
+    }
+
+    .divider span {
+      margin: 0 10px;
+      font-size: 1rem;
+      color: #333;
+    }
+
+    .game-list {
+      display: flex;
+      flex-direction: column;
+      gap: 15px;
+      width: 100%;
+      max-width: 400px;
+    }
+
+    .game-item {
+      background: linear-gradient(90deg, #007f00, #00cc44);
+      color: white;
+      border: none;
+      border-radius: 50px;
+      padding: 15px 30px;
+      font-family: 'Orbitron', sans-serif;
+      text-align: center;
+      cursor: pointer;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+    }
+
+    .view-more {
+      margin: 30px 0;
+      background: linear-gradient(90deg, #007f00, #00cc44);
+      color: white;
+      border: none;
+      border-radius: 50px;
+      padding: 12px 25px;
+      cursor: pointer;
+      font-family: 'Orbitron', sans-serif;
+    }
+
+    /* FAB Menu */
+    .fab {
+      position: fixed;
+      bottom: 30px;
+      right: 30px;
+    }
+
+    .fab-btn {
+      background: linear-gradient(90deg, #007f00, #00cc44);
+      border: none;
+      border-radius: 50%;
+      width: 60px;
+      height: 60px;
+      color: white;
+      font-size: 30px;
+      cursor: pointer;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+      position: relative;
+      z-index: 2;
+    }
+
+    .fab-options {
+      position: absolute;
+      bottom: 0;
+      right: 0;
+      transform: scale(0);
+      transform-origin: bottom right;
+      transition: transform 0.3s ease-in-out;
+    }
+
+    .fab.show .fab-options {
+      transform: scale(1);
+    }
+
+    .fab-option {
+      background: #000;
+      color: white;
+      border: none;
+      border-radius: 50px;
+      padding: 12px 20px;
+      margin: 5px 0;
+      cursor: pointer;
+      display: block;
+      font-family: 'Orbitron', sans-serif;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <img src="logo_golftrix.png" alt="Logo">
+    <h1>Golftrix Dashboard</h1>
+  </header>
+
+  <main>
+    <button class="new-game">
+      <img src="icono_nuevo_juego.png" class="icon" alt="Nuevo Juego">
+      Nuevo Juego
+    </button>
+
+    <div class="divider"><span>Juegos actuales</span></div>
+
+    <div class="game-list" id="game-list">
+      <!-- Se llenarán dinámicamente -->
+      <button class="game-item">Juego 1</button>
+      <button class="game-item">Juego 2</button>
+      <button class="game-item">Juego 3</button>
+    </div>
+
+    <button class="view-more">Ver más juegos</button>
+  </main>
+
+  <!-- FAB Menu -->
+  <div class="fab" id="fab">
+    <button class="fab-btn" id="fab-btn">+</button>
+    <div class="fab-options">
+      <button class="fab-option">Mi Perfil</button>
+      <button class="fab-option">Mis Stats</button>
+      <button class="fab-option">Campos de Golf</button>
+      <button class="fab-option">Modos de Juego</button>
+    </div>
+  </div>
+
+  <script>
+    const fab = document.getElementById('fab');
+    const fabBtn = document.getElementById('fab-btn');
+
+    fabBtn.addEventListener('click', () => {
+      fab.classList.toggle('show');
+    });
+  </script>
+</body>
+</html>
