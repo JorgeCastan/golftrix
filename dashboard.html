@@ -192,6 +192,9 @@
     </div>
 
     <button class="view-more">Ver más juegos</button>
+        <!-- Botón de Logout -->
+    <button id="logoutBtn" class="view-more">Cerrar Sesión</button>
+
   </main>
 
   <!-- FAB Menu -->
@@ -213,5 +216,21 @@
       fab.classList.toggle('show');
     });
   </script>
+  <script type="module">
+  import { app } from './firebase-config.js';
+  import { getAuth, signOut } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+
+  const auth = getAuth(app);
+
+  document.getElementById('logoutBtn').addEventListener('click', async () => {
+    try {
+      await signOut(auth);
+      window.location.href = "index.html";
+    } catch (error) {
+      alert("Error al cerrar sesión: " + error.message);
+    }
+  });
+</script>
+
 </body>
 </html>
