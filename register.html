@@ -56,21 +56,42 @@
     }
 
     .btn {
-      display: inline-block;
-      background: linear-gradient(90deg, #007f00, #00cc44);
-      color: white;
-      border: none;
-      padding: 12px 20px;
-      margin: 10px 5px;
-      border-radius: 50px;
-      cursor: pointer;
-      font-family: 'Orbitron', sans-serif;
-      text-decoration: none;
-    }
+    display: inline-flex; /* Ahora usa flex para alinear */
+    align-items: center;
+    gap: 10px;
+    background: linear-gradient(90deg, #007f00, #00cc44);
+    color: white;
+    border: none;
+    padding: 12px 20px;
+    margin: 10px 5px;
+    border-radius: 50px;
+    cursor: pointer;
+    font-family: 'Orbitron', sans-serif;
+    text-decoration: none;
+  }
 
-    .btn:hover {
-      transform: scale(1.05);
-    }
+  .btn-icon {
+    background: black;
+    border-radius: 50%;
+    width: 28px;
+    height: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+  }
+
+  .btn-icon img {
+    width: 60%;
+    height: 60%;
+    object-fit: contain;
+    display: block;
+  }
+
+  .btn:hover {
+    transform: scale(1.05);
+  }
+
   </style>
 </head>
 <body>
@@ -84,11 +105,26 @@
       <input type="checkbox" id="terms" required />
       <label for="terms">Acepto los Términos y Condiciones</label>
     </div>
-    <button class="btn" onclick="register()">Registrarse</button>
-    <button class="btn" onclick="registerGoogle()">Registrarse con Google</button>
-    <br><br>
-    <a class="btn" href="login.html">Iniciar Sesión</a>
-    <a class="btn" href="index.html">Volver al Inicio</a>
+    <button class="btn" onclick="register()">
+  <span class="btn-icon"><img src="icon_register.png" alt="Registrar"></span>
+  Registrarse
+</button>
+
+<button class="btn" onclick="registerGoogle()">
+  <span class="btn-icon"><img src="icon_google.png" alt="Google"></span>
+  Registrarse con Google
+</button>
+
+<a class="btn" href="login.html">
+  <span class="btn-icon"><img src="icon_login.png" alt="Iniciar Sesión"></span>
+  Iniciar Sesión
+</a>
+
+<a class="btn" href="index.html">
+  <span class="btn-icon"><img src="icon_home.png" alt="Inicio"></span>
+  Volver al Inicio
+</a>
+
   </div>
 
 
