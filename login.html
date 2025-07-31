@@ -55,7 +55,9 @@
     }
 
     .btn {
-      display: inline-block;
+      display: inline-flex; /* Para alinear icono y texto */
+      align-items: center;
+      gap: 10px;
       background: linear-gradient(90deg, #007f00, #00cc44);
       color: white;
       border: none;
@@ -67,9 +69,32 @@
       text-decoration: none;
     }
 
+
     .btn:hover {
       transform: scale(1.05);
+
     }
+
+    
+  .btn-icon {
+      background: black;
+      border-radius: 50%;
+      width: 28px;   /* Tamaño del círculo */
+      height: 28px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+    }
+
+  .btn-icon img {
+    width: 60%;   /* Escala interna del icono */
+    height: 60%;
+    object-fit: contain;
+    display: block;
+  }
+
+
   </style>
 </head>
 <body>
