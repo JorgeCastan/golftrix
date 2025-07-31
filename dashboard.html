@@ -95,19 +95,20 @@
       position: fixed;
       top: 0; /* cubre TODO */
       left: 0;
-      transform: translateX(-100%);
+      transform: translateX(-100%); /* oculta deslizando */
       width: 250px;
       height: 100%;
-      padding: 100px 20px 40px; /* deja espacio para header */
+      padding: 100px 20px 40px; /* espacio para header */
       transition: transform 0.3s ease;
       z-index: 9999;
-      display: none;
+      display: flex; /* SIEMPRE flex */
     }
 
+
     .sidebar-mobile.open {
-      display: flex;
       transform: translateX(0);
     }
+
 
 
     .sidebar-mobile a {
