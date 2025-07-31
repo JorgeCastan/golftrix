@@ -48,6 +48,7 @@
       position: absolute;
       left: 20px;
       top: 25px;
+      z-index: 10000; /* clave! */
     }
 
     .hamburger span {
@@ -88,29 +89,25 @@
     }
 
     .sidebar-mobile {
-      display: flex;
       flex-direction: column;
       background: linear-gradient(180deg, #007f00, #00cc44);
-      opacity: 0.85;
+      opacity: 0.95;
       position: fixed;
-      top: 140px; /* Igual que la sidebar normal */
+      top: 0; /* cubre TODO */
       left: 0;
       transform: translateX(-100%);
       width: 250px;
-      height: calc(100% - 190px); /* quita header y footer aprox. */
-      padding: 40px 20px;
+      height: 100%;
+      padding: 100px 20px 40px; /* deja espacio para header */
       transition: transform 0.3s ease;
-      z-index: 999;
+      z-index: 9999;
+      display: none;
     }
-
-.sidebar-mobile.open {
-  transform: translateX(0);
-}
 
     .sidebar-mobile.open {
+      display: flex;
       transform: translateX(0);
     }
-
 
 
     .sidebar-mobile a {
@@ -121,10 +118,7 @@
                    -1px 1px 0 #000, 1px 1px 0 #000;
     }
 
-    .sidebar-mobile.open {
-      left: 0;
-    }
-
+    
     main {
       flex: 1;
       margin-left: 220px; /* espacio para barra lateral */
@@ -134,7 +128,6 @@
       align-items: center;
       justify-content: center;
     }
-
 
 
     .new-game {
@@ -283,29 +276,37 @@
   </footer>
 
   <script>
-    const hamburger = document.getElementById('hamburger');
-    const sidebarMobile = document.getElementById('sidebarMobile');
+  const hamburger = document.getElementById('hamburger');
+  const sidebarMobile = document.getElementById('sidebarMobile');
 
-    hamburger.addEventListener('click', () => {
-      sidebarMobile.classList.toggle('open');
+  hamburger.addEventListener('click', () => {
+    sidebarMobile.classList.toggle('open');
+  });
+
+  // Opcional: cerrar al tocar un link
+  sidebarMobile.querySelectorAll('a').forEach(link => {
+    link.addEventListener('click', () => {
+      sidebarMobile.classList.remove('open');
     });
+  });
 
-    // Lógica para cerrar sesión
-    import { app } from './firebase-config.js';
-    import { getAuth, signOut } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+  // Lógica cerrar sesión
+  import { app } from './firebase-config.js';
+  import { getAuth, signOut } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 
-    const auth = getAuth(app);
+  const auth = getAuth(app);
 
-    document.getElementById('logoutDesktop').addEventListener('click', async () => {
-      await signOut(auth);
-      window.location.href = "index.html";
-    });
+  document.getElementById('logoutDesktop').addEventListener('click', async () => {
+    await signOut(auth);
+    window.location.href = "index.html";
+  });
 
-    document.getElementById('logoutMobile').addEventListener('click', async () => {
-      await signOut(auth);
-      window.location.href = "index.html";
-    });
-  </script>
+  document.getElementById('logoutMobile').addEventListener('click', async () => {
+    await signOut(auth);
+    window.location.href = "index.html";
+  });
+</script>
+
 </body>
 </html>
 
