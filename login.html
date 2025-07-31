@@ -74,18 +74,26 @@
 </head>
 <body>
   <div class="login-container">
-    <h1>Iniciar Sesión</h1>
-    <input type="email" id="email" placeholder="Correo Electrónico" required />
-    <input type="password" id="password" placeholder="Contraseña" required />
-    <div class="remember">
-      <input type="checkbox" id="remember" />
-      <label for="remember">Mantener sesión iniciada</label>
-    </div>
-    <button class="btn" onclick="login()">Entrar</button>
-    <button class="btn" onclick="loginGoogle()">Entrar con Google</button>
-    <br><br>
-    <a class="btn" href="register.html">Crear Cuenta</a>
-    <a class="btn" href="index.html">Volver al Inicio</a>
+    <button class="btn" onclick="login()">
+  <span class="btn-icon"><img src="icon_login.png" alt="Entrar"></span>
+  Entrar
+</button>
+
+<button class="btn" onclick="loginGoogle()">
+  <span class="btn-icon"><img src="icon_google.png" alt="Google"></span>
+  Entrar con Google
+</button>
+
+<a class="btn" href="register.html">
+  <span class="btn-icon"><img src="icon_register.png" alt="Registrar"></span>
+  Crear Cuenta
+</a>
+
+<a class="btn" href="index.html">
+  <span class="btn-icon"><img src="icon_home.png" alt="Inicio"></span>
+  Volver al Inicio
+</a>
+
   </div>
 
   <!-- Firebase SDKs -->
