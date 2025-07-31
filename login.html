@@ -165,28 +165,34 @@
       }
     }
 
-    window.loginGoogle = async function() {
-      const remember = document.getElementById('remember').checked;
-      const persistenceType = remember ? browserLocalPersistence : browserSessionPersistence;
+   window.loginGoogle = async function() {
+  const remember = document.getElementById('remember').checked;
+  const persistenceType = remember ? browserLocalPersistence : browserSessionPersistence;
 
-      try {
-        await setPersistence(auth, persistenceType);
-        const result = await signInWithPopup(auth, provider);
-        const user = result.user;
+  const googleBtn = document.querySelector('button[onclick="loginGoogle()"]');
+  googleBtn.disabled = true; // 🔒 Desactiva botón para evitar spam clic
 
-        // Verificar que exista en Firestore
-        const userDoc = await getDoc(doc(db, "users", user.uid));
-        if (!userDoc.exists()) {
-          alert("Tu cuenta de Google no está registrada.");
-          return;
-        }
+  try {
+    await setPersistence(auth, persistenceType);
+    const result = await signInWithPopup(auth, provider);
+    const user = result.user;
 
-        alert(`¡Bienvenido de nuevo!`);
-        window.location.href = "dashboard.html"; // Redirige al dashboard
-      } catch (error) {
-        alert(error.message);
-      }
+    const userDoc = await getDoc(doc(db, "users", user.uid));
+    if (!userDoc.exists()) {
+      alert("Tu cuenta de Google no está registrada.");
+      googleBtn.disabled = false; // 🔓 Reactiva botón si falla
+      return;
     }
+
+    alert(`¡Bienvenido de nuevo!`);
+    window.location.href = "dashboard.html";
+
+  } catch (error) {
+    alert(error.message);
+    googleBtn.disabled = false; // 🔓 Reactiva botón si falla
+  }
+}
+
   </script>
 </body>
 </html>
