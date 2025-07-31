@@ -92,17 +92,6 @@
     }
 
 
-
-
-    .profile-pic {
-      width: 120px;
-      height: 120px;
-      border-radius: 50%;
-      object-fit: cover;
-      border: 4px solid #007f00;
-      margin-bottom: 20px;
-    }
-
     button {
       display: flex;
       align-items: center;
@@ -145,7 +134,6 @@
   </header>
 
   <main>
-    <img src="default_profile.png" alt="Foto de Perfil" id="profilePic" class="profile-pic">
     <form id="profileForm">
       <label>Email</label>
       <input type="email" id="email" readonly />
@@ -159,8 +147,6 @@
       <label>Hándicap</label>
       <input type="number" id="handicap" />
 
-      <label>Foto de Perfil</label>
-      <input type="file" id="photoInput" accept="image/*" />
 
       <button type="submit">
         <div class="icon"><img src="icon_guardar.png" alt="Guardar" width="16"></div>Guardar
@@ -194,8 +180,6 @@
   const dashboardBtn = document.getElementById('dashboardBtn');
   dashboardBtn.addEventListener('click', () => window.location.href = 'dashboard.html');
 
-  const profilePic = document.getElementById('profilePic');
-  const photoInput = document.getElementById('photoInput');
 
   let currentUserId = null;
 
@@ -212,9 +196,7 @@
         document.getElementById('lastname').value = data.lastname || '';
         document.getElementById('handicap').value = data.handicap || '';
 
-        if (data.photoURL) {
-          profilePic.src = data.photoURL;
-        }
+       
       } else {
         console.log("❌ Documento no existe aún.");
       }
@@ -238,17 +220,7 @@
     const userRef = doc(db, "users", currentUserId);
 
     try {
-      let photoURL = null;
-
-      if (photoInput.files.length > 0) {
-        const file = photoInput.files[0];
-        const photoRef = ref(storage, `profile_pics/${currentUserId}.jpg`);
-        console.log("📤 Subiendo foto...");
-        await uploadBytes(photoRef, file);
-        photoURL = await getDownloadURL(photoRef);
-        console.log("✅ URL obtenida:", photoURL);
-        profilePic.src = photoURL;
-      }
+      
 
       const updates = {
         name,
