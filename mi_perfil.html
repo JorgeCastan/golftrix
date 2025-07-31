@@ -179,87 +179,97 @@
   </footer>
 
   <script type="module">
-    import { app } from './firebase-config.js';
-    import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
-    import { getFirestore, doc, getDoc, setDoc, updateDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
-    import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js";
+  import { app } from './firebase-config.js';
+  import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+  import { getFirestore, doc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+  import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js";
 
-    const auth = getAuth(app);
-    const db = getFirestore(app);
-    const storage = getStorage(app);
+  const auth = getAuth(app);
+  const db = getFirestore(app);
+  const storage = getStorage(app);
 
-    const logo = document.getElementById('logo');
-    logo.addEventListener('click', () => window.location.href = 'dashboard.html');
+  const logo = document.getElementById('logo');
+  logo.addEventListener('click', () => window.location.href = 'dashboard.html');
 
-    const dashboardBtn = document.getElementById('dashboardBtn');
-    dashboardBtn.addEventListener('click', () => window.location.href = 'dashboard.html');
+  const dashboardBtn = document.getElementById('dashboardBtn');
+  dashboardBtn.addEventListener('click', () => window.location.href = 'dashboard.html');
 
-    const profilePic = document.getElementById('profilePic');
-    const photoInput = document.getElementById('photoInput');
+  const profilePic = document.getElementById('profilePic');
+  const photoInput = document.getElementById('photoInput');
 
-    let currentUserId = null;
+  let currentUserId = null;
 
-    onAuthStateChanged(auth, async (user) => {
-      if (user) {
-        currentUserId = user.uid;
-        const userDoc = await getDoc(doc(db, "users", currentUserId));
-        if (userDoc.exists()) {
-          const data = userDoc.data();
-          document.getElementById('email').value = data.email || '';
-          document.getElementById('name').value = data.name || '';
-          document.getElementById('lastname').value = data.lastname || '';
-          document.getElementById('handicap').value = data.handicap || '';
+  onAuthStateChanged(auth, async (user) => {
+    if (user) {
+      currentUserId = user.uid;
+      console.log("✅ UID detectado:", currentUserId);
+      const userDoc = await getDoc(doc(db, "users", currentUserId));
+      if (userDoc.exists()) {
+        const data = userDoc.data();
+        console.log("📄 Datos actuales:", data);
+        document.getElementById('email').value = data.email || '';
+        document.getElementById('name').value = data.name || '';
+        document.getElementById('lastname').value = data.lastname || '';
+        document.getElementById('handicap').value = data.handicap || '';
 
-          if (data.photoURL) {
-            profilePic.src = data.photoURL;
-          }
+        if (data.photoURL) {
+          profilePic.src = data.photoURL;
         }
       } else {
-        window.location.href = 'index.html';
+        console.log("❌ Documento no existe aún.");
       }
-    });
+    } else {
+      window.location.href = 'index.html';
+    }
+  });
 
-    document.getElementById('profileForm').addEventListener('submit', async (e) => {
-        e.preventDefault();
+  document.getElementById('profileForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
 
-        const name = document.getElementById('name').value.trim();
-        const lastname = document.getElementById('lastname').value.trim();
-        const handicap = document.getElementById('handicap').value.trim();
+    if (!currentUserId) {
+      alert("No hay usuario autenticado.");
+      return;
+    }
 
-        const userRef = doc(db, "users", currentUserId);
+    const name = document.getElementById('name').value.trim();
+    const lastname = document.getElementById('lastname').value.trim();
+    const handicap = document.getElementById('handicap').value.trim();
 
-        try {
-            // 1️⃣ Subir foto si hay
-            let photoURL = null;
-            if (photoInput.files.length > 0) {
-            const file = photoInput.files[0];
-            const photoRef = ref(storage, `profile_pics/${currentUserId}.jpg`);
-            await uploadBytes(photoRef, file);
-            photoURL = await getDownloadURL(photoRef);
-            profilePic.src = photoURL;
-            }
+    const userRef = doc(db, "users", currentUserId);
 
-            // 2️⃣ Guardar campos + URL
-            const updates = {
-            name,
-            lastname,
-            handicap
-            };
-            if (photoURL) {
-            updates.photoURL = photoURL;
-            }
+    try {
+      let photoURL = null;
 
-            await setDoc(userRef, updates, { merge: true });
+      if (photoInput.files.length > 0) {
+        const file = photoInput.files[0];
+        const photoRef = ref(storage, `profile_pics/${currentUserId}.jpg`);
+        console.log("📤 Subiendo foto...");
+        await uploadBytes(photoRef, file);
+        photoURL = await getDownloadURL(photoRef);
+        console.log("✅ URL obtenida:", photoURL);
+        profilePic.src = photoURL;
+      }
 
-            alert('¡Datos actualizados correctamente!');
-        } catch (error) {
-            console.error("Error guardando perfil:", error);
-            alert("Ocurrió un error al guardar el perfil.");
-        }
-     });
+      const updates = {
+        name,
+        lastname,
+        handicap
+      };
+      if (photoURL) {
+        updates.photoURL = photoURL;
+      }
 
+      console.log("📌 Guardando en Firestore:", updates);
+      await setDoc(userRef, updates, { merge: true });
 
-  </script>
+      alert('¡Datos actualizados correctamente!');
+    } catch (error) {
+      console.error("❌ Error guardando perfil:", error);
+      alert("Ocurrió un error al guardar el perfil. Revisa consola.");
+    }
+  });
+</script>
+
 
 </body>
 </html>
