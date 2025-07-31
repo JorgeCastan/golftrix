@@ -220,30 +220,39 @@
     });
 
     document.getElementById('profileForm').addEventListener('submit', async (e) => {
-      e.preventDefault();
+    e.preventDefault();
 
-      const name = document.getElementById('name').value;
-      const lastname = document.getElementById('lastname').value;
-      const handicap = document.getElementById('handicap').value;
+    const name = document.getElementById('name').value.trim();
+    const lastname = document.getElementById('lastname').value.trim();
+    const handicap = document.getElementById('handicap').value.trim();
 
-      let photoURL = null;
-      if (photoInput.files[0]) {
+    const userRef = doc(db, "users", currentUserId);
+
+    let updates = { name, lastname, handicap };
+
+    if (photoInput.files[0]) {
+        const file = photoInput.files[0];
         const photoRef = ref(storage, `profile_pics/${currentUserId}.jpg`);
-        await uploadBytes(photoRef, photoInput.files[0]);
-        photoURL = await getDownloadURL(photoRef);
-        profilePic.src = photoURL;
-      }
+        try {
+        await uploadBytes(photoRef, file, { contentType: file.type });
+        const url = await getDownloadURL(photoRef);
+        updates.photoURL = url;
+        profilePic.src = url;
+        } catch (error) {
+        console.error("Error al subir imagen:", error);
+        alert("No se pudo subir la foto de perfil.");
+        }
+    }
 
-      const userRef = doc(db, "users", currentUserId);
-      await updateDoc(userRef, {
-        name,
-        lastname,
-        handicap,
-        ...(photoURL && { photoURL })
-      });
-
-      alert('¡Datos actualizados!');
+    try {
+        await setDoc(userRef, updates, { merge: true });
+        alert("¡Datos actualizados correctamente!");
+    } catch (err) {
+        console.error("Error al guardar datos:", err);
+        alert("Error al guardar los datos.");
+    }
     });
+
   </script>
 
 </body>
