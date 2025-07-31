@@ -2,243 +2,293 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Dashboard - Golftrix</title>
-  <link rel="icon" href="logo_golftrix.png" type="image/png"/>
-  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@700&display=swap" rel="stylesheet"/>
+  <link rel="icon" href="logo_golftrix.png" type="image/png" />
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@700&display=swap" rel="stylesheet" />
   <style>
     * {
       box-sizing: border-box;
     }
+
     body {
       margin: 0;
       font-family: 'Orbitron', sans-serif;
       display: flex;
-      min-height: 100vh;
       flex-direction: column;
+      min-height: 100vh;
+      overflow-x: hidden;
     }
 
     header {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
       background: linear-gradient(90deg, #007f00, #00cc44);
-      padding: 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 20px 40px;
       color: white;
       position: relative;
     }
 
     header h1 {
-      margin: 0 auto;
+      flex: 1;
       text-align: center;
       font-size: 2rem;
+      margin: 0;
     }
 
     header img {
       height: 80px;
     }
 
-    .menu-toggle {
+    /* Botón hamburguesa */
+    .hamburger {
       display: none;
+      flex-direction: column;
+      cursor: pointer;
       position: absolute;
       left: 20px;
       top: 25px;
-      background: none;
-      border: none;
-      color: white;
-      font-size: 2rem;
-      cursor: pointer;
     }
 
-    .content {
-      display: flex;
-      flex: 1;
+    .hamburger span {
+      height: 3px;
+      width: 25px;
+      background: white;
+      margin: 4px 0;
+      display: block;
     }
 
-    nav {
+    /* Sidebar */
+    .sidebar {
       background: linear-gradient(180deg, #007f00, #00cc44);
-      color: black;
-      padding: 30px 20px;
-      min-width: 200px;
+      opacity: 0.9;
+      padding: 40px 20px;
+      position: fixed;
+      top: 0;
+      left: 0;
+      height: 100%;
+      width: 220px;
+      color: white;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+      font-size: 1rem;
+      border-right: 2px solid #000;
+      z-index: 200;
     }
 
-    nav ul {
-      list-style: none;
-      padding: 0;
+    .sidebar a {
+      text-decoration: none;
+      color: white;
+      text-shadow: -1px -1px 0 #000, 1px -1px 0 #000,
+                   -1px 1px 0 #000, 1px 1px 0 #000;
     }
 
-    nav li {
-      margin: 20px 0;
-      cursor: pointer;
+    .sidebar-mobile {
+      display: none;
+      flex-direction: column;
+      background: linear-gradient(180deg, #007f00, #00cc44);
+      opacity: 0.95;
+      position: fixed;
+      top: 0;
+      left: -250px;
+      width: 250px;
+      height: 100%;
+      padding: 50px 20px;
+      transition: left 0.3s ease;
+      z-index: 300;
+    }
+
+    .sidebar-mobile a {
+      margin: 15px 0;
+      text-decoration: none;
+      color: white;
+      text-shadow: -1px -1px 0 #000, 1px -1px 0 #000,
+                   -1px 1px 0 #000, 1px 1px 0 #000;
+    }
+
+    .sidebar-mobile.open {
+      left: 0;
     }
 
     main {
       flex: 1;
+      margin-left: 220px;
       padding: 40px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
     }
 
     .new-game {
-      background: #f2f2f2;
+      position: relative;
+      background: linear-gradient(90deg, #007f00, #00cc44);
       border-radius: 20px;
       overflow: hidden;
-      width: 300px;
-      text-align: center;
-      box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+      width: 500px;
+      max-width: 90%;
+      height: 250px;
+      display: flex;
+      flex-direction: column;
+      justify-content: flex-end;
       cursor: pointer;
-      margin-bottom: 40px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.4);
     }
 
-    .new-game img.cover {
+    .new-game img.bg {
       width: 100%;
-      display: block;
+      height: 100%;
+      object-fit: cover;
+      position: absolute;
+      top: 0;
+      left: 0;
     }
 
-    .new-game-footer {
+    .new-game .content {
+      position: relative;
+      background: rgba(255,255,255,0.9);
+      width: 100%;
       display: flex;
       align-items: center;
-      justify-content: center;
-      padding: 10px;
-      background: white;
+      padding: 15px 20px;
     }
 
-    .new-game-footer .circle-icon {
+    .new-game .icon {
       background: black;
       border-radius: 50%;
-      width: 30px;
-      height: 30px;
+      width: 35px;
+      height: 35px;
       display: flex;
       align-items: center;
       justify-content: center;
       margin-right: 10px;
     }
 
-    .new-game-footer .circle-icon img {
-      width: 60%;
-      height: 60%;
+    .new-game .icon img {
+      width: 70%;
+      height: 70%;
+      object-fit: contain;
     }
 
-    .new-game-footer span {
-      color: black;
-    }
-
-    .divider {
-      display: flex;
-      align-items: center;
-      margin: 40px 0 20px;
-    }
-
-    .divider::before,
-    .divider::after {
-      content: "";
-      flex: 1;
-      height: 1px;
-      background: #333;
-    }
-
-    .divider span {
-      margin: 0 10px;
-      color: #333;
+    .new-game .text {
+      color: #000;
+      font-weight: bold;
     }
 
     footer {
+      background: #000;
+      color: white;
       text-align: center;
       padding: 15px;
-      background: #333;
-      color: white;
-      font-size: 0.8rem;
     }
 
-    /* Móvil: menú overlay */
-    .overlay {
-      display: none;
-      flex-direction: column;
-      position: fixed;
-      top: 0; left: 0;
-      width: 250px;
-      height: 100%;
-      background: linear-gradient(180deg, #007f00, #00cc44);
-      padding: 30px 20px;
-      z-index: 1000;
-    }
-
-    .overlay.show {
-      display: flex;
-    }
-
-    @media (max-width: 768px) {
+    @media(max-width: 768px) {
       header {
         flex-direction: column;
-      }
-
-      header h1 {
-        margin: 10px 0 0;
+        text-align: center;
+        padding: 20px;
       }
 
       header img {
+        order: 1;
         height: 60px;
       }
 
-      nav {
+      header h1 {
+        order: 2;
+        margin-top: 10px;
+      }
+
+      .hamburger {
+        display: flex;
+      }
+
+      .sidebar {
         display: none;
       }
 
-      .menu-toggle {
-        display: block;
-      }
-
-      .content {
-        flex-direction: column;
+      main {
+        margin-left: 0;
       }
     }
+
   </style>
 </head>
 <body>
 
   <header>
-    <button class="menu-toggle" id="menu-toggle">&#9776;</button>
-    <img src="logo_golftrix.png" alt="Logo"/>
+    <div class="hamburger" id="hamburger">
+      <span></span>
+      <span></span>
+      <span></span>
+    </div>
     <h1>Golftrix Dashboard</h1>
+    <img src="logo_golftrix.png" alt="Logo">
   </header>
 
-  <div class="overlay" id="overlay">
-    <ul>
-      <li>Mi Perfil</li>
-      <li>Mis Stats</li>
-      <li>Campos de Golf</li>
-      <li>Modos de Juego</li>
-    </ul>
-  </div>
+  <!-- Barra lateral escritorio -->
+  <nav class="sidebar">
+    <a href="#">Mi Perfil</a>
+    <a href="#">Mis Stats</a>
+    <a href="#">Campos de Golf</a>
+    <a href="#">Modos de Juego</a>
+    <a href="#">Historial Completo</a>
+    <a href="#" id="logoutDesktop">Cerrar Sesión</a>
+  </nav>
 
-  <div class="content">
-    <nav>
-      <ul>
-        <li>Mi Perfil</li>
-        <li>Mis Stats</li>
-        <li>Campos de Golf</li>
-        <li>Modos de Juego</li>
-      </ul>
-    </nav>
+  <!-- Barra lateral móvil -->
+  <nav class="sidebar-mobile" id="sidebarMobile">
+    <a href="#">Mi Perfil</a>
+    <a href="#">Mis Stats</a>
+    <a href="#">Campos de Golf</a>
+    <a href="#">Modos de Juego</a>
+    <a href="#">Historial Completo</a>
+    <a href="#" id="logoutMobile">Cerrar Sesión</a>
+  </nav>
 
-    <main>
-      <div class="new-game">
-        <img src="nuevo_juego.jpg" alt="Nuevo Juego" class="cover">
-        <div class="new-game-footer">
-          <div class="circle-icon"><img src="icono_nuevo_juego.png" alt="Icono"></div>
-          <span>Nuevo Juego</span>
-        </div>
+  <main>
+    <div class="new-game">
+      <img src="nuevo_juego.jpg" class="bg" alt="Nuevo Juego">
+      <div class="content">
+        <div class="icon"><img src="icono_nuevo_juego.png" alt="Icon"></div>
+        <div class="text">Nuevo Juego</div>
       </div>
+    </div>
 
-      <div class="divider"><span>Juegos actuales</span></div>
-
-      <!-- Aquí van los últimos 5 juegos (dinámico en siguiente fase) -->
-
-    </main>
-  </div>
+    <div class="divider">
+      <h2>──────── Juegos Actuales ────────</h2>
+    </div>
+    <!-- Los botones de juegos actuales se generarán dinámicamente -->
+  </main>
 
   <footer>
-    © 2025 Golftrix. Todos los derechos reservados.
+    &copy; 2025 Golftrix. Todos los derechos reservados.
   </footer>
 
   <script>
-    const toggle = document.getElementById('menu-toggle');
-    cons
+    const hamburger = document.getElementById('hamburger');
+    const sidebarMobile = document.getElementById('sidebarMobile');
+
+    hamburger.addEventListener('click', () => {
+      sidebarMobile.classList.toggle('open');
+    });
+
+    // Lógica para cerrar sesión
+    import { app } from './firebase-config.js';
+    import { getAuth, signOut } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+
+    const auth = getAuth(app);
+
+    document.getElementById('logoutDesktop').addEventListener('click', async () => {
+      await signOut(auth);
+      window.location.href = "index.html";
+    });
+
+    document.getElementById('logoutMobile').addEventListener('click', async () => {
+      await signOut(auth);
+      window.location.href = "index.html";
+    });
+  </script>
+</body>
+</html>
