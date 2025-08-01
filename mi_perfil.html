@@ -227,9 +227,6 @@
         lastname,
         handicap
       };
-      if (photoURL) {
-        updates.photoURL = photoURL;
-      }
 
       console.log("📌 Guardando en Firestore:", updates);
       await setDoc(userRef, updates, { merge: true });
