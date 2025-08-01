@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Registrar Campo de Golf - Golftrix</title>
+  <link rel="icon" href="logo_golftrix.png" type="image/png" />
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@700&display=swap" rel="stylesheet" />
+  <style>
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      font-family: 'Orbitron', sans-serif;
+      background: #f0f0f0;
+      display: flex;
+      flex-direction: column;
+      min-height: 100vh;
+    }
+
+    header {
+      background: linear-gradient(90deg, #007f00, #00cc44);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+      padding: 20px 40px;
+      color: white;
+    }
+
+    header img {
+      height: 60px;
+      position: absolute;
+      left: 20px;
+      cursor: pointer;
+    }
+
+    header h1 {
+      font-size: 2rem;
+      margin: 0;
+    }
+
+    main {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 40px 20px;
+    }
+
+    form {
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+      width: 100%;
+      max-width: 600px;
+      background: white;
+      border-radius: 20px;
+      padding: 30px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+      border: 5px solid transparent;
+      background-clip: padding-box;
+      position: relative;
+    }
+
+    form::before {
+      content: "";
+      position: absolute;
+      top: -5px; left: -5px; right: -5px; bottom: -5px;
+      z-index: -1;
+      border-radius: 25px;
+      background: linear-gradient(90deg, #000000, #007f00);
+    }
+
+    label {
+      font-weight: bold;
+      margin-bottom: 5px;
+    }
+
+    input {
+      background: white;
+      border: 3px solid;
+      border-image: linear-gradient(90deg, #007f00, #00cc44) 1;
+      border-radius: 50px;
+      padding: 10px 20px;
+      color: transparent;
+      background-clip: text;
+      -webkit-background-clip: text;
+      background-image: linear-gradient(90deg, #007f00, #00cc44);
+      font-family: 'Orbitron', sans-serif;
+      font-size: 1rem;
+    }
+
+    .par-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 15px 20px;
+    }
+
+    button {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: linear-gradient(90deg, #007f00, #00cc44);
+      border: none;
+      border-radius: 25px;
+      padding: 12px 20px;
+      cursor: pointer;
+      font-family: 'Orbitron', sans-serif;
+      color: white;
+      font-size: 1rem;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+    }
+
+    button .icon {
+      background: black;
+      border-radius: 50%;
+      width: 30px;
+      height: 30px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-right: 10px;
+    }
+
+    footer {
+      background: #000;
+      color: white;
+      text-align: center;
+      padding: 15px;
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <img src="logo_golftrix.png" alt="Logo" id="logo"/>
+    <h1>Registrar Campo de Golf</h1>
+  </header>
+
+  <main>
+    <form id="golfCourseForm">
+      <label>Nombre del Campo</label>
+      <input type="text" id="campoNombre" required />
+
+      <label>Par del Campo</label>
+      <input type="number" id="campoPar" required />
+
+      <label>Ubicación Google Maps (URL)</label>
+      <input type="url" id="campoUbicacion" placeholder="https://maps.google.com..." required />
+
+      <label>Par por Hoyo</label>
+      <div class="par-grid">
+        <!-- Generar inputs del 1 al 18 -->
+        ${Array.from({ length: 18 }, (_, i) => `
+          <div>
+            <label>Hoyo ${i + 1}</label>
+            <input type="number" class="parHoyo" data-hoyo="${i + 1}" required />
+          </div>
+        `).join('')}
+      </div>
+
+      <button type="submit">
+        <div class="icon"><img src="icon_guardar.png" alt="Registrar" width="16"></div>Registrar Campo
+      </button>
+    </form>
+
+    <button id="volverBtn" style="margin-top:30px;">
+      <div class="icon"><img src="icon_home.png" alt="Campos" width="16"></div>Volver a Campos
+    </button>
+
+  </main>
+
+  <footer>
+    &copy; 2025 Golftrix. Todos los derechos reservados.
+  </footer>
+
+  <script type="module">
+    import { app } from './firebase-config.js';
+    import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+    import { getFirestore, doc, setDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+
+    const logo = document.getElementById('logo');
+    logo.addEventListener('click', () => window.location.href = 'dashboard.html');
+
+    const volverBtn = document.getElementById('volverBtn');
+    volverBtn.addEventListener('click', () => window.location.href = 'campos.html');
+
+    let currentUserId = null;
+
+    onAuthStateChanged(auth, (user) => {
+      if (user) {
+        currentUserId = user.uid;
+      } else {
+        window.location.href = 'index.html';
+      }
+    });
+
+    document.getElementById('golfCourseForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+
+      const nombre = document.getElementById('campoNombre').value.trim();
+      const par = parseInt(document.getElementById('campoPar').value.trim());
+      const ubicacion = document.getElementById('campoUbicacion').value.trim();
+
+      const parHoyoInputs = document.querySelectorAll('.parHoyo');
+      const paresHoyo = Array.from(parHoyoInputs).map(input => parseInt(input.value.trim()));
+
+      if (paresHoyo.length !== 18 || paresHoyo.some(isNaN)) {
+        alert("Todos los pares de hoyo deben ser números.");
+        return;
+      }
+
+      // Extraer lat/lon de URL Google Maps si posible
+      let lat = null;
+      let lon = null;
+      const regex = /@(-?\d+\.\d+),(-?\d+\.\d+)/;
+      const match = ubicacion.match(regex);
+      if (match) {
+        lat = parseFloat(match[1]);
+        lon = parseFloat(match[2]);
+      } else {
+        alert("No se pudo extraer latitud/longitud de la URL. Verifica que tenga formato @lat,lon");
+        return;
+      }
+
+      try {
+        const campoRef = doc(db, "camposGolf", nombre.replace(/\s+/g, "_").toLowerCase());
+        await setDoc(campoRef, {
+          nombre,
+          parCampo: par,
+          paresHoyo,
+          ubicacion,
+          lat,
+          lon
+        });
+        alert("✅ Campo registrado correctamente");
+      } catch (error) {
+        console.error("❌ Error registrando campo:", error);
+        alert("Error al registrar. Revisa consola.");
+      }
+    });
+  </script>
+
+</body>
+</html>
