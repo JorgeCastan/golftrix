@@ -49,12 +49,27 @@
     }
 
     form {
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
       width: 100%;
-      max-width: 950px; /* <-- antes decía 800px */
+      max-width: 500px;
       background: white;
       border-radius: 20px;
       padding: 30px;
       box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+      border: 5px solid transparent;
+      background-clip: padding-box;
+      position: relative;
+    }
+
+    form::before {
+      content: "";
+      position: absolute;
+      top: -5px; left: -5px; right: -5px; bottom: -5px;
+      z-index: -1;
+      border-radius: 25px;
+      background: linear-gradient(90deg, #000000, #007f00);
     }
 
     label {
@@ -63,35 +78,32 @@
     }
 
     input {
-    background: white;
-    border: 3px solid;
-    border-image: linear-gradient(90deg, #007f00, #00cc44) 1;
-    border-radius: 50px;  /* AUMENTADO */
-    padding: 10px 20px;
-    color: transparent;
-    background-clip: text;
-    -webkit-background-clip: text;
-    background-image: linear-gradient(90deg, #007f00, #00cc44);
-    font-family: 'Orbitron', sans-serif;
-    font-size: 1rem;
+      background: white;
+      border: 3px solid;
+      border-image: linear-gradient(90deg, #007f00, #00cc44) 1;
+      border-radius: 50px;
+      padding: 10px 20px;
+      color: transparent;
+      background-clip: text;
+      -webkit-background-clip: text;
+      background-image: linear-gradient(90deg, #007f00, #00cc44);
+      font-family: 'Orbitron', sans-serif;
+      font-size: 1rem;
     }
-
-
 
     input[readonly] {
-    background: white;
-    border: 3px solid;
-    border-image: linear-gradient(90deg, #007f00, #00cc44) 1;
-    border-radius: 50px;  /* AUMENTADO */
-    padding: 10px 20px;
-    color: transparent;
-    background-clip: text;
-    -webkit-background-clip: text;
-    background-image: linear-gradient(90deg, #007f00, #00cc44);
-    font-family: 'Orbitron', sans-serif;
-    font-size: 1rem;
+      background: white;
+      border: 3px solid;
+      border-image: linear-gradient(90deg, #007f00, #00cc44) 1;
+      border-radius: 50px;
+      padding: 10px 20px;
+      color: transparent;
+      background-clip: text;
+      -webkit-background-clip: text;
+      background-image: linear-gradient(90deg, #007f00, #00cc44);
+      font-family: 'Orbitron', sans-serif;
+      font-size: 1rem;
     }
-
 
     button {
       display: flex;
@@ -148,17 +160,14 @@
       <label>Hándicap</label>
       <input type="number" id="handicap" />
 
-
       <button type="submit">
         <div class="icon"><img src="icon_guardar.png" alt="Guardar" width="16"></div>Guardar
-    </button>
-
+      </button>
     </form>
 
     <button id="dashboardBtn" style="margin-top:30px;">
-    <div class="icon"><img src="icon_home.png" alt="Dashboard" width="16"></div>Volver al Dashboard
+      <div class="icon"><img src="icon_home.png" alt="Dashboard" width="16"></div>Volver al Dashboard
     </button>
-
   </main>
 
   <footer>
@@ -166,80 +175,67 @@
   </footer>
 
   <script type="module">
-  import { app } from './firebase-config.js';
-  import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
-  import { getFirestore, doc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
-  import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js";
+    import { app } from './firebase-config.js';
+    import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+    import { getFirestore, doc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
-  const auth = getAuth(app);
-  const db = getFirestore(app);
-  const storage = getStorage(app);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
 
-  const logo = document.getElementById('logo');
-  logo.addEventListener('click', () => window.location.href = 'dashboard.html');
+    const logo = document.getElementById('logo');
+    logo.addEventListener('click', () => window.location.href = 'dashboard.html');
 
-  const dashboardBtn = document.getElementById('dashboardBtn');
-  dashboardBtn.addEventListener('click', () => window.location.href = 'dashboard.html');
+    const dashboardBtn = document.getElementById('dashboardBtn');
+    dashboardBtn.addEventListener('click', () => window.location.href = 'dashboard.html');
 
+    let currentUserId = null;
 
-  let currentUserId = null;
-
-  onAuthStateChanged(auth, async (user) => {
-    if (user) {
-      currentUserId = user.uid;
-      console.log("✅ UID detectado:", currentUserId);
-      const userDoc = await getDoc(doc(db, "users", currentUserId));
-      if (userDoc.exists()) {
-        const data = userDoc.data();
-        console.log("📄 Datos actuales:", data);
-        document.getElementById('email').value = data.email || '';
-        document.getElementById('name').value = data.name || '';
-        document.getElementById('lastname').value = data.lastname || '';
-        document.getElementById('handicap').value = data.handicap || '';
-
-       
+    onAuthStateChanged(auth, async (user) => {
+      if (user) {
+        currentUserId = user.uid;
+        console.log("✅ UID detectado:", currentUserId);
+        const userDoc = await getDoc(doc(db, "users", currentUserId));
+        if (userDoc.exists()) {
+          const data = userDoc.data();
+          console.log("📄 Datos actuales:", data);
+          document.getElementById('email').value = data.email || '';
+          document.getElementById('name').value = data.name || '';
+          document.getElementById('lastname').value = data.lastname || '';
+          document.getElementById('handicap').value = data.handicap || '';
+        } else {
+          console.log("❌ Documento no existe aún.");
+        }
       } else {
-        console.log("❌ Documento no existe aún.");
+        window.location.href = 'index.html';
       }
-    } else {
-      window.location.href = 'index.html';
-    }
-  });
+    });
 
-  document.getElementById('profileForm').addEventListener('submit', async (e) => {
-    e.preventDefault();
+    document.getElementById('profileForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
 
-    if (!currentUserId) {
-      alert("No hay usuario autenticado.");
-      return;
-    }
+      if (!currentUserId) {
+        alert("No hay usuario autenticado.");
+        return;
+      }
 
-    const name = document.getElementById('name').value.trim();
-    const lastname = document.getElementById('lastname').value.trim();
-    const handicap = document.getElementById('handicap').value.trim();
+      const name = document.getElementById('name').value.trim();
+      const lastname = document.getElementById('lastname').value.trim();
+      const handicap = document.getElementById('handicap').value.trim();
 
-    const userRef = doc(db, "users", currentUserId);
+      const userRef = doc(db, "users", currentUserId);
 
-    try {
-      
+      try {
+        const updates = { name, lastname, handicap };
+        console.log("📌 Guardando en Firestore:", updates);
+        await setDoc(userRef, updates, { merge: true });
 
-      const updates = {
-        name,
-        lastname,
-        handicap
-      };
-
-      console.log("📌 Guardando en Firestore:", updates);
-      await setDoc(userRef, updates, { merge: true });
-
-      alert('¡Datos actualizados correctamente!');
-    } catch (error) {
-      console.error("❌ Error guardando perfil:", error);
-      alert("Ocurrió un error al guardar el perfil. Revisa consola.");
-    }
-  });
-</script>
-
+        alert('¡Datos actualizados correctamente!');
+      } catch (error) {
+        console.error("❌ Error guardando perfil:", error);
+        alert("Ocurrió un error al guardar el perfil. Revisa consola.");
+      }
+    });
+  </script>
 
 </body>
 </html>
