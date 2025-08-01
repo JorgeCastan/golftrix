@@ -49,11 +49,12 @@
     }
 
     form {
-      display: flex;
-      flex-direction: column;
-      gap: 20px;
       width: 100%;
-      max-width: 400px;
+      max-width: 950px; /* <-- antes decía 800px */
+      background: white;
+      border-radius: 20px;
+      padding: 30px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.1);
     }
 
     label {
@@ -62,34 +63,47 @@
     }
 
     input {
-    background: white;
-    border: 3px solid;
-    border-image: linear-gradient(90deg, #007f00, #00cc44) 1;
-    border-radius: 50px;  /* AUMENTADO */
+    border: 3px solid transparent;
+    border-radius: 50px;
     padding: 10px 20px;
-    color: transparent;
-    background-clip: text;
-    -webkit-background-clip: text;
-    background-image: linear-gradient(90deg, #007f00, #00cc44);
     font-family: 'Orbitron', sans-serif;
     font-size: 1rem;
-    }
 
-
-
-    input[readonly] {
-    background: white;
-    border: 3px solid;
+    /* Contorno gradiente */
     border-image: linear-gradient(90deg, #007f00, #00cc44) 1;
-    border-radius: 50px;  /* AUMENTADO */
-    padding: 10px 20px;
-    color: transparent;
+
+    /* Texto gradiente */
+    color: #007f00;
+    background: none;
     background-clip: text;
     -webkit-background-clip: text;
+    color: transparent;
     background-image: linear-gradient(90deg, #007f00, #00cc44);
+
+    /* Evitar autofill amarillo de Chrome */
+    transition: background-color 5000s ease-in-out 0s;
+  }
+  
+  input:focus {
+    outline: none;
+  }
+
+  input[readonly] {
+    border: 3px solid transparent;
+    border-radius: 50px;
+    padding: 10px 20px;
     font-family: 'Orbitron', sans-serif;
     font-size: 1rem;
-    }
+
+    border-image: linear-gradient(90deg, #007f00, #00cc44) 1;
+
+    color: #007f00;
+    background: none;
+    background-clip: text;
+    -webkit-background-clip: text;
+    color: transparent;
+    background-image: linear-gradient(90deg, #007f00, #00cc44);
+  }
 
 
     button {
