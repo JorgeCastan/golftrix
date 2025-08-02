@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Campos de Golf - Golftrix</title>
+  <link rel="icon" href="logo_golftrix.png" type="image/png" />
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@700&display=swap" rel="stylesheet" />
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Orbitron', sans-serif;
+      background: #f0f0f0;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    header {
+      background: linear-gradient(90deg, #007f00, #00cc44);
+      display: flex;
+      flex-direction: row;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+      padding: 20px 40px;
+      color: white;
+    }
+
+    header img {
+      height: 60px;
+      position: absolute;
+      left: 20px;
+      cursor: pointer;
+    }
+
+    header h1 {
+      font-size: 2rem;
+    }
+
+    main {
+      flex: 1;
+      padding: 40px 20px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    .nuevo-btn {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: linear-gradient(90deg, #007f00, #00cc44);
+      border: none;
+      border-radius: 25px;
+      padding: 12px 20px;
+      cursor: pointer;
+      font-family: 'Orbitron', sans-serif;
+      color: white;
+      font-size: 1rem;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+      margin-bottom: 30px;
+    }
+
+    .nuevo-btn .icon {
+      background: black;
+      border-radius: 50%;
+      width: 30px;
+      height: 30px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-right: 10px;
+    }
+
+    .campos-container {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+      gap: 20px;
+      width: 100%;
+      max-width: 1200px;
+    }
+
+    .campo-card {
+      position: relative;
+      height: 200px;
+      border-radius: 20px;
+      overflow: hidden;
+      background-size: cover;
+      background-position: center;
+      cursor: pointer;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      color: white;
+    }
+
+    .info-top {
+      display: flex;
+      justify-content: space-between;
+      padding: 10px;
+      font-size: 0.9rem;
+      background: rgba(0,0,0,0.4);
+    }
+
+    .info-bottom {
+      padding: 10px;
+      background: rgba(0,0,0,0.6);
+      font-size: 1.1rem;
+    }
+
+    footer {
+      background: #000;
+      color: white;
+      text-align: center;
+      padding: 15px;
+    }
+
+    @media(max-width: 600px) {
+      header {
+        flex-direction: column;
+        align-items: center;
+      }
+      header img {
+        position: static;
+        margin-bottom: 10px;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <img src="logo_golftrix.png" alt="Logo" id="logo"/>
+    <h1>Campos de Golf</h1>
+  </header>
+
+  <main>
+    <button class="nuevo-btn" id="nuevoCampoBtn">
+      <div class="icon"><img src="icon_mas.png" alt="Nuevo" width="16"></div>Registrar Nuevo Campo
+    </button>
+
+    <div class="campos-container" id="camposContainer">
+      <!-- Botones dinámicos se insertan aquí -->
+    </div>
+  </main>
+
+  <footer>
+    &copy; 2025 Golftrix. Todos los derechos reservados.
+  </footer>
+
+  <script type="module">
+    import { app } from './firebase-config.js';
+    import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+    import { getFirestore, collection, getDocs } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+
+    const logo = document.getElementById('logo');
+    logo.addEventListener('click', () => window.location.href = 'dashboard.html');
+
+    const nuevoBtn = document.getElementById('nuevoCampoBtn');
+    nuevoBtn.addEventListener('click', () => window.location.href = 'registrar_campo.html');
+
+    let currentUserId = null;
+
+    onAuthStateChanged(auth, async (user) => {
+      if (user) {
+        currentUserId = user.uid;
+        cargarCampos();
+      } else {
+        window.location.href = 'index.html';
+      }
+    });
+
+    async function cargarCampos() {
+      const snapshot = await getDocs(collection(db, "camposGolf"));
+      const container = document.getElementById('camposContainer');
+
+      snapshot.forEach(async (docSnap) => {
+        const data = docSnap.data();
+        const id = docSnap.id;
+        const nombre = data.nombre;
+        const parCampo = data.parCampo;
+        const lat = data.lat;
+        const lon = data.lon;
+
+        // Verificar imagen
+        let imagen = `img/${id}.jpg`;
+        try {
+          const res = await fetch(imagen, { method: 'HEAD' });
+          if (!res.ok) imagen = 'img/campos_predeterminado.jpg';
+        } catch {
+          imagen = 'img/campos_predeterminado.jpg';
+        }
+
+        // Obtener clima
+        let temp = '...';
+        let viento = '...';
+        let lluvia = '...';
+        try {
+          const apiKey = 'TU_API_KEY';
+          const climaRes = await fetch(`https://api.openweathermap.org/data/2.5/weather?lat=${lat}&lon=${lon}&units=metric&lang=es&appid=${apiKey}`);
+          const climaData = await climaRes.json();
+          temp = `${Math.round(climaData.main.temp)}°C`;
+          viento = `${Math.round(climaData.wind.speed)} m/s`;
+          lluvia = climaData.clouds ? `${climaData.clouds.all}%` : '0%';
+        } catch (e) {
+          console.error('Error obteniendo clima', e);
+        }
+
+        // Crear card
+        const card = document.createElement('div');
+        card.className = 'campo-card';
+        card.style.backgroundImage = `url(${imagen})`;
+        card.innerHTML = `
+          <div class="info-top">
+            <span>Par: ${parCampo}</span>
+            <span>${temp}<br>${viento}<br>Lluvia: ${lluvia}</span>
+          </div>
+          <div class="info-bottom">${nombre}</div>
+        `;
+        card.addEventListener('click', () => {
+          window.location.href = `detalle_campo.html?id=${id}`;
+        });
+
+        container.appendChild(card);
+      });
+    }
+  </script>
+
+</body>
+</html>
