@@ -139,7 +139,7 @@
 
   <main>
     <button class="nuevo-btn" id="nuevoCampoBtn">
-      <div class="icon"><img src="icon_mas.png" alt="Nuevo" width="16"></div>Registrar Nuevo Campo
+      <div class="icon"><img src="icono_agregar.png" alt="Nuevo" width="16"></div>Registrar Nuevo Campo
     </button>
 
     <div class="campos-container" id="camposContainer">
@@ -202,7 +202,7 @@
         let viento = '...';
         let lluvia = '...';
         try {
-          const apiKey = 'TU_API_KEY';
+          const apiKey = '32f961aecad1581d93eb6d7bcd9105ca';
           const climaRes = await fetch(`https://api.openweathermap.org/data/2.5/weather?lat=${lat}&lon=${lon}&units=metric&lang=es&appid=${apiKey}`);
           const climaData = await climaRes.json();
           temp = `${Math.round(climaData.main.temp)}°C`;
