@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Detalle del Campo - Golftrix</title>
+  <link rel="icon" href="logo_golftrix.png" type="image/png" />
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@700&display=swap" rel="stylesheet" />
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Orbitron', sans-serif;
+      background: #f0f0f0;
+      display: flex;
+      flex-direction: column;
+      min-height: 100vh;
+    }
+
+    header {
+      background: linear-gradient(90deg, #007f00, #00cc44);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      color: white;
+      position: relative;
+    }
+
+    header img {
+      height: 60px;
+      position: absolute;
+      left: 20px;
+      cursor: pointer;
+    }
+
+    header h1 {
+      font-size: 2rem;
+      text-align: center;
+    }
+
+    main {
+      flex: 1;
+      padding: 30px 20px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    .campo-imagen {
+      width: 100%;
+      max-width: 800px;
+      height: 300px;
+      border-radius: 20px;
+      background-size: cover;
+      background-position: center;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+      margin-bottom: 30px;
+    }
+
+    .nombre-campo {
+      font-size: 2rem;
+      margin-bottom: 20px;
+      background: linear-gradient(90deg, #007f00, #00cc44);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .info-campo {
+      width: 100%;
+      max-width: 800px;
+      background: white;
+      border-radius: 15px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+      padding: 20px;
+      font-size: 1rem;
+      color: #333;
+    }
+
+    .info-campo h2 {
+      font-size: 1.2rem;
+      margin-bottom: 10px;
+      color: #007f00;
+    }
+
+    .info-campo ul {
+      margin-bottom: 15px;
+      padding-left: 20px;
+    }
+
+    footer {
+      background: linear-gradient(90deg, #007f00, #00cc44);
+      color: white;
+      text-align: center;
+      padding: 15px;
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <img src="logo_golftrix.png" alt="Logo" id="logo" />
+    <h1>Detalles del Campo</h1>
+  </header>
+
+  <main>
+    <div class="campo-imagen" id="campoImagen"></div>
+    <div class="nombre-campo" id="campoNombre">Cargando...</div>
+    <div class="info-campo" id="campoInfo">
+      <!-- Información dinámica aquí -->
+    </div>
+  </main>
+
+  <footer>
+    &copy; 2025 Golftrix. Todos los derechos reservados.
+  </footer>
+
+  <script type="module">
+    import { app } from './firebase-config.js';
+    import { getFirestore, doc, getDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+    const db = getFirestore(app);
+
+    document.getElementById('logo').addEventListener('click', () => {
+      window.location.href = 'dashboard.html';
+    });
+
+    const params = new URLSearchParams(window.location.search);
+    const campoId = params.get('id');
+
+    async function cargarDetalleCampo(id) {
+      const docRef = doc(db, "camposGolf", id);
+      const docSnap = await getDoc(docRef);
+
+      if (!docSnap.exists()) {
+        document.getElementById('campoNombre').textContent = "Campo no encontrado";
+        return;
+      }
+
+      const data = docSnap.data();
+      const nombre = data.nombre;
+      const parCampo = data.parCampo;
+      const hoyos = data.hoyos; // Suponiendo que sea un array de 18 números
+
+      // Imagen
+      let imagenUrl = `img/${id}.jpg`;
+      try {
+        const res = await fetch(imagenUrl, { method: 'HEAD' });
+        if (!res.ok) imagenUrl = 'img/campos_predeterminado.jpg';
+      } catch {
+        imagenUrl = 'img/campos_predeterminado.jpg';
+      }
+
+      document.getElementById('campoImagen').style.backgroundImage = `url(${imagenUrl})`;
+      document.getElementById('campoNombre').textContent = nombre;
+
+      // Contar tipo de hoyos
+      const conteo = { par3: 0, par4: 0, par5: 0, otros: 0 };
+      if (Array.isArray(hoyos)) {
+        hoyos.forEach(p => {
+          if (p === 3) conteo.par3++;
+          else if (p === 4) conteo.par4++;
+          else if (p === 5) conteo.par5++;
+          else conteo.otros++;
+        });
+      }
+
+      const descripcion = `
+        Este campo tiene un total de ${hoyos?.length || 0} hoyos con un par total de ${parCampo}. 
+        Cuenta con ${conteo.par3} hoyos par 3, ${conteo.par4} par 4, y ${conteo.par5} par 5.
+        ${conteo.otros > 0 ? `Además, tiene ${conteo.otros} hoyos de otro par.` : ''}
+      `;
+
+      document.getElementById('campoInfo').innerHTML = `
+        <h2>Par por Hoyo</h2>
+        <ul>
+          ${hoyos.map((p, i) => `<li>Hoyo ${i + 1}: Par ${p}</li>`).join("")}
+        </ul>
+        <h2>Resumen</h2>
+        <p>${descripcion}</p>
+      `;
+    }
+
+    if (campoId) {
+      cargarDetalleCampo(campoId);
+    } else {
+      document.getElementById('campoNombre').textContent = "ID no proporcionado.";
+    }
+  </script>
+</body>
+</html>
