@@ -64,6 +64,7 @@
       background: linear-gradient(90deg, #007f00, #00cc44);
       -webkit-background-clip: text;
       -webkit-text-fill-color: transparent;
+      text-align: center;
     }
 
     .info-campo {
@@ -86,6 +87,11 @@
     .info-campo ul {
       margin-bottom: 15px;
       padding-left: 20px;
+    }
+
+    .info-campo a {
+      color: #00aa44;
+      text-decoration: underline;
     }
 
     footer {
@@ -140,7 +146,8 @@
       const data = docSnap.data();
       const nombre = data.nombre;
       const parCampo = data.parCampo;
-      const hoyos = data.hoyos; // Suponiendo que sea un array de 18 números
+      const paresHoyo = data.paresHoyo || [];
+      const ubicacion = data.ubicacion || "#";
 
       // Imagen
       let imagenUrl = `img/${id}.jpg`;
@@ -154,29 +161,34 @@
       document.getElementById('campoImagen').style.backgroundImage = `url(${imagenUrl})`;
       document.getElementById('campoNombre').textContent = nombre;
 
-      // Contar tipo de hoyos
+      // Contar tipos de hoyos
       const conteo = { par3: 0, par4: 0, par5: 0, otros: 0 };
-      if (Array.isArray(hoyos)) {
-        hoyos.forEach(p => {
-          if (p === 3) conteo.par3++;
-          else if (p === 4) conteo.par4++;
-          else if (p === 5) conteo.par5++;
-          else conteo.otros++;
-        });
-      }
+      paresHoyo.forEach(p => {
+        if (p === 3) conteo.par3++;
+        else if (p === 4) conteo.par4++;
+        else if (p === 5) conteo.par5++;
+        else conteo.otros++;
+      });
 
       const descripcion = `
-        Este campo tiene un total de ${hoyos?.length || 0} hoyos con un par total de ${parCampo}. 
-        Cuenta con ${conteo.par3} hoyos par 3, ${conteo.par4} par 4, y ${conteo.par5} par 5.
-        ${conteo.otros > 0 ? `Además, tiene ${conteo.otros} hoyos de otro par.` : ''}
+        Este campo cuenta con un par total de ${parCampo} en ${paresHoyo.length} hoyos. 
+        De ellos, ${conteo.par3} son par 3, ${conteo.par4} par 4 y ${conteo.par5} par 5.
+        ${conteo.otros > 0 ? `Además, hay ${conteo.otros} hoyos con diferente par.` : ''}
       `;
 
       document.getElementById('campoInfo').innerHTML = `
+        <h2>Par de Campo</h2>
+        <p>${parCampo}</p>
+        
+        <h2>Ubicación</h2>
+        <p><a href="${ubicacion}" target="_blank">Ver en Google Maps</a></p>
+
         <h2>Par por Hoyo</h2>
         <ul>
-          ${hoyos.map((p, i) => `<li>Hoyo ${i + 1}: Par ${p}</li>`).join("")}
+          ${paresHoyo.map((p, i) => `<li>Hoyo ${i + 1}: Par ${p}</li>`).join("")}
         </ul>
-        <h2>Resumen</h2>
+
+        <h2>Descripción</h2>
         <p>${descripcion}</p>
       `;
     }
