@@ -1,40 +1,28 @@
 // menu.js
 const hamburger = document.getElementById('hamburger');
-const sidebarMobile = document.getElementById('sidebarMobile');
+const sidebarMenu = document.getElementById('sidebarMenu');
 
-if (hamburger) {
+if (hamburger && sidebarMenu) {
   hamburger.addEventListener('click', () => {
-    sidebarMobile.classList.toggle('open');
+    sidebarMenu.classList.toggle('open');
   });
-}
 
-if (sidebarMobile) {
-  sidebarMobile.querySelectorAll('a').forEach(link => {
+  sidebarMenu.querySelectorAll('a').forEach(link => {
     link.addEventListener('click', () => {
-      sidebarMobile.classList.remove('open');
+      sidebarMenu.classList.remove('open');
     });
   });
 }
 
-// Lógica cerrar sesión Firebase
+// Firebase cerrar sesión
 import { app } from './firebase-config.js';
 import { getAuth, signOut } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 
 const auth = getAuth(app);
+const logoutBtn = document.getElementById('logoutBtn');
 
-const logoutDesktop = document.getElementById('logoutDesktop');
-const logoutMobile = document.getElementById('logoutMobile');
-
-if (logoutDesktop) {
-  logoutDesktop.addEventListener('click', async (e) => {
-    e.preventDefault();
-    await signOut(auth);
-    window.location.href = "index.html";
-  });
-}
-
-if (logoutMobile) {
-  logoutMobile.addEventListener('click', async (e) => {
+if (logoutBtn) {
+  logoutBtn.addEventListener('click', async (e) => {
     e.preventDefault();
     await signOut(auth);
     window.location.href = "index.html";

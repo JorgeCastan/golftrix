@@ -141,18 +141,20 @@
   </style>
 </head>
 <body>
-  <header>
-    <div class="hamburger" id="hamburger">
-      <span></span>
-      <span></span>
-      <span></span>
-    </div>
-    <h1>Golftrix Dashboard</h1>
-    <img src="logo_golftrix.png" alt="Logo">
-  </header>
-
-  <!-- Contenedor donde se cargará el menú -->
+  <header style="display: flex; align-items: center; justify-content: space-between; padding: 10px 20px;">
+  
+  <!-- Contenedor para el botón hamburguesa (se cargará desde menu.html) -->
   <div id="menuContainer"></div>
+  
+  <h1 style="margin: 0; flex-grow: 1; text-align: center;">Golftrix Dashboard</h1>
+  
+  <img src="logo_golftrix.png" alt="Logo" style="height: 60px;">
+</header>
+
+ 
+
+<!-- Y no olvides enlazar el CSS del menú en <head> o aquí -->
+<link rel="stylesheet" href="menu.css">
 
   <main>
     <div class="new-game">
@@ -173,15 +175,32 @@
     &copy; 2025 Golftrix. Todos los derechos reservados.
   </footer>
 
-  <!-- Cargar menú -->
-  <script>
-    fetch('menu.html')
-      .then(res => res.text())
-      .then(html => {
-        document.getElementById('menuContainer').innerHTML = html;
-        import('./menu.js'); // carga lógica del menú
-      });
-  </script>
+  <!-- Aquí cargas el menú lateral y el botón hamburguesa -->
+<script>
+  // Carga menú y botón
+  fetch('menu.html')
+    .then(res => res.text())
+    .then(html => {
+      // Inserta solo el botón hamburguesa en el contenedor
+      const tempDiv = document.createElement('div');
+      tempDiv.innerHTML = html;
+      
+      // El botón hamburguesa (div.hamburger)
+      const hamburgerBtn = tempDiv.querySelector('.hamburger');
+      // El menú lateral (nav.sidebar-mobile)
+      const sidebarMenu = tempDiv.querySelector('.sidebar-mobile');
+      
+      // Pon el botón en #menuContainer (encabezado)
+      document.getElementById('menuContainer').appendChild(hamburgerBtn);
+      
+      // Pon el menú lateral en body (para que esté fuera del header)
+      document.body.appendChild(sidebarMenu);
+      
+      // Ahora carga la lógica del menú (menu.js)
+      import('./menu.js');
+    });
+</script>
+
 
 </body>
 </html>
