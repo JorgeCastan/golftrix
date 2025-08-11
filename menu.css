@@ -3,65 +3,20 @@
   box-sizing: border-box;
 }
 
-body {
-  margin: 0;
-  font-family: 'Orbitron', sans-serif;
-  display: flex;
-  flex-direction: column;
-  min-height: 100vh;
-  overflow-x: hidden;
-}
-
-header {
-  background: linear-gradient(90deg, #007f00, #00cc44);
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  padding: 20px 40px;
-  color: white;
-  position: relative;
-}
-
-header h1 {
-  font-size: 2.5rem;
-  margin: 0 30px;
-}
-
-header img {
-  height: 100px;
-}
-
-.hamburger {
-  display: none;
-  flex-direction: column;
-  cursor: pointer;
-  position: absolute;
-  left: 20px;
-  top: 25px;
-  z-index: 10000;
-}
-
-.hamburger span {
-  height: 3px;
-  width: 25px;
-  background: white;
-  margin: 4px 0;
-  display: block;
-}
-
 .sidebar {
   background: linear-gradient(180deg, #007f00, #00cc44);
   opacity: 0.7;
   padding: 40px 20px;
   position: fixed;
-  top: 140px;
-  bottom: 50px;
+  top: 80px; /* espacio para tu header actual */
+  bottom: 0;
   left: 0;
   width: 220px;
   color: white;
   display: flex;
   flex-direction: column;
-  justify-content: space-around;
+  justify-content: flex-start;
+  gap: 15px;
   font-size: 1rem;
   border-right: 2px solid #000;
   z-index: 200;
@@ -101,23 +56,23 @@ header img {
                -1px 1px 0 #000, 1px 1px 0 #000;
 }
 
+/* Botón hamburguesa para el header */
+.hamburger {
+  display: flex;
+  flex-direction: column;
+  cursor: pointer;
+  margin-right: 15px;
+}
+
+.hamburger span {
+  height: 3px;
+  width: 25px;
+  background: white;
+  margin: 4px 0;
+  display: block;
+}
+
 @media(max-width: 768px) {
-  header {
-    flex-direction: column;
-    text-align: center;
-    padding: 20px;
-  }
-  header img {
-    order: 1;
-    height: 60px;
-  }
-  header h1 {
-    order: 2;
-    margin-top: 10px;
-  }
-  .hamburger {
-    display: flex;
-  }
   .sidebar {
     display: none;
   }

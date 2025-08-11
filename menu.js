@@ -26,14 +26,16 @@ const logoutDesktop = document.getElementById('logoutDesktop');
 const logoutMobile = document.getElementById('logoutMobile');
 
 if (logoutDesktop) {
-  logoutDesktop.addEventListener('click', async () => {
+  logoutDesktop.addEventListener('click', async (e) => {
+    e.preventDefault();
     await signOut(auth);
     window.location.href = "index.html";
   });
 }
 
 if (logoutMobile) {
-  logoutMobile.addEventListener('click', async () => {
+  logoutMobile.addEventListener('click', async (e) => {
+    e.preventDefault();
     await signOut(auth);
     window.location.href = "index.html";
   });

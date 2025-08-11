@@ -6,14 +6,12 @@
   <title>Dashboard - Golftrix</title>
   <link rel="icon" href="logo_golftrix.png" type="image/png" />
   <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@700&display=swap" rel="stylesheet" />
-
-  <!-- 🔹 Cargar estilos del menú -->
+  
+  <!-- Estilos del menú -->
   <link rel="stylesheet" href="menu.css">
 
   <style>
-    * {
-      box-sizing: border-box;
-    }
+    * { box-sizing: border-box; }
 
     body {
       margin: 0;
@@ -26,7 +24,7 @@
 
     main {
       flex: 1;
-      margin-left: 220px; /* espacio para barra lateral */
+      margin-left: 220px; /* espacio para barra lateral en escritorio */
       padding: 40px;
       display: flex;
       flex-direction: column;
@@ -105,7 +103,7 @@
 </head>
 <body>
 
-  <!-- 🔹 Aquí se insertará el menú dinámicamente -->
+  <!-- Contenedor donde se cargará el menú -->
   <div id="menuContainer"></div>
 
   <main>
@@ -127,7 +125,7 @@
     &copy; 2025 Golftrix. Todos los derechos reservados.
   </footer>
 
-  <!-- 🔹 Carga dinámica del menú -->
+  <!-- Cargar menú -->
   <script>
     fetch('menu.html')
       .then(res => res.text())
