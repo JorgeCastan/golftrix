@@ -146,6 +146,19 @@
     <h1>Mi Perfil</h1>
   </header>
 
+<link rel="stylesheet" href="menu.css">
+<div id="menuContainer"></div>
+
+<script>
+  fetch('menu.html')
+    .then(res => res.text())
+    .then(html => {
+      document.getElementById('menuContainer').innerHTML = html;
+      import('./menu.js'); // carga lógica del menú
+    });
+</script>
+
+
   <main>
     <form id="profileForm">
       <label>Email</label>
