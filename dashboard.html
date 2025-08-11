@@ -21,26 +21,23 @@
       min-height: 100vh;
       overflow-x: hidden;
     }
-    header {
+        header {
       background: linear-gradient(90deg, #007f00, #00cc44);
       display: flex;
-      align-items: center;
       justify-content: center;
-      position: relative;
+      align-items: center;
       padding: 20px 40px;
       color: white;
-    }
-
-    header img {
-      height: 60px;
-      position: absolute;
-      left: 20px;
-      cursor: pointer;
+      position: relative;
     }
 
     header h1 {
-      font-size: 2rem;
-      margin: 0;
+      font-size: 2.5rem;
+      margin: 0 30px;
+    }
+
+    header img {
+      height: 100px;
     }
 
     main {
@@ -116,6 +113,27 @@
     }
 
     @media(max-width: 768px) {
+      
+      header {
+        flex-direction: column;
+        text-align: center;
+        padding: 20px;
+      }
+
+      header img {
+        order: 1;
+        height: 60px;
+      }
+
+      header h1 {
+        order: 2;
+        margin-top: 10px;
+      }
+
+      .hamburger {
+        display: flex;
+      }
+
       main {
         margin-left: 0;
       }
@@ -123,9 +141,14 @@
   </style>
 </head>
 <body>
-<header>
-    <img src="logo_golftrix.png" alt="Logo" id="logo"/>
-    <h1>Dashboard Golftrix</h1>
+  <header>
+    <div class="hamburger" id="hamburger">
+      <span></span>
+      <span></span>
+      <span></span>
+    </div>
+    <h1>Golftrix Dashboard</h1>
+    <img src="logo_golftrix.png" alt="Logo">
   </header>
 
   <!-- Contenedor donde se cargará el menú -->
