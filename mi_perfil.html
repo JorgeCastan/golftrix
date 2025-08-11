@@ -137,27 +137,55 @@
       text-align: center;
       padding: 15px;
     }
+     @media(max-width: 768px) {
+      
+      header {
+        flex-direction: column;
+        text-align: center;
+        padding: 20px;
+      }
+
+      header img {
+        order: 1;
+        height: 60px;
+      }
+
+      header h1 {
+        order: 2;
+        margin-top: 10px;
+      }
+
+      main {
+        margin-left: 0;
+      }
+    }
   </style>
 </head>
 <body>
+<header>
+  <div id="hamburger" class="hamburger" aria-label="Abrir menú" role="button" tabindex="0">
+    <span></span>
+    <span></span>
+    <span></span>
+  </div>
+  <h1>Mi Perfil</h1>
+  <img src="logo_golftrix.png" alt="Logo" id="logo"/>
+</header>
 
-  <header>
-    <img src="logo_golftrix.png" alt="Logo" id="logo"/>
-    <h1>Mi Perfil</h1>
-  </header>
-
-<link rel="stylesheet" href="menu.css">
+ 
+<!-- Contenedor del menú -->
 <div id="menuContainer"></div>
 
+<!-- Llama al CSS y carga menú y JS -->
+<link rel="stylesheet" href="menu.css" />
 <script>
   fetch('menu.html')
     .then(res => res.text())
     .then(html => {
       document.getElementById('menuContainer').innerHTML = html;
-      import('./menu.js'); // carga lógica del menú
+      import('./menu.js');
     });
 </script>
-
 
   <main>
     <form id="profileForm">
