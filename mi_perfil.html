@@ -280,15 +280,16 @@
 
 <link rel="stylesheet" href="menu.css" />
 
-<script>
-  fetch('menu.html')
-    .then(res => res.text())
-    .then(html => {
-      document.getElementById('menuContainer').innerHTML = html;
-      // Importa el JS que activa el toggle del menú
-      import('./menu.js');
-    });
+<script type="module">
+  async function loadMenu() {
+    const res = await fetch('menu.html');
+    const html = await res.text();
+    document.getElementById('menuContainer').innerHTML = html;
+    await import('./menu.js');
+  }
+  loadMenu();
 </script>
+
 
 
 </body>
