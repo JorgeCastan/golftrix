@@ -6,6 +6,10 @@
   <title>Dashboard - Golftrix</title>
   <link rel="icon" href="logo_golftrix.png" type="image/png" />
   <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@700&display=swap" rel="stylesheet" />
+
+  <!-- 🔹 Cargar estilos del menú -->
+  <link rel="stylesheet" href="menu.css">
+
   <style>
     * {
       box-sizing: border-box;
@@ -20,105 +24,6 @@
       overflow-x: hidden;
     }
 
-    header {
-      background: linear-gradient(90deg, #007f00, #00cc44);
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      padding: 20px 40px;
-      color: white;
-      position: relative;
-    }
-
-    header h1 {
-      font-size: 2.5rem;
-      margin: 0 30px;
-    }
-
-    header img {
-      height: 100px;
-    }
-
-
-    /* Botón hamburguesa */
-    .hamburger {
-      display: none;
-      flex-direction: column;
-      cursor: pointer;
-      position: absolute;
-      left: 20px;
-      top: 25px;
-      z-index: 10000; /* MÁS ALTO QUE sidebar-mobile */
-    }
-
-    .hamburger span {
-      height: 3px;
-      width: 25px;
-      background: white;
-      margin: 4px 0;
-      display: block;
-    }
-
-    /* Sidebar */
-    .sidebar {
-      background: linear-gradient(180deg, #007f00, #00cc44);
-      opacity: 0.7;
-      padding: 40px 20px;
-      position: fixed;
-      top: 140px; /* Dale más altura si tu header es grande */
-      bottom: 50px; /* Altura del footer */
-      left: 0;
-      width: 220px;
-      color: white;
-      display: flex;
-      flex-direction: column;
-      justify-content: space-around;
-      font-size: 1rem;
-      border-right: 2px solid #000;
-      z-index: 200;
-    }
-
-
-
-
-    .sidebar a {
-      text-decoration: none;
-      color: white;
-      text-shadow: -1px -1px 0 #000, 1px -1px 0 #000,
-                   -1px 1px 0 #000, 1px 1px 0 #000;
-    }
-
-    .sidebar-mobile {
-      position: fixed;
-      top: 0; left: 0;
-      width: 250px;
-      height: 100%;
-      background: linear-gradient(180deg, #007f00, #00cc44);
-      opacity: 0.95;
-      display: flex;               /* SIEMPRE FLEX */
-      flex-direction: column;
-      padding: 100px 20px 40px;
-      transform: translateX(-100%);
-      transition: transform 0.3s ease;
-      z-index: 9999;               /* POR ENCIMA DE TODO */
-    }
-
-
-    .sidebar-mobile.open {
-      transform: translateX(0);
-    }
-
-
-
-    .sidebar-mobile a {
-      margin: 15px 0;
-      text-decoration: none;
-      color: white;
-      text-shadow: -1px -1px 0 #000, 1px -1px 0 #000,
-                   -1px 1px 0 #000, 1px 1px 0 #000;
-    }
-
-    
     main {
       flex: 1;
       margin-left: 220px; /* espacio para barra lateral */
@@ -128,7 +33,6 @@
       align-items: center;
       justify-content: center;
     }
-
 
     .new-game {
       position: relative;
@@ -193,68 +97,16 @@
     }
 
     @media(max-width: 768px) {
-      header {
-        flex-direction: column;
-        text-align: center;
-        padding: 20px;
-      }
-
-      header img {
-        order: 1;
-        height: 60px;
-      }
-
-      header h1 {
-        order: 2;
-        margin-top: 10px;
-      }
-
-      .hamburger {
-        display: flex;
-      }
-
-      .sidebar {
-        display: none;
-      }
-
       main {
         margin-left: 0;
       }
     }
-
   </style>
 </head>
 <body>
 
-  <header>
-    <div class="hamburger" id="hamburger">
-      <span></span>
-      <span></span>
-      <span></span>
-    </div>
-    <h1>Golftrix Dashboard</h1>
-    <img src="logo_golftrix.png" alt="Logo">
-  </header>
-
-  <!-- Barra lateral escritorio -->
-  <nav class="sidebar">
-    <a href="mi_perfil.html">Mi Perfil</a>
-    <a href="#">Mis Stats</a>
-    <a href="campos.html">Campos de Golf</a>
-    <a href="#">Modos de Juego</a>
-    <a href="#">Historial Completo</a>
-    <a href="#" id="logoutDesktop">Cerrar Sesión</a>
-  </nav>
-
-  <!-- ✅ Sidebar móvil -->
-  <nav class="sidebar-mobile" id="sidebarMobile">
-    <a href="mi_perfil.html">Mi Perfil</a>
-    <a href="#">Mis Stats</a>
-    <a href="campos.html">Campos de Golf</a>
-    <a href="#">Modos de Juego</a>
-    <a href="#">Historial Completo</a>
-    <a href="#" id="logoutMobile">Cerrar Sesión</a>
-  </nav>
+  <!-- 🔹 Aquí se insertará el menú dinámicamente -->
+  <div id="menuContainer"></div>
 
   <main>
     <div class="new-game">
@@ -275,40 +127,15 @@
     &copy; 2025 Golftrix. Todos los derechos reservados.
   </footer>
 
-  <script type="module">
-  const hamburger = document.getElementById('hamburger');
-  const sidebarMobile = document.getElementById('sidebarMobile');
-
-  hamburger.addEventListener('click', () => {
-    sidebarMobile.classList.toggle('open');
-  });
-
-  // Opcional: cerrar al tocar un link
-  sidebarMobile.querySelectorAll('a').forEach(link => {
-    link.addEventListener('click', () => {
-      sidebarMobile.classList.remove('open');
-    });
-  });
-
-  // Lógica cerrar sesión
-  import { app } from './firebase-config.js';
-  import { getAuth, signOut } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
-
-  const auth = getAuth(app);
-
-  document.getElementById('logoutDesktop').addEventListener('click', async () => {
-    await signOut(auth);
-    window.location.href = "index.html";
-  });
-
-  document.getElementById('logoutMobile').addEventListener('click', async () => {
-    await signOut(auth);
-    window.location.href = "index.html";
-  });
-</script>
-
+  <!-- 🔹 Carga dinámica del menú -->
+  <script>
+    fetch('menu.html')
+      .then(res => res.text())
+      .then(html => {
+        document.getElementById('menuContainer').innerHTML = html;
+        import('./menu.js'); // carga lógica del menú
+      });
+  </script>
 
 </body>
 </html>
-
- 
