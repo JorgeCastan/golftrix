@@ -6,6 +6,7 @@
   <title>Mi Perfil - Golftrix</title>
   <link rel="icon" href="logo_golftrix.png" type="image/png" />
   <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="menu.css" />
   <style>
     * { box-sizing: border-box; }
 
@@ -170,17 +171,14 @@
 </head>
 <body>
 <header>
-  <!-- Botón hamburguesa -->
-  <div id="hamburger" class="hamburger" aria-label="Abrir menú" role="button" tabindex="0">
-    <span></span>
-    <span></span>
-    <span></span>
-  </div>
+  <!-- aquí se insertará el botón hamburguesa (viene de menu.html) -->
+  <div id="menuContainer" style="display:inline-block; margin-left:10px;"></div>
 
   <h1>Mi Perfil</h1>
 
   <img src="logo_golftrix.png" alt="Logo" id="logo" />
 </header>
+
 
   <!-- Aquí se carga el menú -->
   <div id="menuContainer"></div>
@@ -278,17 +276,39 @@
     });
   </script>
 
-<link rel="stylesheet" href="menu.css" />
+<script>
+  // Carga menu.html, extrae botón hamburguesa y sidebar, los inserta y luego carga la lógica (menu.js)
+  fetch('menu.html')
+    .then(res => res.text())
+    .then(html => {
+      const temp = document.createElement('div');
+      temp.innerHTML = html;
 
-<script type="module">
-  async function loadMenu() {
-    const res = await fetch('menu.html');
-    const html = await res.text();
-    document.getElementById('menuContainer').innerHTML = html;
-    await import('./menu.js');
-  }
-  loadMenu();
+      // buscar botón hamburguesa (por id o por clase)
+      const hamburgerBtn = temp.querySelector('#hamburger') || temp.querySelector('.hamburger');
+      // buscar sidebar (por id o clase)
+      const sidebarMenu = temp.querySelector('#sidebarMenu') || temp.querySelector('.sidebar-mobile') || temp.querySelector('.sidebar');
+
+      // coloca el botón hamburger dentro del header (en #menuContainer)
+      const container = document.getElementById('menuContainer');
+      if (hamburgerBtn && container) {
+        // si había un nodo igual en el DOM, evitar duplicar: remove original (opcional)
+        container.appendChild(hamburgerBtn);
+      }
+
+      // coloca el sidebar al final del body (fuera del header) para que su posicionamiento fijo funcione
+      if (sidebarMenu) {
+        document.body.appendChild(sidebarMenu);
+      }
+
+      // ahora que los nodos están en el DOM, carga la lógica del menú
+      import('./menu.js').catch(err => console.error('Error importando menu.js', err));
+    })
+    .catch(err => {
+      console.error('Error cargando menu.html', err);
+    });
 </script>
+
 
 
 
