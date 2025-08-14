@@ -199,6 +199,10 @@
       <label>Hándicap</label>
       <input type="number" id="handicap" />
 
+      <label>Grupo</label>
+      <input type="text" id="grupo" readonly />
+
+
       <button type="submit">
         <div class="icon"><img src="icon_guardar.png" alt="Guardar" width="16"></div>Guardar
       </button>
@@ -241,6 +245,8 @@
           document.getElementById('name').value = data.name || '';
           document.getElementById('lastname').value = data.lastname || '';
           document.getElementById('handicap').value = data.handicap || '';
+          document.getElementById('grupo').value = data.grupo || 'Sin grupo';
+
         } else {
           console.log("❌ Documento no existe aún.");
         }
@@ -264,7 +270,13 @@
       const userRef = doc(db, "users", currentUserId);
 
       try {
-        const updates = { name, lastname, handicap };
+        const updates = { 
+          name, 
+          lastname, 
+          handicap 
+          // El grupo no se modifica aquí, solo se asegura que no se borre
+        };
+
         console.log("📌 Guardando en Firestore:", updates);
         await setDoc(userRef, updates, { merge: true });
 
