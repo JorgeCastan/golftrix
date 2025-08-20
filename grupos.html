@@ -165,20 +165,27 @@
     });
   }
 
-  window.autorizarGrupo = async (id) => {
+ window.autorizarGrupo = async (id) => {
   const docRef = doc(db, "grupos_pendientes", id);
   const snap = await getDoc(docRef);
 
   if (!snap.exists()) return;
   const grupo = snap.data();
 
-  // Crear grupo definitivo
+  // Crear grupo definitivo con miembros como objetos { uid, iniciales }
+  const miembros = [
+    {
+      uid: grupo.creador,
+      iniciales: grupo.creadorIniciales || "XX"
+    }
+  ];
+
   await setDoc(doc(db, "grupos", id), {
     nombre: grupo.nombre,
     creador: grupo.creador,
     creadorNombre: grupo.creadorNombre,
     creadorIniciales: grupo.creadorIniciales,
-    miembros: [grupo.creador]
+    miembros
   });
 
   // Eliminar de pendientes
@@ -187,6 +194,7 @@
   cargarSolicitudes();
   cargarGrupos();
 };
+
 
 
   window.denegarGrupo = async (id) => {
