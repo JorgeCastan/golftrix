@@ -186,15 +186,21 @@
     q.forEach(docSnap => {
       const data = docSnap.data();
       const tr = document.createElement("tr");
-      tr.innerHTML = `
-        <td>${data.nombre}</td>
-        <td>${data.creadorNombre}</td>
-        <td>
-          <button onclick="autorizarGrupo('${docSnap.id}')">Autorizar</button>
-          <button onclick="denegarGrupo('${docSnap.id}')">Denegar</button>
-        </td>
-      `;
-      solicitudesTable.appendChild(tr);
+      (async () => {
+  const creador = await getUserNames(data.creador, data.creadorNombre);
+  const creadorNombreCompleto = `${creador.name || ""} ${creador.lastname || ""}`.trim() || creador.email;
+
+  tr.innerHTML = `
+    <td>${data.nombre}</td>
+    <td>${creadorNombreCompleto}</td>
+    <td>
+      <button onclick="autorizarGrupo('${docSnap.id}')">Autorizar</button>
+      <button onclick="denegarGrupo('${docSnap.id}')">Denegar</button>
+    </td>
+  `;
+  solicitudesTable.appendChild(tr);
+})();
+
     });
   }
 
