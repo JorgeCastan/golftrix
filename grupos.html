@@ -209,46 +209,30 @@
 
   // ========= Mis grupos =========
   async function cargarGrupos() {
-    listaGrupos.innerHTML = "";
-    const q = await getDocs(collection(db, "grupos"));
-    q.forEach(docSnap => {
-      const data = docSnap.data();
-      const groupId = docSnap.id;
+  listaGrupos.innerHTML = "";
+  const q = await getDocs(collection(db, "grupos"));
 
-      if (data.miembros && data.miembros.some(m => m.uid === currentUserId)) {
-        const div = document.createElement("div");
-        div.className = "grupo";
+  for (const docSnap of q.docs) {
+  const data = docSnap.data();
+  const tr = document.createElement("tr");
+  const creador = await getUserNames(data.creador, data.creadorNombre);
+  const creadorNombreCompleto = (creador.name && creador.lastname)
+    ? `${creador.name} ${creador.lastname}`
+    : (creador.name || creador.lastname || creador.email);
 
-        const miembrosHtml = data.miembros.map(m => {
-          // Mostrar: name + lastname (fallback a m.nombre, email, uid)
-          const display = (m.name && m.lastname) 
-            ? `${m.name} ${m.lastname}` 
-            : (m.name || m.lastname || m.email || m.uid);
+  tr.innerHTML = `
+    <td>${data.nombre}</td>
+    <td>${creadorNombreCompleto}</td>
+    <td>
+      <button onclick="autorizarGrupo('${docSnap.id}')">Autorizar</button>
+      <button onclick="denegarGrupo('${docSnap.id}')">Denegar</button>
+    </td>
+  `;
+  solicitudesTable.appendChild(tr);
+}
 
+}
 
-          return `
-            <div style="display:flex; align-items:center; gap:8px; margin:5px 0;">
-              <div class="avatar">${m.iniciales || "XX"}</div>
-              <span>${display}</span>
-              ${data.creador === currentUserId && m.uid !== currentUserId
-                ? `<button onclick="eliminarMiembro('${groupId}','${m.uid}')">Eliminar</button>` 
-                : ""}
-            </div>
-          `;
-        }).join("");
-
-        div.innerHTML = `
-          <div>
-            <strong>${data.nombre}</strong><br>
-            ${miembrosHtml}
-           <button class="invitar-btn" onclick="invitarMiembro('${groupId}')">Invitar miembros</button>
-          </div>
-        `;
-
-        listaGrupos.appendChild(div);
-      }
-    });
-  }
 
   // ========= Autorizar/Desechar solicitud =========
   window.autorizarGrupo = async (id) => {
