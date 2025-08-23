@@ -40,9 +40,18 @@
     th { background: #007f00; color: white; }
 
     .avatar {
-      width: 40px; height: 40px; border-radius: 50%; background: #007f00; color: white;
-      display: flex; align-items: center; justify-content: center; font-weight: bold;
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #00cc44, #007f00);
+      border: 2px solid black;
+      color: white;
+      font-weight: bold;
+      display: flex;
+      align-items: center;
+      justify-content: center;
     }
+
 
     .grupo {
       display: flex; align-items: center; gap: 10px; margin-bottom: 15px;
@@ -151,13 +160,23 @@
           <div class="avatar">${m.iniciales || "XX"}</div>
         `).join("");
 
-        div.innerHTML = `
-          <div style="display:flex; gap:5px;">${avatares}</div>
-          <div>
-            <strong>${data.nombre}</strong><br>
-            Miembros: ${data.miembros.length}
-          </div>
-        `;
+        let miembrosHtml = data.miembros.map(m => `
+        <div style="display:flex; align-items:center; gap:8px; margin:5px 0;">
+          <div class="avatar">${m.iniciales || "XX"}</div>
+          <span>${m.nombre || m.uid}</span>
+          ${data.creador === currentUserId && m.uid !== currentUserId ? 
+            `<button onclick="eliminarMiembro('${data.nombre}','${m.uid}')">Eliminar</button>` : ""}
+        </div>
+      `).join("");
+
+      div.innerHTML = `
+        <div>
+          <strong>${data.nombre}</strong><br>
+          ${miembrosHtml}
+          <button onclick="invitarMiembro('${data.nombre}')">Invitar miembros</button>
+        </div>
+      `;
+
         listaGrupos.appendChild(div);
       }
 
@@ -180,6 +199,12 @@
     }
   ];
 
+  // Agregar grupo al documento del creador
+  await updateDoc(doc(db, "users", grupo.creador), {
+    grupo: id
+  });
+
+
   await setDoc(doc(db, "grupos", id), {
     nombre: grupo.nombre,
     creador: grupo.creador,
@@ -201,6 +226,35 @@
     await deleteDoc(doc(db, "grupos_pendientes", id));
     cargarSolicitudes();
   };
+
+window.unirseAGrupo = async (grupoId) => {
+  if (!currentUserId) return;
+
+  const grupoRef = doc(db, "grupos", grupoId);
+  const grupoSnap = await getDoc(grupoRef);
+  if (!grupoSnap.exists()) return;
+
+  const grupo = grupoSnap.data();
+
+  // Agregar al grupo
+  const nuevoMiembro = {
+    uid: currentUserId,
+    iniciales: (auth.currentUser.displayName || currentUserEmail).split(" ").map(p => p[0]).join("").substring(0,2),
+    nombre: auth.currentUser.displayName || currentUserEmail
+  };
+
+  await updateDoc(grupoRef, {
+    miembros: [...grupo.miembros, nuevoMiembro]
+  });
+
+  // Guardar grupo en perfil usuario
+  await updateDoc(doc(db, "users", currentUserId), {
+    grupo: grupoId
+  });
+
+  alert("Te uniste al grupo correctamente.");
+  cargarGrupos();
+};
 
 </script>
 
