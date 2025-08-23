@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Invitación al Grupo</title>
+</head>
+<body>
+<h1>Invitación a unirse al grupo</h1>
+<p id="mensaje">Cargando...</p>
+<button id="aceptarBtn" style="display:none;">Aceptar invitación</button>
+
+<script type="module">
+import { app } from './firebase-config.js';
+import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+import { getFirestore, doc, getDoc, updateDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+const auth = getAuth(app);
+const db = getFirestore(app);
+
+const urlParams = new URLSearchParams(window.location.search);
+const grupoId = urlParams.get('grupo');
+
+const mensaje = document.getElementById('mensaje');
+const aceptarBtn = document.getElementById('aceptarBtn');
+
+onAuthStateChanged(auth, async (user) => {
+  if (!user) {
+    mensaje.innerText = "Debes iniciar sesión para aceptar la invitación.";
+    return;
+  }
+
+  mensaje.innerText = "¿Deseas unirte al grupo?";
+  aceptarBtn.style.display = "inline-block";
+
+  aceptarBtn.onclick = async () => {
+    // Traer grupo
+    const grupoRef = doc(db, "grupos", grupoId);
+    const grupoSnap = await getDoc(grupoRef);
+    if (!grupoSnap.exists()) {
+      alert("Grupo no encontrado");
+      return;
+    }
+    const grupo = grupoSnap.data();
+
+    // Traer datos del usuario
+    const userRef = doc(db, "users", user.uid);
+    const userSnap = await getDoc(userRef);
+    const userData = userSnap.data();
+    const nombreCompleto = `${userData.name} ${userData.lastname}`;
+    const parts = userData.name.trim().split(" ").concat(userData.lastname.trim().split(" "));
+    const iniciales = (parts[0][0] + (parts[1] ? parts[1][0] : parts[0][1] || parts[0][0])).toUpperCase();
+
+    const nuevoMiembro = {
+      uid: user.uid,
+      iniciales,
+      nombre: nombreCompleto
+    };
+
+    // Agregar al grupo
+    await updateDoc(grupoRef, {
+      miembros: [...grupo.miembros, nuevoMiembro]
+    });
+
+    // Guardar grupo en usuario
+    await updateDoc(userRef, { grupo: grupoId });
+
+    alert("¡Te uniste al grupo correctamente!");
+    window.location.href = "grupos.html";
+  };
+});
+</script>
+</body>
+</html>

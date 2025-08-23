@@ -217,6 +217,17 @@
     cargarSolicitudes();
   };
 
+  window.invitarMiembro = (grupoId) => {
+    // Generar enlace de invitación
+    const link = `${window.location.origin}/invitacion.html?grupo=${grupoId}`;
+    // Copiar enlace al portapapeles
+    navigator.clipboard.writeText(link).then(() => {
+      alert("Enlace de invitación copiado al portapapeles:\n" + link);
+    }).catch(() => {
+      alert("Error al copiar enlace. Usa este link: " + link);
+    });
+  };
+
   window.unirseAGrupo = async (grupoId) => {
     if (!currentUserId) return;
 
