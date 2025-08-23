@@ -127,36 +127,59 @@
   import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
   import { getFirestore, collection, getDocs, doc, setDoc, updateDoc, deleteDoc, getDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
-
   const auth = getAuth(app);
   const db = getFirestore(app);
 
   const solicitudesSection = document.getElementById("solicitudesSection");
-  const solicitudesTable = document.querySelector("#solicitudesTable tbody");
-  const listaGrupos = document.getElementById("listaGrupos");
+  const solicitudesTable  = document.querySelector("#solicitudesTable tbody");
+  const listaGrupos       = document.getElementById("listaGrupos");
 
   let currentUserId = null;
   let currentUserEmail = null;
 
+  // ========= Helpers =========
+  function calcIniciales(name = "", lastname = "", fallback = "XX") {
+    const a = (name || "").trim().charAt(0) || "";
+    const b = (lastname || "").trim().charAt(0) || "";
+    const ab = (a + b).toUpperCase();
+    if (ab) return ab;
+    const parts = (name || "").trim().split(/\s+/);
+    if (parts.length >= 2) return (parts[0][0] + parts[1][0]).toUpperCase();
+    return fallback;
+  }
+
+  async function getUserNames(uid, fallbackEmail = "") {
+    const uref = doc(db, "users", uid);
+    const usnap = await getDoc(uref);
+    const u = usnap.exists() ? usnap.data() : {};
+    return {
+      name: u.name || "",
+      lastname: u.lastname || "",
+      email: u.email || fallbackEmail
+    };
+  }
+
+  // ========= Auth =========
   onAuthStateChanged(auth, async (user) => {
-    if (user) {
-      currentUserId = user.uid;
-      currentUserEmail = user.email;
+    if (!user) { window.location.href = "index.html"; return; }
 
-      // Verificar rol desde Firestore
-      const userDoc = await getDoc(doc(db, "users", user.uid));
-      if (userDoc.exists() && userDoc.data().role === "admin") {
-        solicitudesSection.style.display = "block";
-        cargarSolicitudes();
-      }
+    currentUserId = user.uid;
+    currentUserEmail = user.email;
 
-
-      cargarGrupos();
-    } else {
-      window.location.href = "index.html";
+    // Mostrar solicitudes si es admin
+    const userDoc = await getDoc(doc(db, "users", user.uid));
+    if (userDoc.exists() && userDoc.data().role === "admin") {
+      solicitudesSection.style.display = "block";
+      cargarSolicitudes();
     }
+
+    // Primero procesa invitación por URL (si existe)
+    await procesarInvitacionPorURL();
+
+    cargarGrupos();
   });
 
+  // ========= Solicitudes (admin) =========
   async function cargarSolicitudes() {
     solicitudesTable.innerHTML = "";
     const q = await getDocs(collection(db, "grupos_pendientes"));
@@ -175,118 +198,174 @@
     });
   }
 
+  // ========= Mis grupos =========
   async function cargarGrupos() {
     listaGrupos.innerHTML = "";
     const q = await getDocs(collection(db, "grupos"));
     q.forEach(docSnap => {
       const data = docSnap.data();
+      const groupId = docSnap.id;
+
       if (data.miembros && data.miembros.some(m => m.uid === currentUserId)) {
         const div = document.createElement("div");
         div.className = "grupo";
 
-        // Mostrar iniciales de TODOS los miembros
-        const avatares = data.miembros.map(m => `
-          <div class="avatar">${m.iniciales || "XX"}</div>
-        `).join("");
+        const miembrosHtml = data.miembros.map(m => {
+          // Mostrar: name + lastname (fallback a m.nombre, email, uid)
+          const display = [m.name || m.nombre, m.lastname].filter(Boolean).join(" ")
+                        || m.email
+                        || m.uid;
 
-        let miembrosHtml = data.miembros.map(m => `
-        <div style="display:flex; align-items:center; gap:8px; margin:5px 0;">
-          <div class="avatar">${m.iniciales || "XX"}</div>
-          <span>${(m.name || "") + " " + (m.lastname || "")}</span>
-          ${data.creador === currentUserId && m.uid !== currentUserId ? 
-            `<button onclick="eliminarMiembro('${data.nombre}','${m.uid}')">Eliminar</button>` : ""}
-        </div>
-      `).join("");
+          return `
+            <div style="display:flex; align-items:center; gap:8px; margin:5px 0;">
+              <div class="avatar">${m.iniciales || "XX"}</div>
+              <span>${display}</span>
+              ${data.creador === currentUserId && m.uid !== currentUserId
+                ? `<button onclick="eliminarMiembro('${groupId}','${m.uid}')">Eliminar</button>` 
+                : ""}
+            </div>
+          `;
+        }).join("");
 
-      div.innerHTML = `
-        <div>
-          <strong>${data.nombre}</strong><br>
-          ${miembrosHtml}
-          <button class="invitar-btn" onclick="invitarMiembro('${data.nombre}')">Invitar miembros</button>
-
-        </div>
-      `;
+        div.innerHTML = `
+          <div>
+            <strong>${data.nombre}</strong><br>
+            ${miembrosHtml}
+           <button class="invitar-btn" onclick="invitarMiembro('${groupId}')">Invitar miembros</button>
+          </div>
+        `;
 
         listaGrupos.appendChild(div);
       }
-
-
     });
   }
 
- window.autorizarGrupo = async (id) => {
-  const docRef = doc(db, "grupos_pendientes", id);
-  const snap = await getDoc(docRef);
+  // ========= Autorizar/Desechar solicitud =========
+  window.autorizarGrupo = async (id) => {
+    const pendRef = doc(db, "grupos_pendientes", id);
+    const snap = await getDoc(pendRef);
+    if (!snap.exists()) return;
 
-  if (!snap.exists()) return;
-  const grupo = snap.data();
+    const grupo = snap.data();
 
-  // Crear grupo definitivo con miembros como objetos { uid, iniciales }
-  const miembros = [
-    {
+    // Datos del creador desde users
+    const creador = await getUserNames(grupo.creador, currentUserEmail);
+    const iniciales = calcIniciales(creador.name, creador.lastname, grupo.creadorIniciales || "XX");
+
+    const miembros = [{
       uid: grupo.creador,
-      iniciales: grupo.creadorIniciales || "XX"
-    }
-  ];
+      iniciales,
+      name: creador.name,
+      lastname: creador.lastname,
+      email: creador.email
+    }];
 
-  // Agregar grupo al documento del creador
-  await updateDoc(doc(db, "users", grupo.creador), {
-    grupo: id
-  });
+    // Crear el grupo definitivo
+    await setDoc(doc(db, "grupos", id), {
+      nombre: grupo.nombre,
+      creador: grupo.creador,
+      creadorNombre: `${creador.name || ""} ${creador.lastname || ""}`.trim() || grupo.creadorNombre || "",
+      creadorIniciales: iniciales,
+      miembros
+    });
 
+    // Marcar grupo en el perfil del creador
+    try { await updateDoc(doc(db, "users", grupo.creador), { grupo: id }); } catch(e){}
 
-  await setDoc(doc(db, "grupos", id), {
-    nombre: grupo.nombre,
-    creador: grupo.creador,
-    creadorNombre: grupo.creadorNombre,
-    creadorIniciales: grupo.creadorIniciales,
-    miembros
-  });
+    // Eliminar de pendientes
+    await deleteDoc(pendRef);
 
-  // Eliminar de pendientes
-  await deleteDoc(docRef);
-
-  cargarSolicitudes();
-  cargarGrupos();
-};
-
-
+    cargarSolicitudes();
+    cargarGrupos();
+  };
 
   window.denegarGrupo = async (id) => {
     await deleteDoc(doc(db, "grupos_pendientes", id));
     cargarSolicitudes();
   };
 
-window.unirseAGrupo = async (grupoId) => {
-  if (!currentUserId) return;
+  // ========= Unirse por invitación =========
+  window.unirseAGrupo = async (grupoId) => {
+    if (!currentUserId) return;
 
-  const grupoRef = doc(db, "grupos", grupoId);
-  const grupoSnap = await getDoc(grupoRef);
-  if (!grupoSnap.exists()) return;
+    const grupoRef = doc(db, "grupos", grupoId);
+    const grupoSnap = await getDoc(grupoRef);
+    if (!grupoSnap.exists()) return;
 
-  const grupo = grupoSnap.data();
+    const data = grupoSnap.data();
 
-  // Agregar al grupo
-  const nuevoMiembro = {
-    uid: currentUserId,
-    iniciales: (auth.currentUser.displayName || currentUserEmail).split(" ").map(p => p[0]).join("").substring(0,2),
-    nombre: auth.currentUser.displayName || currentUserEmail
+    // Evitar duplicados
+    if (data.miembros.some(m => m.uid === currentUserId)) {
+      alert("Ya perteneces a este grupo.");
+      return;
+    }
+
+    // Traer name/lastname del usuario
+    const yo = await getUserNames(currentUserId, currentUserEmail);
+    const iniciales = calcIniciales(yo.name, yo.lastname, (auth.currentUser.displayName || currentUserEmail || "XX").substring(0,2).toUpperCase());
+
+    const nuevoMiembro = {
+      uid: currentUserId,
+      iniciales,
+      name: yo.name,
+      lastname: yo.lastname,
+      email: yo.email
+    };
+
+    await updateDoc(grupoRef, { miembros: [...data.miembros, nuevoMiembro] });
+
+    try { await updateDoc(doc(db, "users", currentUserId), { grupo: grupoId }); } catch(e){}
+
+    alert("Te uniste al grupo correctamente.");
+    cargarGrupos();
   };
 
-  await updateDoc(grupoRef, {
-    miembros: [...grupo.miembros, nuevoMiembro]
-  });
+  // ========= Invitar miembros (copia link con ?invite=ID) =========
+  window.invitarMiembro = async (grupoId) => {
+    const url = new URL(window.location.href);
+    url.searchParams.set("invite", grupoId);
+    const link = url.href;
+    try {
+      await navigator.clipboard.writeText(link);
+      alert("Enlace de invitación copiado al portapapeles.");
+    } catch {
+      prompt("Copia este enlace para invitar:", link);
+    }
+  };
 
-  // Guardar grupo en perfil usuario
-  await updateDoc(doc(db, "users", currentUserId), {
-    grupo: grupoId
-  });
+  // ========= Eliminar miembro (solo creador) =========
+  window.eliminarMiembro = async (grupoId, uid) => {
+    if (!confirm("¿Eliminar a este miembro del grupo?")) return;
 
-  alert("Te uniste al grupo correctamente.");
-  cargarGrupos();
-};
+    const ref = doc(db, "grupos", grupoId);
+    const snap = await getDoc(ref);
+    if (!snap.exists()) return;
 
+    const miembros = snap.data().miembros.filter(m => m.uid !== uid);
+    await updateDoc(ref, { miembros });
+
+    // Quitar referencia de grupo en el perfil del usuario
+    try { await updateDoc(doc(db, "users", uid), { grupo: null }); } catch(e){}
+
+    cargarGrupos();
+  };
+
+  // ========= Si viene ?invite=ID en la URL, preguntar y unir =========
+  async function procesarInvitacionPorURL() {
+    const params = new URLSearchParams(window.location.search);
+    const invite = params.get("invite");
+    if (!invite) return;
+
+    const ok = confirm("¿Quieres unirte a este grupo?");
+    if (ok) await window.unirseAGrupo(invite);
+
+    // limpiar la URL
+    params.delete("invite");
+    const clean = `${window.location.pathname}${params.toString() ? "?" + params.toString() : ""}`;
+    window.history.replaceState({}, "", clean);
+  }
 </script>
+
 
 <script>
   // Carga menu.html igual que en perfil
