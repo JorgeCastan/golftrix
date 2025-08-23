@@ -188,7 +188,10 @@
       const tr = document.createElement("tr");
       (async () => {
   const creador = await getUserNames(data.creador, data.creadorNombre);
-  const creadorNombreCompleto = `${creador.name || ""} ${creador.lastname || ""}`.trim() || creador.email;
+  const creadorNombreCompleto = (creador.name && creador.lastname) 
+    ? `${creador.name} ${creador.lastname}` 
+    : (creador.name || creador.lastname || creador.email);
+
 
   tr.innerHTML = `
     <td>${data.nombre}</td>
@@ -218,9 +221,10 @@
 
         const miembrosHtml = data.miembros.map(m => {
           // Mostrar: name + lastname (fallback a m.nombre, email, uid)
-          const display = [m.name || m.nombre, m.lastname].filter(Boolean).join(" ")
-                        || m.email
-                        || m.uid;
+          const display = (m.name && m.lastname) 
+            ? `${m.name} ${m.lastname}` 
+            : (m.name || m.lastname || m.email || m.uid);
+
 
           return `
             <div style="display:flex; align-items:center; gap:8px; margin:5px 0;">
@@ -270,10 +274,13 @@
     await setDoc(doc(db, "grupos", id), {
       nombre: grupo.nombre,
       creador: grupo.creador,
-      creadorNombre: `${creador.name || ""} ${creador.lastname || ""}`.trim() || grupo.creadorNombre || "",
+      creadorNombre: (creador.name && creador.lastname) 
+        ? `${creador.name} ${creador.lastname}` 
+        : (creador.name || creador.lastname || grupo.creadorNombre || ""),
       creadorIniciales: iniciales,
       miembros
     });
+
 
     // Marcar grupo en el perfil del creador
     try { await updateDoc(doc(db, "users", grupo.creador), { grupo: id }); } catch(e){}
