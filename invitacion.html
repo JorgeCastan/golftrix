@@ -89,7 +89,7 @@
 
 <script type="module">
 import { app } from './firebase-config.js';
-import { getAuth, onAuthStateChanged, signInWithRedirect, GoogleAuthProvider } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 import { getFirestore, doc, getDoc, updateDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
 const auth = getAuth(app);
@@ -101,16 +101,27 @@ const grupoId = urlParams.get('grupo');
 const mensaje = document.getElementById('mensaje');
 const aceptarBtn = document.getElementById('aceptarBtn');
 
+// Función para manejar redirección después del login
+function redirectAfterLogin() {
+  const storedGrupo = sessionStorage.getItem('invitacionGrupo');
+  if (storedGrupo) {
+    window.location.href = `invitacion.html?grupo=${storedGrupo}`;
+    sessionStorage.removeItem('invitacionGrupo');
+  }
+}
+
 onAuthStateChanged(auth, async (user) => {
   if (!user) {
     mensaje.innerText = "Debes iniciar sesión para aceptar la invitación.";
-    // Redirigir al login.html pasando la invitación
+    // Guardar invitación en sessionStorage antes de ir al login
+    sessionStorage.setItem('invitacionGrupo', grupoId);
     setTimeout(() => {
-      window.location.href = `login.html?redirect=invitacion.html?grupo=${grupoId}`;
-    }, 1500);
+      window.location.href = `login.html`;
+    }, 1000);
     return;
   }
 
+  // Si llegamos aquí después del login, mostrar invitación
   mensaje.innerText = "¿Deseas unirte al grupo?";
   aceptarBtn.style.display = "inline-block";
 
@@ -137,7 +148,6 @@ onAuthStateChanged(auth, async (user) => {
         nombre: nombreCompleto
       };
 
-      // Evitar duplicados
       const miembrosExistentes = grupo.miembros || [];
       if (!miembrosExistentes.some(m => m.uid === user.uid)) {
         await updateDoc(grupoRef, {
@@ -156,6 +166,9 @@ onAuthStateChanged(auth, async (user) => {
     }
   };
 });
+
+// Si venimos del login, redirigir automáticamente a la invitación
+redirectAfterLogin();
 </script>
 
 <script>
