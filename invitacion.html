@@ -3,16 +3,93 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Invitación al Grupo</title>
+<title>Invitación al Grupo - Golftrix</title>
+<link rel="icon" href="logo_golftrix.png" type="image/png">
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="menu.css">
+<style>
+  body {
+    font-family: 'Orbitron', sans-serif;
+    margin: 0;
+    background: #f0f0f0;
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+  }
+  header {
+    background: linear-gradient(90deg, #007f00, #00cc44);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    padding: 20px 40px;
+    color: white;
+    height: 80px;
+  }
+  header h1 {
+    font-size: 2rem;
+    margin: 0;
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+  }
+  header img {
+    height: 60px;
+    position: absolute;
+    left: 20px;
+    cursor: pointer;
+  }
+  main {
+    flex: 1;
+    padding: 40px 20px;
+    max-width: 600px;
+    margin: auto;
+    background: white;
+    border-radius: 20px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+    text-align: center;
+  }
+  .btn-gradient {
+    display: inline-block;
+    padding: 12px 25px;
+    margin-top: 20px;
+    font-family: 'Orbitron', sans-serif;
+    font-weight: bold;
+    color: white;
+    border: none;
+    border-radius: 25px;
+    background: linear-gradient(90deg, #007f00, #00cc44);
+    cursor: pointer;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+    font-size: 1rem;
+  }
+  footer {
+    background: #000;
+    color: white;
+    text-align: center;
+    padding: 15px;
+    margin-top: auto;
+  }
+</style>
 </head>
 <body>
-<h1>Invitación a unirse al grupo</h1>
-<p id="mensaje">Cargando...</p>
-<button id="aceptarBtn" style="display:none;">Aceptar invitación</button>
+
+<header>
+  <img src="logo_golftrix.png" alt="Logo" onclick="window.location.href='dashboard.html'">
+  <h1>Invitación al Grupo</h1>
+  <div id="menuContainer"></div>
+</header>
+
+<main>
+  <p id="mensaje">Cargando...</p>
+  <button id="aceptarBtn" class="btn-gradient" style="display:none;">Aceptar invitación</button>
+</main>
+
+<footer>&copy; 2025 Golftrix. Todos los derechos reservados.</footer>
 
 <script type="module">
 import { app } from './firebase-config.js';
-import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+import { getAuth, onAuthStateChanged, signInWithRedirect, GoogleAuthProvider } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 import { getFirestore, doc, getDoc, updateDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
 const auth = getAuth(app);
@@ -27,6 +104,10 @@ const aceptarBtn = document.getElementById('aceptarBtn');
 onAuthStateChanged(auth, async (user) => {
   if (!user) {
     mensaje.innerText = "Debes iniciar sesión para aceptar la invitación.";
+    // Redirigir al login.html pasando la invitación
+    setTimeout(() => {
+      window.location.href = `login.html?redirect=invitacion.html?grupo=${grupoId}`;
+    }, 1500);
     return;
   }
 
@@ -34,41 +115,63 @@ onAuthStateChanged(auth, async (user) => {
   aceptarBtn.style.display = "inline-block";
 
   aceptarBtn.onclick = async () => {
-    // Traer grupo
-    const grupoRef = doc(db, "grupos", grupoId);
-    const grupoSnap = await getDoc(grupoRef);
-    if (!grupoSnap.exists()) {
-      alert("Grupo no encontrado");
-      return;
+    try {
+      const grupoRef = doc(db, "grupos", grupoId);
+      const grupoSnap = await getDoc(grupoRef);
+      if (!grupoSnap.exists()) {
+        alert("Grupo no encontrado");
+        return;
+      }
+      const grupo = grupoSnap.data();
+
+      const userRef = doc(db, "users", user.uid);
+      const userSnap = await getDoc(userRef);
+      const userData = userSnap.data();
+      const nombreCompleto = `${userData.name} ${userData.lastname}`;
+      const parts = userData.name.trim().split(" ").concat(userData.lastname.trim().split(" "));
+      const iniciales = (parts[0][0] + (parts[1] ? parts[1][0] : parts[0][1] || parts[0][0])).toUpperCase();
+
+      const nuevoMiembro = {
+        uid: user.uid,
+        iniciales,
+        nombre: nombreCompleto
+      };
+
+      // Evitar duplicados
+      const miembrosExistentes = grupo.miembros || [];
+      if (!miembrosExistentes.some(m => m.uid === user.uid)) {
+        await updateDoc(grupoRef, {
+          miembros: [...miembrosExistentes, nuevoMiembro]
+        });
+      }
+
+      await updateDoc(userRef, { grupo: grupoId });
+
+      alert("¡Te uniste al grupo correctamente!");
+      window.location.href = "grupos.html";
+
+    } catch (err) {
+      console.error(err);
+      alert("Error al unirse al grupo.");
     }
-    const grupo = grupoSnap.data();
-
-    // Traer datos del usuario
-    const userRef = doc(db, "users", user.uid);
-    const userSnap = await getDoc(userRef);
-    const userData = userSnap.data();
-    const nombreCompleto = `${userData.name} ${userData.lastname}`;
-    const parts = userData.name.trim().split(" ").concat(userData.lastname.trim().split(" "));
-    const iniciales = (parts[0][0] + (parts[1] ? parts[1][0] : parts[0][1] || parts[0][0])).toUpperCase();
-
-    const nuevoMiembro = {
-      uid: user.uid,
-      iniciales,
-      nombre: nombreCompleto
-    };
-
-    // Agregar al grupo
-    await updateDoc(grupoRef, {
-      miembros: [...grupo.miembros, nuevoMiembro]
-    });
-
-    // Guardar grupo en usuario
-    await updateDoc(userRef, { grupo: grupoId });
-
-    alert("¡Te uniste al grupo correctamente!");
-    window.location.href = "grupos.html";
   };
 });
 </script>
+
+<script>
+  // Carga menu.html para menú desplegable en encabezado
+  fetch('menu.html')
+    .then(res => res.text())
+    .then(html => {
+      const temp = document.createElement('div');
+      temp.innerHTML = html;
+      const hamburgerBtn = temp.querySelector('#hamburger');
+      const sidebarMenu = temp.querySelector('#sidebarMenu');
+      document.getElementById('menuContainer').appendChild(hamburgerBtn);
+      document.body.appendChild(sidebarMenu);
+      import('./menu.js');
+    });
+</script>
+
 </body>
 </html>
