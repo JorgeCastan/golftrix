@@ -113,21 +113,36 @@ function redirectAfterLogin() {
 onAuthStateChanged(auth, async (user) => {
   if (!user) {
     mensaje.innerText = "Debes iniciar sesión para aceptar la invitación.";
-    // Guardar invitación en sessionStorage antes de ir al login
-    sessionStorage.setItem('invitacionGrupo', grupoId);
+    if (grupoId) {
+      // Guardar invitación en sessionStorage antes de ir al login
+      sessionStorage.setItem('invitacionGrupo', grupoId);
+    }
     setTimeout(() => {
       window.location.href = `login.html`;
     }, 1000);
     return;
   }
 
-  // Si llegamos aquí después del login, mostrar invitación
+  // Si venimos del login, revisar si hay invitación pendiente
+  const storedGrupo = sessionStorage.getItem('invitacionGrupo');
+  const grupoActual = storedGrupo || grupoId;
+  if (storedGrupo) {
+    sessionStorage.removeItem('invitacionGrupo');
+    window.history.replaceState({}, '', `invitacion.html?grupo=${storedGrupo}`);
+  }
+
+  if (!grupoActual) {
+    mensaje.innerText = "No se encontró la invitación.";
+    return;
+  }
+
+  // Mostrar invitación
   mensaje.innerText = "¿Deseas unirte al grupo?";
   aceptarBtn.style.display = "inline-block";
 
   aceptarBtn.onclick = async () => {
     try {
-      const grupoRef = doc(db, "grupos", grupoId);
+      const grupoRef = doc(db, "grupos", grupoActual);
       const grupoSnap = await getDoc(grupoRef);
       if (!grupoSnap.exists()) {
         alert("Grupo no encontrado");
@@ -155,7 +170,7 @@ onAuthStateChanged(auth, async (user) => {
         });
       }
 
-      await updateDoc(userRef, { grupo: grupoId });
+      await updateDoc(userRef, { grupo: grupoActual });
 
       alert("¡Te uniste al grupo correctamente!");
       window.location.href = "grupos.html";
