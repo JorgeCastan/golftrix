@@ -149,6 +149,23 @@
   }
   .hidden { display: none; }
 
+  .resumen-tablas table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 20px;
+  }
+
+  .resumen-tablas th, .resumen-tablas td {
+    border: 1px solid #007f00;
+    padding: 8px;
+    text-align: center;
+  }
+
+  .resumen-tablas th {
+    background: linear-gradient(90deg, #007f00, #00cc44);
+    color: white;
+  }
+
 
   /* --- Responsive --- */
   @media (max-width: 768px) {
@@ -175,6 +192,17 @@
 
     .par-grid {
       grid-template-columns: 1fr;
+
+  
+      
+    }
+    .dos-columnas {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+    }
+    .dos-columnas {
+      display: block;
     }
   }
 </style>
@@ -248,11 +276,12 @@
     <!-- Paso 4: Confirmación -->
     <div class="step hidden" id="step4">
       <h3>Confirmar Datos</h3>
-      <pre id="resumenDatos"></pre>
+      <div id="resumenDatos" class="resumen-tablas"></div>
 
       <button type="button" id="backToStep3">⬅️ Anterior</button>
       <button type="button" id="confirmarRegistro">✅ Confirmar y Guardar</button>
     </div>
+
   </div>
 
 
@@ -391,7 +420,55 @@ document.getElementById('nextToStep4').addEventListener('click', () => {
 
   currentStep = 4;
   showStep(currentStep);
-  document.getElementById('resumenDatos').textContent = JSON.stringify({datosGenerales, yardas, ventajas}, null, 2);
+  const container = document.getElementById('resumenDatos');
+container.innerHTML = ""; // limpiar
+
+// 1️⃣ Datos generales
+const tablaDatos = document.createElement('table');
+tablaDatos.innerHTML = `
+  <tr><th>Campo</th><td>${datosGenerales.nombre}</td></tr>
+  <tr><th>Par Total</th><td>${datosGenerales.parCampo}</td></tr>
+  <tr><th>Ubicación</th><td><a href="${datosGenerales.ubicacion}" target="_blank">Ver en Google Maps</a></td></tr>
+`;
+container.appendChild(tablaDatos);
+
+// Función para crear tabla de 18 hoyos (par, yardas, ventajas)
+function crearTabla18(titulo, data) {
+  const tabla = document.createElement('div');
+  tabla.className = "dos-columnas";
+
+  const mitad = Math.ceil(data.length / 2);
+
+  const tablaCol1 = document.createElement('table');
+  const tablaCol2 = document.createElement('table');
+
+  tablaCol1.innerHTML = `<tr><th>${titulo}</th><th>Hoyo</th><th>Valor</th></tr>`;
+  tablaCol2.innerHTML = `<tr><th>${titulo}</th><th>Hoyo</th><th>Valor</th></tr>`;
+
+  data.forEach((val, idx) => {
+    const fila = `<tr><td>${titulo}</td><td>${idx+1}</td><td>${val}</td></tr>`;
+    if (idx < mitad) tablaCol1.innerHTML += fila;
+    else tablaCol2.innerHTML += fila;
+  });
+
+  tabla.appendChild(tablaCol1);
+  tabla.appendChild(tablaCol2);
+  return tabla;
+}
+
+// 2️⃣ Par por hoyo
+container.appendChild(crearTabla18("Par", datosGenerales.paresHoyo));
+
+// 3️⃣ Yardas por tee
+["azules","blancas","rojas"].forEach(tee=>{
+  container.appendChild(crearTabla18(`Yardas ${tee}`, yardas[tee]));
+});
+
+// 4️⃣ Ventajas por género
+["masculino","femenino"].forEach(gen=>{
+  container.appendChild(crearTabla18(`Ventajas ${gen}`, ventajas[gen]));
+});
+
 });
 
 // Confirmar y guardar
