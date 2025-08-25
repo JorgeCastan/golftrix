@@ -147,6 +147,8 @@
     text-align: center;
     padding: 15px;
   }
+  .hidden { display: none; }
+
 
   /* --- Responsive --- */
   @media (max-width: 768px) {
@@ -191,7 +193,10 @@
   
 
   <main>
-    <form id="golfCourseForm">
+   <div id="multiStepForm">
+
+    <!-- Paso 1: Datos generales -->
+    <div class="step" id="step1">
       <label>Nombre del Campo</label>
       <input type="text" id="campoNombre" required />
 
@@ -203,31 +208,58 @@
 
       <label>Par por Hoyo</label>
       <div class="par-grid">
-        <!-- Inputs del 1 al 18 manualmente -->
-        <div><label>Hoyo 1</label><input type="number" class="parHoyo" data-hoyo="1" required /></div>
-        <div><label>Hoyo 2</label><input type="number" class="parHoyo" data-hoyo="2" required /></div>
-        <div><label>Hoyo 3</label><input type="number" class="parHoyo" data-hoyo="3" required /></div>
-        <div><label>Hoyo 4</label><input type="number" class="parHoyo" data-hoyo="4" required /></div>
-        <div><label>Hoyo 5</label><input type="number" class="parHoyo" data-hoyo="5" required /></div>
-        <div><label>Hoyo 6</label><input type="number" class="parHoyo" data-hoyo="6" required /></div>
-        <div><label>Hoyo 7</label><input type="number" class="parHoyo" data-hoyo="7" required /></div>
-        <div><label>Hoyo 8</label><input type="number" class="parHoyo" data-hoyo="8" required /></div>
-        <div><label>Hoyo 9</label><input type="number" class="parHoyo" data-hoyo="9" required /></div>
-        <div><label>Hoyo 10</label><input type="number" class="parHoyo" data-hoyo="10" required /></div>
-        <div><label>Hoyo 11</label><input type="number" class="parHoyo" data-hoyo="11" required /></div>
-        <div><label>Hoyo 12</label><input type="number" class="parHoyo" data-hoyo="12" required /></div>
-        <div><label>Hoyo 13</label><input type="number" class="parHoyo" data-hoyo="13" required /></div>
-        <div><label>Hoyo 14</label><input type="number" class="parHoyo" data-hoyo="14" required /></div>
-        <div><label>Hoyo 15</label><input type="number" class="parHoyo" data-hoyo="15" required /></div>
-        <div><label>Hoyo 16</label><input type="number" class="parHoyo" data-hoyo="16" required /></div>
-        <div><label>Hoyo 17</label><input type="number" class="parHoyo" data-hoyo="17" required /></div>
-        <div><label>Hoyo 18</label><input type="number" class="parHoyo" data-hoyo="18" required /></div>
+        <!-- 18 hoyos -->
+        ${Array.from({length:18},(_,i)=>`
+          <div>
+            <label>Hoyo ${i+1}</label>
+            <input type="number" class="parHoyo" data-hoyo="${i+1}" required />
+          </div>`).join('')}
       </div>
 
-      <button type="submit">
-        <div class="icon"><img src="icon_guardar.png" alt="Registrar" width="16"></div>Registrar Campo
-      </button>
-    </form>
+      <button type="button" id="nextToStep2">Siguiente ➡️</button>
+    </div>
+
+    <!-- Paso 2: Yardas -->
+    <div class="step hidden" id="step2">
+      <div>
+        <button type="button" class="teeBtn" data-tee="azules">Azules</button>
+        <button type="button" class="teeBtn" data-tee="blancas">Blancas</button>
+        <button type="button" class="teeBtn" data-tee="rojas">Rojas</button>
+      </div>
+
+      <div id="yardasInputs">
+        <!-- Aquí se generan dinámicamente los 18 inputs según tee seleccionado -->
+      </div>
+
+      <button type="button" id="backToStep1">⬅️ Anterior</button>
+      <button type="button" id="nextToStep3">Siguiente ➡️</button>
+    </div>
+
+    <!-- Paso 3: Ventajas -->
+    <div class="step hidden" id="step3">
+      <div>
+        <button type="button" class="generoBtn" data-genero="masculino">Masculino</button>
+        <button type="button" class="generoBtn" data-genero="femenino">Femenino</button>
+      </div>
+
+      <div id="ventajasInputs">
+        <!-- Aquí se generan dinámicamente los 18 inputs según género seleccionado -->
+      </div>
+
+      <button type="button" id="backToStep2">⬅️ Anterior</button>
+      <button type="button" id="nextToStep4">Siguiente ➡️</button>
+    </div>
+
+    <!-- Paso 4: Confirmación -->
+    <div class="step hidden" id="step4">
+      <h3>Confirmar Datos</h3>
+      <pre id="resumenDatos"></pre>
+
+      <button type="button" id="backToStep3">⬅️ Anterior</button>
+      <button type="button" id="confirmarRegistro">✅ Confirmar y Guardar</button>
+    </div>
+  </div>
+
 
     <button id="volverBtn" style="margin-top:30px;">
       <div class="icon"><img src="icon_home.png" alt="Campos" width="16"></div>Volver a Campos
@@ -263,50 +295,125 @@
       }
     });
 
-    document.getElementById('golfCourseForm').addEventListener('submit', async (e) => {
-      e.preventDefault();
+    let currentStep = 1;
+const steps = document.querySelectorAll('.step');
 
-      const nombre = document.getElementById('campoNombre').value.trim();
-      const par = parseInt(document.getElementById('campoPar').value.trim());
-      const ubicacion = document.getElementById('campoUbicacion').value.trim();
+// Mostrar paso
+function showStep(n) {
+  steps.forEach((step, idx) => {
+    step.classList.toggle('hidden', idx !== n-1);
+  });
+}
+showStep(currentStep);
 
-      const parHoyoInputs = document.querySelectorAll('.parHoyo');
-      const paresHoyo = Array.from(parHoyoInputs).map(input => parseInt(input.value.trim()));
+// Datos temporales
+let datosGenerales = {};
+let yardas = { azules: [], blancas: [], rojas: [] };
+let ventajas = { masculino: [], femenino: [] };
 
-      if (paresHoyo.length !== 18 || paresHoyo.some(isNaN)) {
-        alert("Todos los pares de hoyo deben ser números.");
-        return;
-      }
+// Paso 1 → 2
+document.getElementById('nextToStep2').addEventListener('click', () => {
+  datosGenerales.nombre = document.getElementById('campoNombre').value.trim();
+  datosGenerales.parCampo = parseInt(document.getElementById('campoPar').value.trim());
+  datosGenerales.ubicacion = document.getElementById('campoUbicacion').value.trim();
+  datosGenerales.paresHoyo = Array.from(document.querySelectorAll('.parHoyo')).map(i => parseInt(i.value));
 
-      // Extraer lat/lon de URL Google Maps si posible
-      let lat = null;
-      let lon = null;
-      const regex = /@(-?\d+\.\d+),(-?\d+\.\d+)/;
-      const match = ubicacion.match(regex);
-      if (match) {
-        lat = parseFloat(match[1]);
-        lon = parseFloat(match[2]);
-      } else {
-        alert("No se pudo extraer latitud/longitud de la URL. Verifica que tenga formato @lat,lon");
-        return;
-      }
+  // validar
+  if (!datosGenerales.nombre || !datosGenerales.parCampo || datosGenerales.paresHoyo.some(isNaN)) {
+    alert("Completa todos los campos.");
+    return;
+  }
 
-      try {
-        const campoRef = doc(db, "camposGolf", nombre.replace(/\s+/g, "_").toLowerCase());
-        await setDoc(campoRef, {
-          nombre,
-          parCampo: par,
-          paresHoyo,
-          ubicacion,
-          lat,
-          lon
-        });
-        alert("✅ Campo registrado correctamente");
-      } catch (error) {
-        console.error("❌ Error registrando campo:", error);
-        alert("Error al registrar. Revisa consola.");
-      }
+  currentStep = 2;
+  showStep(currentStep);
+  renderYardasInputs("azules");
+});
+
+// Yardas (tabs)
+function renderYardasInputs(tee) {
+  const container = document.getElementById('yardasInputs');
+  container.innerHTML = "";
+  for (let i=1;i<=18;i++) {
+    const input = document.createElement('input');
+    input.type = "number";
+    input.placeholder = `Hoyo ${i}`;
+    input.value = yardas[tee][i-1] || "";
+    input.addEventListener('input', e => yardas[tee][i-1] = parseInt(e.target.value));
+    container.appendChild(input);
+  }
+}
+document.querySelectorAll('.teeBtn').forEach(btn => {
+  btn.addEventListener('click', () => renderYardasInputs(btn.dataset.tee));
+});
+
+// Paso 2 → 3
+document.getElementById('nextToStep3').addEventListener('click', () => {
+  if (yardas.azules.length<18 || yardas.blancas.length<18 || yardas.rojas.length<18) {
+    alert("Debes llenar las 18 yardas de cada salida.");
+    return;
+  }
+  currentStep = 3;
+  showStep(currentStep);
+  renderVentajasInputs("masculino");
+});
+
+// Ventajas (tabs)
+function renderVentajasInputs(genero) {
+  const container = document.getElementById('ventajasInputs');
+  container.innerHTML = "";
+  for (let i=1;i<=18;i++) {
+    const input = document.createElement('input');
+    input.type = "number";
+    input.placeholder = `Hoyo ${i}`;
+    input.value = ventajas[genero][i-1] || "";
+    input.addEventListener('input', e => ventajas[genero][i-1] = parseInt(e.target.value));
+    container.appendChild(input);
+  }
+}
+document.querySelectorAll('.generoBtn').forEach(btn => {
+  btn.addEventListener('click', () => renderVentajasInputs(btn.dataset.genero));
+});
+
+// Paso 3 → 4
+document.getElementById('nextToStep4').addEventListener('click', () => {
+  if (ventajas.masculino.length<18 || ventajas.femenino.length<18) {
+    alert("Debes llenar las 18 ventajas para ambos géneros.");
+    return;
+  }
+  currentStep = 4;
+  showStep(currentStep);
+  document.getElementById('resumenDatos').textContent = JSON.stringify({datosGenerales, yardas, ventajas}, null, 2);
+});
+
+// Confirmar y guardar
+document.getElementById('confirmarRegistro').addEventListener('click', async () => {
+  let lat=null, lon=null;
+  const regex = /@(-?\d+\.\d+),(-?\d+\.\d+)/;
+  const match = datosGenerales.ubicacion.match(regex);
+  if (match) { lat=parseFloat(match[1]); lon=parseFloat(match[2]); }
+  else { alert("Ubicación inválida"); return; }
+
+  try {
+    const campoRef = doc(db, "camposGolf", datosGenerales.nombre.replace(/\s+/g,"_").toLowerCase());
+    await setDoc(campoRef, {
+      ...datosGenerales,
+      yardas,
+      ventajas,
+      lat, lon
     });
+    alert("✅ Campo registrado correctamente");
+    window.location.href = "campos.html";
+  } catch (err) {
+    console.error("Error:", err);
+    alert("Error al guardar.");
+  }
+});
+
+// Botones Anterior
+document.getElementById('backToStep1').addEventListener('click', ()=>{currentStep=1;showStep(currentStep);});
+document.getElementById('backToStep2').addEventListener('click', ()=>{currentStep=2;showStep(currentStep);});
+document.getElementById('backToStep3').addEventListener('click', ()=>{currentStep=3;showStep(currentStep);});
+
   </script>
 
 <script>
