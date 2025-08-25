@@ -208,12 +208,7 @@
 
       <label>Par por Hoyo</label>
       <div class="par-grid">
-        <!-- 18 hoyos -->
-        ${Array.from({length:18},(_,i)=>`
-          <div>
-            <label>Hoyo ${i+1}</label>
-            <input type="number" class="parHoyo" data-hoyo="${i+1}" required />
-          </div>`).join('')}
+        
       </div>
 
       <button type="button" id="nextToStep2">Siguiente ➡️</button>
@@ -308,8 +303,20 @@ showStep(currentStep);
 
 // Datos temporales
 let datosGenerales = {};
-let yardas = { azules: [], blancas: [], rojas: [] };
-let ventajas = { masculino: [], femenino: [] };
+// Generar inputs Paso 1: Par por Hoyo
+const parGrid = document.querySelector('.par-grid');
+for (let i = 1; i <= 18; i++) {
+  const div = document.createElement('div');
+  div.innerHTML = `
+    <label>Hoyo ${i}</label>
+    <input type="number" class="parHoyo" data-hoyo="${i}" required />
+  `;
+  parGrid.appendChild(div);
+}
+
+let yardas = { azules: Array(18).fill(NaN), blancas: Array(18).fill(NaN), rojas: Array(18).fill(NaN) };
+let ventajas = { masculino: Array(18).fill(NaN), femenino: Array(18).fill(NaN) };
+
 
 // Paso 1 → 2
 document.getElementById('nextToStep2').addEventListener('click', () => {
@@ -348,10 +355,11 @@ document.querySelectorAll('.teeBtn').forEach(btn => {
 
 // Paso 2 → 3
 document.getElementById('nextToStep3').addEventListener('click', () => {
-  if (yardas.azules.length<18 || yardas.blancas.length<18 || yardas.rojas.length<18) {
-    alert("Debes llenar las 18 yardas de cada salida.");
+  if (yardas.azules.some(isNaN) || yardas.blancas.some(isNaN) || yardas.rojas.some(isNaN)) {
+    alert("Debes llenar todas las yardas de cada salida.");
     return;
   }
+
   currentStep = 3;
   showStep(currentStep);
   renderVentajasInputs("masculino");
@@ -376,10 +384,11 @@ document.querySelectorAll('.generoBtn').forEach(btn => {
 
 // Paso 3 → 4
 document.getElementById('nextToStep4').addEventListener('click', () => {
-  if (ventajas.masculino.length<18 || ventajas.femenino.length<18) {
-    alert("Debes llenar las 18 ventajas para ambos géneros.");
-    return;
-  }
+  if (ventajas.masculino.some(isNaN) || ventajas.femenino.some(isNaN)) {
+      alert("Debes llenar las 18 ventajas para ambos géneros.");
+      return;
+    }
+
   currentStep = 4;
   showStep(currentStep);
   document.getElementById('resumenDatos').textContent = JSON.stringify({datosGenerales, yardas, ventajas}, null, 2);
