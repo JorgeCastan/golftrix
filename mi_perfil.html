@@ -202,6 +202,12 @@
       <label>Grupo</label>
       <input type="text" id="grupo" readonly />
 
+      <label>Género</label>
+      <select id="genero">
+        <option value="">Selecciona tu género</option>
+        <option value="Masculino">Masculino</option>
+        <option value="Femenino">Femenino</option>
+      </select>
 
       <button type="submit">
         <div class="icon"><img src="icon_guardar.png" alt="Guardar" width="16"></div>Guardar
@@ -239,15 +245,34 @@
         console.log("✅ UID detectado:", currentUserId);
         const userDoc = await getDoc(doc(db, "users", currentUserId));
         if (userDoc.exists()) {
-          const data = userDoc.data();
-          console.log("📄 Datos actuales:", data);
-          document.getElementById('email').value = data.email || '';
-          document.getElementById('name').value = data.name || '';
-          document.getElementById('lastname').value = data.lastname || '';
-          document.getElementById('handicap').value = data.handicap || '';
-          document.getElementById('grupo').value = data.grupo || 'Sin grupo';
+  const data = userDoc.data();
+  console.log("📄 Datos actuales:", data);
+  document.getElementById('email').value = data.email || '';
+  document.getElementById('name').value = data.name || '';
+  document.getElementById('lastname').value = data.lastname || '';
+  document.getElementById('handicap').value = data.handicap || '';
 
-        } else {
+  // Si el usuario tiene grupo asignado, buscar en la colección "grupos"
+  if (data.grupo) {
+    try {
+      const grupoDoc = await getDoc(doc(db, "grupos", data.grupo));
+      if (grupoDoc.exists()) {
+            document.getElementById('grupo').value = grupoDoc.data().nombre || 'Sin grupo';
+          } else {
+            document.getElementById('grupo').value = 'Sin grupo';
+          }
+        } catch (err) {
+          console.error("❌ Error obteniendo grupo:", err);
+          document.getElementById('grupo').value = 'Sin grupo';
+        }
+      } else {
+        document.getElementById('grupo').value = 'Sin grupo';
+      }
+
+      // Cargar género si existe
+      document.getElementById('genero').value = data.genero || '';
+    }
+else {
           console.log("❌ Documento no existe aún.");
         }
       } else {
@@ -270,12 +295,15 @@
       const userRef = doc(db, "users", currentUserId);
 
       try {
+        const genero = document.getElementById('genero').value;
+
         const updates = { 
           name, 
           lastname, 
-          handicap 
-          // El grupo no se modifica aquí, solo se asegura que no se borre
+          handicap,
+          genero // 👈 también guardamos el género
         };
+
 
         console.log("📌 Guardando en Firestore:", updates);
         await setDoc(userRef, updates, { merge: true });
@@ -320,9 +348,6 @@
       console.error('Error cargando menu.html', err);
     });
 </script>
-
-
-
 
 </body>
 </html>
