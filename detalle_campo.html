@@ -101,6 +101,124 @@
       text-decoration: underline;
     }
 
+    /* Botones de secciones */
+    .secciones-btns {
+      display: flex;
+      gap: 10px;
+      margin: 20px 0;
+      flex-wrap: wrap;
+    }
+    .secciones-btns button {
+      flex: 1;
+      padding: 10px 20px;
+      border-radius: 30px;
+      border: 2px solid transparent;
+      background-image: linear-gradient(90deg, #007f00, #00cc44);
+      color: white;
+      font-family: 'Orbitron', sans-serif;
+      font-size: 1rem;
+      font-weight: bold;
+      cursor: pointer;
+      transition: all 0.3s ease;
+    }
+    .secciones-btns button:hover {
+      box-shadow: 0 0 12px rgba(0, 255, 136, 0.6),
+                  0 0 20px rgba(0, 224, 255, 0.4);
+    }
+    .secciones-btns button.active {
+      background: white;
+      border: 2px solid #00cc44;
+      color: #00cc44;
+    }
+
+    /* Tablas */
+    .tabla {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 15px;
+    }
+    .tabla th, .tabla td {
+      border: 1px solid #ccc;
+      padding: 8px;
+      text-align: center;
+      font-size: 0.9rem;
+    }
+    .tabla th {
+      background: linear-gradient(90deg, #007f00, #00cc44);
+      color: white;
+    }
+
+    /* Responsive: 2 bloques en PC, 1 en móvil */
+    .tabla-contenedor {
+      display: flex;
+      gap: 20px;
+      flex-wrap: wrap;
+    }
+    .tabla-contenedor .tabla {
+      flex: 1;
+      min-width: 280px;
+    }
+
+    /* Selectores de opciones */
+    .selector {
+      margin: 15px 0;
+    }
+    .selector select {
+      width: 100%;
+      padding: 10px;
+      border-radius: 10px;
+      border: 2px solid transparent;
+      font-family: 'Orbitron', sans-serif;
+      font-weight: bold;
+      font-size: 1rem;
+      background-color: white;
+      color: #00aa44;
+      cursor: pointer;
+      background-image: linear-gradient(90deg, #007f00, #00cc44);
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+    }
+    .selector option {
+      background-color: white;
+      color: #00aa44;
+    }
+
+    /* Botones de navegación */
+    .nav-btns {
+      margin-top: 30px;
+      display: flex;
+      gap: 20px;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+    .nav-btns button {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 12px 24px;
+      border-radius: 40px;
+      border: none;
+      background: linear-gradient(90deg, #007f00, #00cc44);
+      color: white;
+      font-family: 'Orbitron', sans-serif;
+      font-size: 1rem;
+      cursor: pointer;
+      transition: all 0.3s ease;
+    }
+    .nav-btns button img {
+      width: 24px;
+      height: 24px;
+      background: black;
+      border-radius: 50%;
+      padding: 4px;
+    }
+    .nav-btns button:hover {
+      box-shadow: 0 0 12px rgba(0, 255, 136, 0.6),
+                  0 0 20px rgba(0, 224, 255, 0.4);
+    }
+
+
     footer {
       background: linear-gradient(90deg, #007f00, #00cc44);
       color: white;
@@ -214,27 +332,123 @@
         else conteo.otros++;
       });
 
-      const descripcion = `
-        Este campo cuenta con un par total de ${parCampo} en ${paresHoyo.length} hoyos. 
-        De ellos, ${conteo.par3} son par 3, ${conteo.par4} par 4 y ${conteo.par5} par 5.
-        ${conteo.otros > 0 ? `Además, hay ${conteo.otros} hoyos con diferente par.` : ''}
-      `;
+      // Cálculo de distancia total
+const yardas = data.yardas || {};
+const distTotalAzules = yardas.azules ? yardas.azules.reduce((a,b)=>a+b,0) : 0;
+const distTotalBlancas = yardas.blancas ? yardas.blancas.reduce((a,b)=>a+b,0) : 0;
+const distTotalRojas = yardas.rojas ? yardas.rojas.reduce((a,b)=>a+b,0) : 0;
 
-      document.getElementById('campoInfo').innerHTML = `
-        <h2>Par de Campo</h2>
-        <p>${parCampo}</p>
-        
-        <h2>Ubicación</h2>
-        <p><a href="${ubicacion}" target="_blank">Ver en Google Maps</a></p>
+// Nueva descripción más completa
+const descripcion = `
+  Este campo cuenta con un par total de ${parCampo} en ${paresHoyo.length} hoyos. 
+  De ellos, ${conteo.par3} son par 3, ${conteo.par4} par 4 y ${conteo.par5} par 5.
+  ${conteo.otros > 0 ? `Además, hay ${conteo.otros} hoyos con diferente par.` : ''}
+  La distancia total es de ${distTotalAzules} yardas desde las salidas azules, 
+  ${distTotalBlancas} yardas desde las blancas 
+  y ${distTotalRojas} yardas desde las rojas.
+`;
 
-        <h2>Par por Hoyo</h2>
-        <ul>
-          ${paresHoyo.map((p, i) => `<li>Hoyo ${i + 1}: Par ${p}</li>`).join("")}
-        </ul>
+document.getElementById('campoInfo').innerHTML = `
+  <h2>Ubicación</h2>
+  <p><a href="${ubicacion}" target="_blank">Ver en Google Maps</a></p>
 
-        <h2>Descripción</h2>
-        <p>${descripcion}</p>
-      `;
+  <h2>Descripción</h2>
+  <p>${descripcion}</p>
+
+  <!-- Botonera -->
+  <div class="secciones-btns">
+    <button id="btnPar" class="active">Par por Hoyo</button>
+    <button id="btnYardas">Yardas</button>
+    <button id="btnVentajas">Ventajas</button>
+  </div>
+
+  <!-- Contenedor dinámico -->
+  <div id="seccionContenido"></div>
+
+  <!-- Botones de navegación -->
+  <div class="nav-btns">
+    <button onclick="location.href='campos.html'"><img src="back.png" alt="volver">Volver a Campos</button>
+    <button onclick="location.href='dashboard.html'"><img src="home.png" alt="home">Dashboard</button>
+  </div>
+`;
+
+// Funciones de render
+function renderPar() {
+  const mitad = Math.ceil(paresHoyo.length/2);
+  const tabla1 = paresHoyo.slice(0, mitad).map((p,i)=>`<tr><td>${i+1}</td><td>Par ${p}</td></tr>`).join("");
+  const tabla2 = paresHoyo.slice(mitad).map((p,i)=>`<tr><td>${i+1+mitad}</td><td>Par ${p}</td></tr>`).join("");
+  document.getElementById('seccionContenido').innerHTML = `
+    <div class="tabla-contenedor">
+      <table class="tabla"><tr><th>Hoyo</th><th>Par</th></tr>${tabla1}</table>
+      <table class="tabla"><tr><th>Hoyo</th><th>Par</th></tr>${tabla2}</table>
+    </div>
+  `;
+}
+
+function renderYardas(salida="azules") {
+  const arr = yardas[salida] || [];
+  const mitad = Math.ceil(arr.length/2);
+  const tabla1 = arr.slice(0, mitad).map((y,i)=>`<tr><td>${i+1}</td><td>${y} yd</td></tr>`).join("");
+  const tabla2 = arr.slice(mitad).map((y,i)=>`<tr><td>${i+1+mitad}</td><td>${y} yd</td></tr>`).join("");
+  document.getElementById('seccionContenido').innerHTML = `
+    <div class="selector">
+      <select id="selectSalida">
+        <option value="azules">Azules</option>
+        <option value="blancas">Blancas</option>
+        <option value="rojas">Rojas</option>
+      </select>
+    </div>
+    <div class="tabla-contenedor">
+      <table class="tabla"><tr><th>Hoyo</th><th>Yardas</th></tr>${tabla1}</table>
+      <table class="tabla"><tr><th>Hoyo</th><th>Yardas</th></tr>${tabla2}</table>
+    </div>
+  `;
+  document.getElementById('selectSalida').value = salida;
+  document.getElementById('selectSalida').addEventListener('change', e=>renderYardas(e.target.value));
+}
+
+function renderVentajas(genero="masculino") {
+  const ventajas = data.ventajas || {};
+  const arr = ventajas[genero] || [];
+  const mitad = Math.ceil(arr.length/2);
+  const tabla1 = arr.slice(0, mitad).map((v,i)=>`<tr><td>${i+1}</td><td>${v}</td></tr>`).join("");
+  const tabla2 = arr.slice(mitad).map((v,i)=>`<tr><td>${i+1+mitad}</td><td>${v}</td></tr>`).join("");
+  document.getElementById('seccionContenido').innerHTML = `
+    <div class="selector">
+      <select id="selectGenero">
+        <option value="masculino">Masculino</option>
+        <option value="femenino">Femenino</option>
+      </select>
+    </div>
+    <div class="tabla-contenedor">
+      <table class="tabla"><tr><th>Hoyo</th><th>Ventaja</th></tr>${tabla1}</table>
+      <table class="tabla"><tr><th>Hoyo</th><th>Ventaja</th></tr>${tabla2}</table>
+    </div>
+  `;
+  document.getElementById('selectGenero').value = genero;
+  document.getElementById('selectGenero').addEventListener('change', e=>renderVentajas(e.target.value));
+}
+
+// Eventos botones
+document.getElementById('btnPar').addEventListener('click', ()=>{
+  document.querySelectorAll('.secciones-btns button').forEach(b=>b.classList.remove('active'));
+  document.getElementById('btnPar').classList.add('active');
+  renderPar();
+});
+document.getElementById('btnYardas').addEventListener('click', ()=>{
+  document.querySelectorAll('.secciones-btns button').forEach(b=>b.classList.remove('active'));
+  document.getElementById('btnYardas').classList.add('active');
+  renderYardas();
+});
+document.getElementById('btnVentajas').addEventListener('click', ()=>{
+  document.querySelectorAll('.secciones-btns button').forEach(b=>b.classList.remove('active'));
+  document.getElementById('btnVentajas').classList.add('active');
+  renderVentajas();
+});
+
+// Render inicial
+renderPar();
+
     }
 
     if (campoId) {
