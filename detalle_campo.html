@@ -253,6 +253,16 @@
             background-position: center center;
             background-size: cover;
         }
+      .tabla-contenedor {
+        display: block;          /* En móvil, en vez de flex, las apilamos */
+        overflow-x: auto;        /* Scroll horizontal si se pasan */
+        -webkit-overflow-scrolling: touch; /* scroll suave en iOS */
+      }
+
+      .tabla-contenedor .tabla {
+        width: 100%;             /* Cada tabla ocupa ancho completo */
+        margin-bottom: 20px;     /* separa las dos tablas */
+      }
         
     }
     
@@ -391,13 +401,14 @@ function renderYardas(salida="azules") {
   const tabla1 = arr.slice(0, mitad).map((y,i)=>`<tr><td>${i+1}</td><td>${y} yd</td></tr>`).join("");
   const tabla2 = arr.slice(mitad).map((y,i)=>`<tr><td>${i+1+mitad}</td><td>${y} yd</td></tr>`).join("");
   document.getElementById('seccionContenido').innerHTML = `
-    <div class="selector">
-      <select id="selectSalida">
-        <option value="azules">Azules</option>
-        <option value="blancas">Blancas</option>
-        <option value="rojas">Rojas</option>
-      </select>
-    </div>
+  <div class="selector">
+    <label for="selectSalida">Seleccione una opción:</label><br>
+    <select id="selectSalida">
+      <option value="azules">Azules</option>
+      <option value="blancas">Blancas</option>
+      <option value="rojas">Rojas</option>
+    </select>
+  </div>
     <div class="tabla-contenedor">
       <table class="tabla"><tr><th>Hoyo</th><th>Yardas</th></tr>${tabla1}</table>
       <table class="tabla"><tr><th>Hoyo</th><th>Yardas</th></tr>${tabla2}</table>
@@ -414,12 +425,13 @@ function renderVentajas(genero="masculino") {
   const tabla1 = arr.slice(0, mitad).map((v,i)=>`<tr><td>${i+1}</td><td>${v}</td></tr>`).join("");
   const tabla2 = arr.slice(mitad).map((v,i)=>`<tr><td>${i+1+mitad}</td><td>${v}</td></tr>`).join("");
   document.getElementById('seccionContenido').innerHTML = `
-    <div class="selector">
-      <select id="selectGenero">
-        <option value="masculino">Masculino</option>
-        <option value="femenino">Femenino</option>
-      </select>
-    </div>
+  <div class="selector">
+    <label for="selectGenero">Seleccione una opción:</label><br>
+    <select id="selectGenero">
+      <option value="masculino">Masculino</option>
+      <option value="femenino">Femenino</option>
+    </select>
+  </div>
     <div class="tabla-contenedor">
       <table class="tabla"><tr><th>Hoyo</th><th>Ventaja</th></tr>${tabla1}</table>
       <table class="tabla"><tr><th>Hoyo</th><th>Ventaja</th></tr>${tabla2}</table>
