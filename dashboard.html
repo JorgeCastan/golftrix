@@ -21,7 +21,7 @@
       min-height: 100vh;
       overflow-x: hidden;
     }
-        header {
+    header {
       background: linear-gradient(90deg, #007f00, #00cc44);
       display: flex;
       justify-content: center;
@@ -130,10 +130,6 @@
         margin-top: 10px;
       }
 
-      .hamburger {
-        display: flex;
-      }
-
       main {
         margin-left: 0;
       }
@@ -157,13 +153,16 @@
 <link rel="stylesheet" href="menu.css">
 
   <main>
-    <div class="new-game">
-      <img src="nuevo_juego.jpg" class="bg" alt="Nuevo Juego">
-      <div class="content">
-        <div class="icon"><img src="icono_agregar.png" alt="Icon"></div>
-        <div class="text">Nuevo Juego</div>
+    <a href="nuevo_juego.html" style="text-decoration: none;">
+      <div class="new-game">
+        <img src="nuevo_juego.jpg" class="bg" alt="Nuevo Juego">
+        <div class="content">
+          <div class="icon"><img src="icono_agregar.png" alt="Icon"></div>
+          <div class="text">Nuevo Juego</div>
+        </div>
       </div>
-    </div>
+    </a>
+
 
     <div class="divider">
       <h2>──────── Juegos Actuales ────────</h2>

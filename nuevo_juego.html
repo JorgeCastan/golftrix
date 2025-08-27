@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Nuevo Juego - Golftrix</title>
+  <link rel="icon" href="logo_golftrix.png" type="image/png" />
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@700&display=swap" rel="stylesheet" />
+  
+  <!-- Estilos menú -->
+  <link rel="stylesheet" href="menu.css">
+
+  <style>
+    body {
+      margin: 0;
+      font-family: 'Orbitron', sans-serif;
+      display: flex;
+      flex-direction: column;
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+    header {
+      background: linear-gradient(90deg, #007f00, #00cc44);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 15px 20px;
+      color: white;
+    }
+    header h1 {
+      font-size: 2rem;
+      margin: 0;
+      flex-grow: 1;
+      text-align: center;
+    }
+    header img {
+      height: 60px;
+    }
+    main {
+      flex: 1;
+      margin-left: 220px;
+      padding: 40px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    .form-container {
+      width: 600px;
+      max-width: 95%;
+      background: rgba(255,255,255,0.95);
+      padding: 30px;
+      border-radius: 20px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+    }
+    .form-container h2 {
+      text-align: center;
+      margin-bottom: 25px;
+      background: linear-gradient(90deg, #007f00, #00cc44);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    .form-group {
+      margin-bottom: 20px;
+    }
+    label {
+      display: block;
+      margin-bottom: 8px;
+      font-weight: bold;
+    }
+    select, input[type="checkbox"] {
+      width: 100%;
+      padding: 10px;
+      border-radius: 10px;
+      border: 2px solid transparent;
+      background: #f0f0f0;
+      font-family: 'Orbitron', sans-serif;
+      font-size: 1rem;
+      transition: all 0.3s ease;
+    }
+    select:focus {
+      border: 2px solid #00cc44;
+      outline: none;
+    }
+    .checkbox-group {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 15px;
+    }
+    .checkbox-group label {
+      font-size: 0.9rem;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+    button {
+      width: 100%;
+      padding: 15px;
+      font-size: 1.2rem;
+      border-radius: 15px;
+      border: none;
+      cursor: pointer;
+      background: linear-gradient(90deg, #007f00, #00cc44);
+      color: white;
+      font-family: 'Orbitron', sans-serif;
+      font-weight: bold;
+      transition: transform 0.2s;
+    }
+    button:hover {
+      transform: scale(1.05);
+    }
+    footer {
+      background: #000;
+      color: white;
+      text-align: center;
+      padding: 15px;
+    }
+    @media(max-width: 768px) {
+      main { margin-left: 0; padding: 20px; }
+      .form-container { padding: 20px; }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div id="menuContainer"></div>
+    <h1>Nuevo Juego</h1>
+    <img src="logo_golftrix.png" alt="Logo">
+  </header>
+
+  <main>
+    <div class="form-container">
+      <h2>Configurar Nuevo Juego</h2>
+      <!-- Selección tipo de juego -->
+      <div class="form-group">
+        <label for="tipoJuego">Tipo de Juego</label>
+        <select id="tipoJuego">
+          <option value="">Seleccione...</option>
+          <option value="individual">Juego Individual</option>
+          <option value="grupo">Juego en Grupo</option>
+        </select>
+      </div>
+
+      <!-- Selección campo -->
+      <div class="form-group">
+        <label for="campo">Campo de Golf</label>
+        <select id="campo">
+          <option value="">Seleccione un campo...</option>
+          <!-- Aquí se cargan dinámicamente los campos desde Firestore -->
+        </select>
+      </div>
+
+      <!-- Selección juegos de grupo -->
+      <div class="form-group" id="juegosGrupo" style="display:none;">
+        <label>Tipos de juegos de grupo</label>
+        <div class="checkbox-group">
+          <label><input type="checkbox" value="polla"> Polla</label>
+          <label><input type="checkbox" value="skins"> Skins</label>
+          <label><input type="checkbox" value="forzons"> Forzons</label>
+        </div>
+      </div>
+
+      <button onclick="crearJuego()">Crear Juego</button>
+    </div>
+  </main>
+
+  <footer>
+    &copy; 2025 Golftrix. Todos los derechos reservados.
+  </footer>
+
+  <script>
+    // Cargar menú
+    fetch('menu.html')
+      .then(res => res.text())
+      .then(html => {
+        const tempDiv = document.createElement('div');
+        tempDiv.innerHTML = html;
+        const hamburgerBtn = tempDiv.querySelector('.hamburger');
+        const sidebarMenu = tempDiv.querySelector('.sidebar-mobile');
+        document.getElementById('menuContainer').appendChild(hamburgerBtn);
+        document.body.appendChild(sidebarMenu);
+        import('./menu.js');
+      });
+
+    // Mostrar opciones de grupo si selecciona "grupo"
+    document.getElementById('tipoJuego').addEventListener('change', e => {
+      const juegosGrupo = document.getElementById('juegosGrupo');
+      if(e.target.value === "grupo") juegosGrupo.style.display = "block";
+      else juegosGrupo.style.display = "none";
+    });
+
+    function crearJuego(){
+      const tipo = document.getElementById('tipoJuego').value;
+      const campo = document.getElementById('campo').value;
+      
+      if(!tipo || !campo){
+        alert("Debe seleccionar tipo de juego y campo.");
+        return;
+      }
+      if(tipo === "grupo"){
+        // Aquí se valida si el usuario está en un grupo con Firestore
+        // Si no -> alert("Debes pertenecer a un grupo para crear juegos en grupo.")
+      }
+      // También validar si tiene handicap y género en su perfil
+
+      alert("Juego creado correctamente (demo).");
+      // Aquí se guardará en Firestore y se actualizará el dashboard
+    }
+  </script>
+</body>
+</html>
