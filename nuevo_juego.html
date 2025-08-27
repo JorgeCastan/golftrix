@@ -149,15 +149,15 @@
         </select>
       </div>
 
-      <!-- Selección juegos de grupo -->
-      <div class="form-group" id="juegosGrupo" style="display:none;">
-        <label>Tipos de juegos de grupo</label>
-        <div class="checkbox-group">
-          <label><input type="checkbox" value="polla"> Polla</label>
-          <label><input type="checkbox" value="skins"> Skins</label>
-          <label><input type="checkbox" value="forzons"> Forzons</label>
+      <!-- Selección de modos dinámicos según el tipo -->
+        <div class="form-group" id="juegosTipo" style="display:none;">
+        <label>Modos disponibles</label>
+        <div id="listaJuegos" class="checkbox-group"></div>
+        <small id="notaJuegos" style="display:block;margin-top:6px;color:#666;">
+            Se cargan desde el repositorio (archivos juego_*_(grupo|individual).html).
+        </small>
         </div>
-      </div>
+
 
       <button onclick="crearJuego()">Crear Juego</button>
     </div>
@@ -166,6 +166,218 @@
   <footer>
     &copy; 2025 Golftrix. Todos los derechos reservados.
   </footer>
+
+<script type="module">
+  import { app } from './firebase-config.js';
+  import {
+    getFirestore, collection, getDocs, addDoc, doc, getDoc, serverTimestamp
+  } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+  import {
+    getAuth, onAuthStateChanged
+  } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+
+  // ---------- CONFIGURA AQUÍ TU REPO ----------
+  // Coloca tu owner y repo de GitHub, y la carpeta donde están los juegos ('' si están en raíz).
+  const GITHUB_OWNER = 'TU_OWNER';      // <-- CAMBIAR
+  const GITHUB_REPO  = 'TU_REPO';       // <-- CAMBIAR
+  const GAME_DIR     = '';              // p.ej. 'juegos' o '' si están en raíz
+  // -------------------------------------------
+
+  const db   = getFirestore(app);
+  const auth = getAuth(app);
+
+  const selTipo   = document.getElementById('tipoJuego');
+  const selCampo  = document.getElementById('campo');
+  const boxJuegos = document.getElementById('juegosTipo');
+  const listaJ    = document.getElementById('listaJuegos');
+
+  let currentUser   = null;
+  let userProfile   = null;
+
+  // Helpers perfil
+  const getHandicap = (u) => u?.handicap ?? u?.hcp ?? u?.handicapNumero ?? null;
+  const getGenero   = (u) => u?.genero ?? u?.gender ?? null;
+  const inGroup     = (u) => !!(u?.grupoId || u?.grupo || u?.groupId);
+
+  // Capitalizar bonito
+  const toLabel = (fileName) => {
+    // juego_polla_grupo.html -> "Polla"
+    return fileName
+      .replace(/^juego_/, '')
+      .replace(/_(grupo|individual)\.html$/,'')
+      .replace(/_/g, ' ')
+      .replace(/\b\w/g, c => c.toUpperCase());
+  };
+
+  // 1) Cargar CAMPOS (camposGolf) y mostrar NOMBRE
+  async function cargarCampos() {
+    selCampo.innerHTML = '<option value="">Seleccione un campo...</option>';
+    const snap = await getDocs(collection(db, 'camposGolf'));
+    snap.forEach(d => {
+      const data = d.data();
+      const opt = document.createElement('option');
+      opt.value = d.id;
+      opt.textContent = data?.nombre || d.id;
+      selCampo.appendChild(opt);
+    });
+  }
+
+  // 2) Cargar MODOS desde GitHub según tipo (grupo/individual)
+  async function cargarModos(tipo) {
+    listaJ.innerHTML = '';
+    if (!tipo) {
+      boxJuegos.style.display = 'none';
+      return;
+    }
+
+    // Intento leer lista de archivos del repo
+    let files = [];
+    try {
+      const url = `https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/contents/${GAME_DIR}`;
+      const res = await fetch(url, { headers: { 'Accept': 'application/vnd.github+json' } });
+      const data = await res.json();
+      if (Array.isArray(data)) files = data;
+    } catch (e) {
+      // ignoramos; usaremos fallback
+    }
+
+    // Filtrar por patrón juego_*_(grupo|individual).html y por el tipo actual
+    const rx = new RegExp(`^juego_.+_${tipo}\\.html$`);
+    let candidatos = files.filter(f => f.type === 'file' && rx.test(f.name));
+
+    // Fallback si repo no configurado / vacío
+    if (candidatos.length === 0) {
+      if (tipo === 'grupo') {
+        candidatos = [
+          { name: 'juego_polla_grupo.html' },
+          { name: 'juego_skins_grupo.html' },
+          { name: 'juego_forzons_grupo.html' },
+        ];
+      } else {
+        // Ejemplos para individual (ajústalos según tu repo real)
+        candidatos = [
+          { name: 'juego_solitario_individual.html' }
+        ];
+      }
+      document.getElementById('notaJuegos').textContent =
+        'Mostrando modos de ejemplo (configura GITHUB_OWNER/REPO para cargar desde tu repo).';
+    } else {
+      document.getElementById('notaJuegos').textContent =
+        'Modos cargados desde el repositorio.';
+    }
+
+    // Pintar checkboxes
+    candidatos.forEach(f => {
+      const id = `modo_${f.name.replace(/\W/g,'_')}`;
+      const lbl = toLabel(f.name);
+      const wrap = document.createElement('label');
+      wrap.style.display = 'flex';
+      wrap.style.alignItems = 'center';
+      wrap.style.gap = '6px';
+      wrap.innerHTML = `
+        <input type="checkbox" id="${id}" data-file="${f.name}">
+        ${lbl}
+      `;
+      listaJ.appendChild(wrap);
+    });
+
+    boxJuegos.style.display = 'block';
+  }
+
+  // 3) Cargar usuario y aplicar restricciones (grupo / handicap / genero)
+  onAuthStateChanged(auth, async (user) => {
+    currentUser = user || null;
+
+    // Cargar campos siempre
+    await cargarCampos();
+
+    // Cargar perfil si hay usuario
+    if (currentUser) {
+      const uref = doc(db, 'users', currentUser.uid);
+      const usnap = await getDoc(uref);
+      userProfile = usnap.exists() ? usnap.data() : {};
+
+      // Si NO está en grupo, deshabilitar la opción "grupo"
+      const optGrupo = document.querySelector('#tipoJuego option[value="grupo"]');
+      if (optGrupo && !inGroup(userProfile)) {
+        optGrupo.disabled = true;
+        optGrupo.textContent = 'Juego en Grupo (requiere pertenecer a un grupo)';
+      }
+    }
+  });
+
+  // 4) Cambio de tipo => recargar modos
+  selTipo.addEventListener('change', (e) => {
+    cargarModos(e.target.value);
+  });
+
+  // 5) Crear Juego (con validaciones y guardado en Firestore)
+  window.crearJuego = async function crearJuego() {
+    const tipo  = selTipo.value;
+    const campo = selCampo.value;
+
+    if (!tipo || !campo) {
+      alert('Debe seleccionar tipo de juego y campo.');
+      return;
+    }
+
+    // Perfil obligatorio
+    if (!currentUser) {
+      alert('Inicia sesión para crear un juego.');
+      return;
+    }
+
+    // Leer perfil si por alguna razón aún no está
+    if (!userProfile) {
+      const uref = doc(db, 'users', currentUser.uid);
+      const usnap = await getDoc(uref);
+      userProfile = usnap.exists() ? usnap.data() : {};
+    }
+
+    const handicap = getHandicap(userProfile);
+    const genero   = getGenero(userProfile);
+
+    if (!handicap || !genero) {
+      alert('Debes tener configurados tu handicap y género en mi_perfil.html');
+      return;
+    }
+
+    if (tipo === 'grupo' && !inGroup(userProfile)) {
+      alert('Debes pertenecer a un grupo para crear juegos en grupo.');
+      return;
+    }
+
+    // Modos seleccionados
+    const seleccionados = Array.from(
+      listaJ.querySelectorAll('input[type="checkbox"]:checked')
+    ).map(i => i.dataset.file);
+
+    if (tipo === 'grupo' && seleccionados.length === 0) {
+      alert('Selecciona al menos un modo de juego.');
+      return;
+    }
+
+    // Tomar nombre del campo del option seleccionado
+    const campoNombre = selCampo.options[selCampo.selectedIndex]?.textContent || '';
+
+    // Guardar juego
+    const ref = await addDoc(collection(db, 'juegos'), {
+      ownerUid: currentUser.uid,
+      tipo,
+      campoId: campo,
+      campoNombre,
+      modos: seleccionados,            // nombres de archivo (p.ej. juego_polla_grupo.html)
+      estado: 'pendiente',
+      createdAt: serverTimestamp()
+    });
+
+    alert('Juego creado correctamente.');
+    // Redirige a un contenedor general que luego muestre los botones de cada modo
+    // (ajusta esta ruta si ya tienes otra)
+    window.location.href = `juego_contenedor.html?id=${ref.id}`;
+  }
+</script>
+
 
   <script>
     // Cargar menú
@@ -181,12 +393,7 @@
         import('./menu.js');
       });
 
-    // Mostrar opciones de grupo si selecciona "grupo"
-    document.getElementById('tipoJuego').addEventListener('change', e => {
-      const juegosGrupo = document.getElementById('juegosGrupo');
-      if(e.target.value === "grupo") juegosGrupo.style.display = "block";
-      else juegosGrupo.style.display = "none";
-    });
+    
 
     function crearJuego(){
       const tipo = document.getElementById('tipoJuego').value;
