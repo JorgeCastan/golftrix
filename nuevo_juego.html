@@ -152,11 +152,16 @@
       <!-- Selección de modos dinámicos según el tipo -->
         <div class="form-group" id="juegosTipo" style="display:none;">
         <label>Modos disponibles</label>
-        <div id="listaJuegos" class="checkbox-group"></div>
+        <div id="listaJuegos" style="display:flex;flex-direction:column;gap:10px;"></div>
+
+        <h4 style="margin-top:15px;">Seleccionados</h4>
+        <div id="juegosSeleccionados" style="display:flex;flex-wrap:wrap;gap:8px;"></div>
+
         <small id="notaJuegos" style="display:block;margin-top:6px;color:#666;">
             Se cargan desde el repositorio (archivos juego_*_(grupo|individual).html).
         </small>
         </div>
+
 
 
       <button onclick="crearJuego()">Crear Juego</button>
@@ -223,66 +228,88 @@
   }
 
   // 2) Cargar MODOS desde GitHub según tipo (grupo/individual)
-  async function cargarModos(tipo) {
-    listaJ.innerHTML = '';
-    if (!tipo) {
-      boxJuegos.style.display = 'none';
-      return;
-    }
+async function cargarModos(tipo) {
+  listaJ.innerHTML = '';
+  document.getElementById('juegosSeleccionados').innerHTML = '';
 
-    // Intento leer lista de archivos del repo
-    let files = [];
-    try {
-      const url = `https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/contents/${GAME_DIR}`;
-      const res = await fetch(url, { headers: { 'Accept': 'application/vnd.github+json' } });
-      const data = await res.json();
-      if (Array.isArray(data)) files = data;
-    } catch (e) {
-      // ignoramos; usaremos fallback
-    }
-
-    // Filtrar por patrón juego_*_(grupo|individual).html y por el tipo actual
-    const rx = new RegExp(`^juego_.+_${tipo}\\.html$`);
-    let candidatos = files.filter(f => f.type === 'file' && rx.test(f.name));
-
-    // Fallback si repo no configurado / vacío
-    if (candidatos.length === 0) {
-      if (tipo === 'grupo') {
-        candidatos = [
-          { name: 'juego_polla_grupo.html' },
-          { name: 'juego_skins_grupo.html' },
-          { name: 'juego_forzons_grupo.html' },
-        ];
-      } else {
-        // Ejemplos para individual (ajústalos según tu repo real)
-        candidatos = [
-          { name: 'juego_solitario_individual.html' }
-        ];
-      }
-      document.getElementById('notaJuegos').textContent =
-        'Mostrando modos de ejemplo (configura GITHUB_OWNER/REPO para cargar desde tu repo).';
-    } else {
-      document.getElementById('notaJuegos').textContent =
-        'Modos cargados desde el repositorio.';
-    }
-
-    // Pintar checkboxes
-    candidatos.forEach(f => {
-      const id = `modo_${f.name.replace(/\W/g,'_')}`;
-      const lbl = toLabel(f.name);
-      const wrap = document.createElement('label');
-      wrap.style.display = 'flex';
-      wrap.style.alignItems = 'center';
-      wrap.style.gap = '6px';
-      wrap.innerHTML = `
-        <input type="checkbox" id="${id}" data-file="${f.name}">
-        ${lbl}
-      `;
-      listaJ.appendChild(wrap);
-    });
-
-    boxJuegos.style.display = 'block';
+  if (!tipo) {
+    boxJuegos.style.display = 'none';
+    return;
   }
+
+  let files = [];
+  try {
+    const url = `https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/contents/${GAME_DIR}`;
+    const res = await fetch(url, { headers: { 'Accept': 'application/vnd.github+json' } });
+    const data = await res.json();
+    if (Array.isArray(data)) files = data;
+  } catch (e) {
+    console.error("Error cargando modos:", e);
+  }
+
+  // Filtrar por patrón juego_*_(grupo|individual).html
+  const rx = new RegExp(`^juego_.+_${tipo}\\.html$`);
+  const candidatos = files.filter(f => f.type === 'file' && rx.test(f.name));
+
+  if (candidatos.length === 0) {
+    document.getElementById('notaJuegos').textContent =
+      '⚠️ No se encontraron modos en el repositorio para este tipo.';
+    boxJuegos.style.display = 'block';
+    return;
+  }
+
+  document.getElementById('notaJuegos').textContent =
+    'Modos cargados desde el repositorio.';
+
+  candidatos.forEach(f => {
+    const lbl = toLabel(f.name);
+
+    const wrapper = document.createElement('div');
+    wrapper.style.display = "flex";
+    wrapper.style.justifyContent = "space-between";
+    wrapper.style.alignItems = "center";
+    wrapper.style.border = "1px solid #ccc";
+    wrapper.style.padding = "8px 12px";
+    wrapper.style.borderRadius = "10px";
+    wrapper.innerHTML = `
+      <span>${lbl}</span>
+      <button type="button" class="btnAgregar" data-file="${f.name}">Agregar</button>
+    `;
+
+    listaJ.appendChild(wrapper);
+  });
+
+  // Click en botones "Agregar"
+  listaJ.querySelectorAll(".btnAgregar").forEach(btn => {
+    btn.addEventListener("click", () => {
+      const file = btn.dataset.file;
+      const lbl = toLabel(file);
+
+      // evitar duplicados
+      if (document.querySelector(`#juegosSeleccionados [data-file="${file}"]`)) return;
+
+      const chip = document.createElement("div");
+      chip.dataset.file = file;
+      chip.style.padding = "6px 12px";
+      chip.style.background = "linear-gradient(90deg, #007f00, #00cc44)";
+      chip.style.color = "white";
+      chip.style.borderRadius = "20px";
+      chip.style.fontSize = "0.9rem";
+      chip.style.display = "flex";
+      chip.style.alignItems = "center";
+      chip.style.gap = "6px";
+      chip.innerHTML = `${lbl} <span style="cursor:pointer;font-weight:bold;">✕</span>`;
+
+      // remover al hacer click en la X
+      chip.querySelector("span").addEventListener("click", () => chip.remove());
+
+      document.getElementById("juegosSeleccionados").appendChild(chip);
+    });
+  });
+
+  boxJuegos.style.display = 'block';
+}
+
 
   // 3) Cargar usuario y aplicar restricciones (grupo / handicap / genero)
   onAuthStateChanged(auth, async (user) => {
@@ -348,9 +375,10 @@
     }
 
     // Modos seleccionados
-    const seleccionados = Array.from(
-      listaJ.querySelectorAll('input[type="checkbox"]:checked')
-    ).map(i => i.dataset.file);
+const seleccionados = Array.from(
+  document.querySelectorAll('#juegosSeleccionados div[data-file]')
+).map(d => d.dataset.file);
+
 
     if (tipo === 'grupo' && seleccionados.length === 0) {
       alert('Selecciona al menos un modo de juego.');
