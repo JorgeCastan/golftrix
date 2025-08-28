@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Juego La Polla - Grupo</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #f4f4f4;
+      margin: 0;
+      padding: 20px;
+      color: #333;
+    }
+    h1 {
+      text-align: center;
+      color: green;
+    }
+    .config, .scorecard, .resultado {
+      background: white;
+      padding: 15px;
+      margin: 20px auto;
+      border-radius: 10px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+      max-width: 900px;
+    }
+    label {
+      display: block;
+      margin: 10px 0 5px;
+    }
+    input {
+      padding: 8px;
+      width: 100%;
+      margin-bottom: 10px;
+      border-radius: 6px;
+      border: 1px solid #ccc;
+    }
+    button {
+      background: linear-gradient(90deg, #00b894, #55efc4);
+      border: none;
+      color: white;
+      padding: 10px 20px;
+      margin: 10px 5px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 16px;
+      font-weight: bold;
+    }
+    button:hover {
+      opacity: 0.9;
+    }
+    table {
+      border-collapse: collapse;
+      width: 100%;
+      margin-top: 15px;
+    }
+    table, th, td {
+      border: 1px solid #ccc;
+      text-align: center;
+      padding: 5px;
+    }
+    th {
+      background: #00b894;
+      color: white;
+    }
+    .winner {
+      font-size: 20px;
+      font-weight: bold;
+      color: darkgreen;
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+
+  <h1>Juego: La Polla (Grupo)</h1>
+
+  <!-- CONFIGURACIÓN -->
+  <div class="config">
+    <h2>Configurar Juego</h2>
+    <label>Precio por jugador:</label>
+    <input type="number" id="precioPolla" placeholder="Ej. 100">
+
+    <h3>Agregar jugadores</h3>
+    <label>Nombre:</label>
+    <input type="text" id="nombreJugador">
+    <label>Handicap:</label>
+    <input type="number" id="handicapJugador" placeholder="Ej. 12">
+
+    <button onclick="agregarJugador()">Agregar jugador</button>
+
+    <ul id="listaJugadores"></ul>
+  </div>
+
+  <!-- SCORECARD -->
+  <div class="scorecard" style="display:none;">
+    <h2>Scorecard (18 hoyos)</h2>
+    <table id="tablaScore">
+      <thead>
+        <tr>
+          <th>Jugador</th>
+          <th>Handicap</th>
+          <!-- 18 hoyos -->
+          <th colspan="18">Golpes por hoyo</th>
+          <th>Total</th>
+        </tr>
+        <tr>
+          <th></th>
+          <th></th>
+          <th>1</th><th>2</th><th>3</th><th>4</th><th>5</th><th>6</th>
+          <th>7</th><th>8</th><th>9</th><th>10</th><th>11</th><th>12</th>
+          <th>13</th><th>14</th><th>15</th><th>16</th><th>17</th><th>18</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody id="bodyScore"></tbody>
+    </table>
+
+    <button onclick="calcularGanador()">Calcular Ganador</button>
+  </div>
+
+  <!-- RESULTADO -->
+  <div class="resultado" style="display:none;">
+    <h2>Resultado Final</h2>
+    <div id="detalleResultados"></div>
+    <div class="winner" id="ganador"></div>
+  </div>
+
+  <script>
+    let jugadores = [];
+
+    function agregarJugador() {
+      const nombre = document.getElementById("nombreJugador").value.trim();
+      const handicap = parseInt(document.getElementById("handicapJugador").value);
+      const precio = parseInt(document.getElementById("precioPolla").value);
+
+      if (!nombre || isNaN(handicap) || isNaN(precio)) {
+        alert("Debes ingresar nombre, handicap y precio válido.");
+        return;
+      }
+
+      jugadores.push({ nombre, handicap });
+      mostrarJugadores();
+
+      document.getElementById("nombreJugador").value = "";
+      document.getElementById("handicapJugador").value = "";
+
+      // Mostrar scorecard cuando haya al menos 2 jugadores
+      if (jugadores.length >= 2) {
+        document.querySelector(".scorecard").style.display = "block";
+        generarTabla();
+      }
+    }
+
+    function mostrarJugadores() {
+      const ul = document.getElementById("listaJugadores");
+      ul.innerHTML = "";
+      jugadores.forEach(j => {
+        const li = document.createElement("li");
+        li.textContent = `${j.nombre} (Handicap: ${j.handicap})`;
+        ul.appendChild(li);
+      });
+    }
+
+    function generarTabla() {
+      const tbody = document.getElementById("bodyScore");
+      tbody.innerHTML = "";
+      jugadores.forEach((j, idx) => {
+        let fila = `<tr><td>${j.nombre}</td><td>${j.handicap}</td>`;
+        for (let h=1; h<=18; h++) {
+          fila += `<td><input type="number" min="1" style="width:50px;" id="jug${idx}h${h}"></td>`;
+        }
+        fila += `<td id="total${idx}">0</td></tr>`;
+        tbody.innerHTML += fila;
+      });
+    }
+
+    function calcularGanador() {
+      const precio = parseInt(document.getElementById("precioPolla").value);
+      let resultados = [];
+      let premioTotal = precio * jugadores.length;
+
+      jugadores.forEach((j, idx) => {
+        let bruto = 0;
+        for (let h=1; h<=18; h++) {
+          let val = parseInt(document.getElementById(`jug${idx}h${h}`).value) || 0;
+          bruto += val;
+        }
+        document.getElementById(`total${idx}`).textContent = bruto;
+
+        let neto = bruto - j.handicap;
+        resultados.push({ nombre: j.nombre, bruto, neto });
+      });
+
+      resultados.sort((a,b) => a.neto - b.neto);
+
+      let ganador = resultados[0];
+      document.querySelector(".resultado").style.display = "block";
+
+      let html = "<h3>Resultados:</h3><ul>";
+      resultados.forEach(r => {
+        html += `<li>${r.nombre} → Bruto: ${r.bruto}, Handicap: ${jugadores.find(j => j.nombre===r.nombre).handicap}, Neto: ${r.neto}</li>`;
+      });
+      html += "</ul>";
+      document.getElementById("detalleResultados").innerHTML = html;
+
+      document.getElementById("ganador").innerHTML = 
+        `🏆 Ganador: ${ganador.nombre} con score neto ${ganador.neto} <br> Premio total: $${premioTotal}`;
+    }
+  </script>
+</body>
+</html>
