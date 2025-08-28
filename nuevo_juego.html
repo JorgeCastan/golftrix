@@ -424,21 +424,33 @@ const seleccionados = Array.from(
     // Tomar nombre del campo del option seleccionado
     const campoNombre = selCampo.options[selCampo.selectedIndex]?.textContent || '';
 
-    // Guardar juego
-    const ref = await addDoc(collection(db, 'juegos'), {
+    // Preparar datos base
+    const juegoData = {
       ownerUid: currentUser.uid,
       tipo,
       campoId: campo,
       campoNombre,
-      modos: seleccionados,            // nombres de archivo (p.ej. juego_polla_grupo.html)
+      modos: seleccionados, // nombres de archivo (p.ej. juego_polla_grupo.html)
       estado: 'pendiente',
       createdAt: serverTimestamp()
-    });
+    };
+
+    // Si es juego en grupo, guardar el grupo del usuario creador
+    if (tipo === 'grupo') {
+      const grupoId = userProfile?.grupoId || userProfile?.grupo || userProfile?.groupId || null;
+      if (grupoId) {
+        juegoData.grupoId = grupoId;
+      }
+    }
+
+    // Guardar juego en Firestore
+    const ref = await addDoc(collection(db, 'juegos'), juegoData);
+
 
     alert('Juego creado correctamente.');
-    // Redirige a un contenedor general que luego muestre los botones de cada modo
-    // (ajusta esta ruta si ya tienes otra)
-    window.location.href = `juego_contenedor.html?id=${ref.id}`;
+    // Redirigir al dashboard
+    window.location.href = `dashboard.html?juegoId=${ref.id}`;
+
   }
 </script>
 
