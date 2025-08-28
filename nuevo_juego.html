@@ -108,46 +108,6 @@
     button:hover {
       transform: scale(1.05);
     }
-        /* --- Estilos para el selector de modos --- */
-    .modo-option {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      border: 2px solid transparent;
-      background: #fdfdfd;
-      border-radius: 12px;
-      padding: 12px 16px;
-      font-family: 'Orbitron', sans-serif;
-      font-size: 1rem;
-      font-weight: bold;
-      margin-bottom: 10px;
-      transition: all 0.3s ease;
-      background-image: linear-gradient(90deg, #007f00, #00cc44);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-    }
-
-    .modo-option:hover {
-      box-shadow: 0 0 12px rgba(0, 255, 136, 0.5);
-      transform: scale(1.02);
-    }
-
-    .btnAgregar {
-      padding: 6px 12px;
-      font-size: 0.9rem;
-      border: none;
-      border-radius: 8px;
-      background: linear-gradient(90deg, #007f00, #00cc44);
-      color: #fff;
-      font-weight: bold;
-      cursor: pointer;
-      transition: transform 0.2s;
-    }
-
-    .btnAgregar:hover {
-      transform: scale(1.05);
-    }
-
     footer {
       background: #000;
       color: white;
@@ -302,20 +262,58 @@ async function cargarModos(tipo) {
   document.getElementById('notaJuegos').textContent =
     'Modos cargados desde el repositorio.';
 
+    // Crear un <select> con las opciones dinámicas
+  const selModos = document.createElement("select");
+  selModos.id = "selectModo";
+  selModos.style.marginBottom = "10px";
+  selModos.innerHTML = `<option value="">Seleccione una opción...</option>`;
+
   candidatos.forEach(f => {
     const lbl = toLabel(f.name);
-
-       const wrapper = document.createElement('div');
-      wrapper.className = "modo-option";
-
-        wrapper.innerHTML = `
-      <span>${lbl}</span>
-      <button type="button" class="btnAgregar" data-file="${f.name}">Agregar</button>
-    `;
-
-
-    listaJ.appendChild(wrapper);
+    const opt = document.createElement("option");
+    opt.value = f.name;
+    opt.textContent = lbl;
+    selModos.appendChild(opt);
   });
+
+  // Botón "Agregar"
+  const btnAdd = document.createElement("button");
+  btnAdd.type = "button";
+  btnAdd.textContent = "Agregar";
+  btnAdd.style.marginTop = "10px";
+
+  listaJ.appendChild(selModos);
+  listaJ.appendChild(btnAdd);
+
+  // Click en "Agregar"
+  btnAdd.addEventListener("click", () => {
+    const file = selModos.value;
+    if (!file) return; // nada seleccionado
+
+    const lbl = toLabel(file);
+
+    // evitar duplicados
+    if (document.querySelector(`#juegosSeleccionados [data-file="${file}"]`)) return;
+
+    const chip = document.createElement("div");
+    chip.dataset.file = file;
+    chip.style.padding = "6px 12px";
+    chip.style.background = "linear-gradient(90deg, #007f00, #00cc44)";
+    chip.style.color = "white";
+    chip.style.borderRadius = "20px";
+    chip.style.fontSize = "0.9rem";
+    chip.style.display = "flex";
+    chip.style.alignItems = "center";
+    chip.style.gap = "6px";
+    chip.innerHTML = `${lbl} <span style="cursor:pointer;font-weight:bold;">✕</span>`;
+
+    chip.querySelector("span").addEventListener("click", () => chip.remove());
+    document.getElementById("juegosSeleccionados").appendChild(chip);
+
+    // reset select
+    selModos.value = "";
+  });
+
 
   // Click en botones "Agregar"
   listaJ.querySelectorAll(".btnAgregar").forEach(btn => {
