@@ -183,9 +183,10 @@
 
   // ---------- CONFIGURA AQUÍ TU REPO ----------
   // Coloca tu owner y repo de GitHub, y la carpeta donde están los juegos ('' si están en raíz).
-  const GITHUB_OWNER = 'TU_OWNER';      // <-- CAMBIAR
-  const GITHUB_REPO  = 'TU_REPO';       // <-- CAMBIAR
-  const GAME_DIR     = '';              // p.ej. 'juegos' o '' si están en raíz
+  const GITHUB_OWNER = 'JorgeCastan';  // <-- cámbialo por tu usuario/org
+  const GITHUB_REPO  = 'golftrix';   // <-- cámbialo por tu repo
+  const GAME_DIR     = '';          // carpeta donde están los archivos ('' si raíz)
+
   // -------------------------------------------
 
   const db   = getFirestore(app);
@@ -421,25 +422,6 @@ const seleccionados = Array.from(
         import('./menu.js');
       });
 
-    
-
-    function crearJuego(){
-      const tipo = document.getElementById('tipoJuego').value;
-      const campo = document.getElementById('campo').value;
-      
-      if(!tipo || !campo){
-        alert("Debe seleccionar tipo de juego y campo.");
-        return;
-      }
-      if(tipo === "grupo"){
-        // Aquí se valida si el usuario está en un grupo con Firestore
-        // Si no -> alert("Debes pertenecer a un grupo para crear juegos en grupo.")
-      }
-      // También validar si tiene handicap y género en su perfil
-
-      alert("Juego creado correctamente (demo).");
-      // Aquí se guardará en Firestore y se actualizará el dashboard
-    }
   </script>
 </body>
 </html>
