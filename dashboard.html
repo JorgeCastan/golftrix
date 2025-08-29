@@ -264,96 +264,102 @@
     });
 </script>
 <script type="module">
-  import { app } from "./firebase-config.js";  // ← usa el MISMO app que ya funciona en nuevo_juego
+  import { db } from "./firebase.js";
   import {
-    getFirestore, collection, query, where, orderBy, limit, getDocs, doc, getDoc
-  } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-  import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+    collection,
+    query,
+    where,
+    orderBy,
+    getDocs,
+    limit,
+  } from "https://www.gstatic.com/firebasejs/10.12.3/firebase-firestore.js";
 
-  const db = getFirestore(app);
-  const auth = getAuth(app);
+  async function cargarJuegos(uid, grupoId) {
+    const ref = collection(db, "juegos");
 
-  const gamesContainer = document.getElementById('gamesContainer');
-  const gameImages = ["juego_golf_1.png","juego_golf_2.png","juego_golf_3.png","juego_golf_4.png","juego_golf_5.png"];
-
-  onAuthStateChanged(auth, async (user) => {
-    if (!user) return;
-
-    try {
-      // 1) Perfil del usuario para obtener grupo
-      const uref = doc(db, "users", user.uid);
-      const usnap = await getDoc(uref);
-      const perfil = usnap.exists() ? usnap.data() : {};
-      const uid = user.uid;
-      const grupoUser = (perfil?.grupo || perfil?.grupoId || "").trim();
-
-     // 2) Construir filtros visiblesPara
-      const filtros = [`uid:${uid}`];
-      if (grupoUser) filtros.push(`grupo:${grupoUser}`);
-
-      // 3) Query con visiblesPara
-      const q = query(
-        collection(db, "juegos"),
-        where("visiblesPara", "array-contains-any", filtros),
+    // Si el usuario pertenece a un grupo, buscar juegos de grupo o individuales suyos
+    let q;
+    if (grupoId) {
+      q = query(
+        ref,
+        where("modos", "array-contains-any", [
+          "juego_polla_grupo.html",
+          "juego_html.html",
+          "juego_solitario_individual.html",
+        ]),
         orderBy("createdAt", "desc"),
         limit(10)
       );
-
-      const snap = await getDocs(q);
-
-      // 4) Procesar documentos
-     const docs = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-    const sorted = docs
-  .sort((a, b) => {
-    const A = a.createdAt?.toMillis?.() ? a.createdAt.toMillis() : 0;
-    const B = b.createdAt?.toMillis?.() ? b.createdAt.toMillis() : 0;
-    return B - A;
-  })
-  .slice(0, 10);
-
-        .sort((a, b) => {
-          const A = a.createdAt?.toMillis?.() ? a.createdAt.toMillis() : 0;
-          const B = b.createdAt?.toMillis?.() ? b.createdAt.toMillis() : 0;
-          return B - A;
-        })
-        .slice(0, 10);
-
-      // 4) Render
-      gamesContainer.innerHTML = "";
-      if (sorted.length === 0) {
-        gamesContainer.innerHTML = `<div style="opacity:.7;text-align:center;">No tienes juegos recientes.</div>`;
-        return;
-      }
-
-      for (const juego of sorted) {
-        const randomImg = gameImages[Math.floor(Math.random() * gameImages.length)];
-        const fecha = juego.createdAt?.toDate
-          ? juego.createdAt.toDate().toLocaleDateString("es-MX", { day: "2-digit", month: "short", year: "2-digit" })
-          : "";
-
-        const card = document.createElement("div");
-        card.className = "game-card";
-        card.innerHTML = `
-          <img src="${randomImg}" class="bg" alt="Juego">
-          <div class="overlay">
-            <div style="display:flex;justify-content:space-between;">
-              <div class="modos">${(juego.modos||[]).map(m => m.replace("juego_", "").replace(".html","")).join("<br>")}</div>
-              <div class="fecha">${fecha}</div>
-            </div>
-            <div class="campo">${juego.campoNombre||""}</div>
-          </div>
-        `;
-        card.addEventListener("click", () => {
-          window.location.href = `juego_html.html?id=${juego.id}`;
-        });
-        gamesContainer.appendChild(card);
-      }
-
-    } catch (err) {
-      console.error("Error cargando juegos:", err);
-      gamesContainer.innerHTML = `<div style="color:#b00;">Error cargando juegos. Revisa la consola y los índices de Firestore.</div>`;
+    } else {
+      // Solo individuales creados por él
+      q = query(
+        ref,
+        where("ownerUid", "==", uid),
+        orderBy("createdAt", "desc"),
+        limit(10)
+      );
     }
-  });
+
+    const snap = await getDocs(q);
+    const docs = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+
+    // ✅ ordenar por fecha manualmente (por seguridad)
+    const sorted = docs
+      .sort((a, b) => {
+        const A = a.createdAt?.toMillis?.() ? a.createdAt.toMillis() : 0;
+        const B = b.createdAt?.toMillis?.() ? b.createdAt.toMillis() : 0;
+        return B - A;
+      })
+      .slice(0, 10);
+
+    mostrarJuegos(sorted);
+  }
+
+  function mostrarJuegos(juegos) {
+    const container = document.getElementById("gamesContainer");
+    container.innerHTML = "";
+
+    if (juegos.length === 0) {
+      container.innerHTML = "<p>No hay juegos disponibles.</p>";
+      return;
+    }
+
+    juegos.forEach((juego) => {
+      const card = document.createElement("div");
+      card.classList.add("game-card");
+
+      // Botones de modos
+      let botones = "";
+      if (Array.isArray(juego.modos)) {
+        botones = juego.modos
+          .map(
+            (modo) =>
+              `<button onclick="window.location.href='${modo}?id=${juego.id}'">
+                ${modo.replace(".html", "").replace("juego_", "").replace("_", " ")}
+              </button>`
+          )
+          .join(" ");
+      }
+
+      card.innerHTML = `
+        <h3>${juego.campoNombre || "Juego sin nombre"}</h3>
+        <p><b>Tipo:</b> ${juego.tipo}</p>
+        <p><b>Estado:</b> ${juego.estado}</p>
+        <p><b>Creado:</b> ${juego.createdAt?.toDate
+          ? juego.createdAt.toDate().toLocaleString()
+          : "Desconocido"}</p>
+        <div class="botones">${botones}</div>
+      `;
+
+      container.appendChild(card);
+    });
+  }
+
+  // 🔑 Aquí pones el UID y grupo del usuario logueado (ejemplo)
+  const uid = "pL9fWQAtheTDQCJjhhxuBGQ9KVF3"; // el actual user.uid
+  const grupoId = "xXPOfcuLs5DSMnUlGsbn"; // si pertenece a grupo, si no deja null
+
+  cargarJuegos(uid, grupoId);
 </script>
 
 
