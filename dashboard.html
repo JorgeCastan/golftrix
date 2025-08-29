@@ -294,9 +294,10 @@
     try {
       // Traemos los juegos ordenados por fecha descendente
       const snapshot = await db.collection("juegos")
-        .orderBy("fecha", "desc")
+        .orderBy("createdAt", "desc")
         .limit(10)
         .get();
+
 
       const grid = document.getElementById("gamesGrid");
       grid.innerHTML = ""; // limpiar
@@ -307,9 +308,11 @@
 
         // Filtrar: juegos de grupo donde pertenece o individuales donde es owner
         const esOwner = juego.ownerUid === userUid;
-        const esGrupo = juego.tipo === "grupo"; // Aquí luego validas membresía al grupo
+        const esIndividual = juego.tipo === "individual" && esOwner;
+        const esGrupo = juego.tipo === "grupo" && esOwner; // de momento validamos solo owner
 
-        if (!esOwner && !esGrupo) return;
+        if (!esIndividual && !esGrupo) return;
+
 
         // Seleccionar imagen aleatoria
         const randomImg = `juego_golf_${Math.floor(Math.random() * 5) + 1}.png`;
@@ -323,8 +326,11 @@
             ${juego.modos.map(m => `<div>${m}</div>`).join("")}
           </div>
           <div class="info date">
-            ${new Date(juego.fecha.toDate()).toLocaleDateString("es-MX", { day: "2-digit", month: "short" })}
+            ${juego.createdAt 
+                ? new Date(juego.createdAt.toDate()).toLocaleDateString("es-MX", { day: "2-digit", month: "short" }) 
+                : "Sin fecha"}
           </div>
+
           <div class="info course">${juego.campoNombre}</div>
         `;
 
