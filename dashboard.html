@@ -292,10 +292,10 @@
 
     const snapshot = await db.collection("juegos")
       .orderBy("createdAt", "desc")
-      .limit(10)
+      .limit(5)
       .get();
 
-    const juegosContainer = document.getElementById("juegosContainer");
+    const juegosContainer = document.getElementById("gamesGrid"); // 👈 ahora sí existe
     juegosContainer.innerHTML = "";
 
     snapshot.forEach(doc => {
@@ -306,12 +306,20 @@
       const esIndividual = juego.tipo === "individual" && esOwner;
       const esGrupo = juego.tipo === "grupo" && userGrupoId && juego.grupoId === userGrupoId;
 
-      // si no es tuyo ni es de tu grupo, no lo muestres
-      if (!esIndividual && !esGrupo) return;
+      if (!esIndividual && !esGrupo) return; // 👈 filtro correcto
 
-      // Crear tarjeta de juego
+      // Mapeo de nombres bonitos para los botones
+      const nombresModos = {
+        "juego_polla_grupo.html": "La Polla",
+        "juego_solitario_individual.html": "Solitario",
+        "juego_skin_grupo.html": "Skin",
+        "juego_forzons_grupo.html": "Forzons"
+      };
+
+      // Crear tarjeta
       const card = document.createElement("div");
-      card.className = "juego-card";
+      card.className = "game-card"; // 👈 corregido
+
       card.innerHTML = `
         <div class="info">
           <div class="nombre">${juego.campoNombre || "Sin nombre"}</div>
@@ -321,13 +329,17 @@
               : "Sin fecha"}
           </div>
         </div>
-        <div class="modos">
-          ${(juego.modos || []).map(m => `<button onclick="abrirJuego('${juego.id}', '${m}')">${m}</button>`).join("")}
+        <div class="modes">
+          ${(juego.modos || [])
+            .map(m => `<button onclick="abrirJuego('${juego.id}', '${m}')">${nombresModos[m] || m}</button>`)
+            .join("")}
         </div>
       `;
+
       juegosContainer.appendChild(card);
     });
   }
+
 
 
   // Esperar login y luego cargar juegos
