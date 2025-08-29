@@ -283,69 +283,52 @@
 
 <script>
   async function cargarJuegos() {
-    const user = auth.currentUser;
-    if (!user) {
-      console.log("Usuario no autenticado");
-      return;
-    }
+    const user = firebase.auth().currentUser;
+    if (!user) return;
 
-    const userUid = user.uid;
+    const userDoc = await db.collection("users").doc(user.uid).get();
+    const userData = userDoc.exists ? userDoc.data() : {};
+    const userGrupoId = userData.grupoId || null;
 
-    try {
-      // Traemos los juegos ordenados por fecha descendente
-      const snapshot = await db.collection("juegos")
-        .orderBy("createdAt", "desc")
-        .limit(10)
-        .get();
+    const snapshot = await db.collection("juegos")
+      .orderBy("createdAt", "desc")
+      .limit(10)
+      .get();
 
+    const juegosContainer = document.getElementById("juegosContainer");
+    juegosContainer.innerHTML = "";
 
-      const grid = document.getElementById("gamesGrid");
-      grid.innerHTML = ""; // limpiar
+    snapshot.forEach(doc => {
+      const juego = doc.data();
+      juego.id = doc.id;
 
-      snapshot.forEach(doc => {
-        const juego = doc.data();
-        const juegoId = doc.id;
+      const esOwner = juego.ownerUid === user.uid;
+      const esIndividual = juego.tipo === "individual" && esOwner;
+      const esGrupo = juego.tipo === "grupo" && userGrupoId && juego.grupoId === userGrupoId;
 
-        // Filtrar: juegos de grupo donde pertenece o individuales donde es owner
-        const esOwner = juego.ownerUid === userUid;
-        const esIndividual = juego.tipo === "individual" && esOwner;
-        const esGrupo = juego.tipo === "grupo" && esOwner; // de momento validamos solo owner
+      // si no es tuyo ni es de tu grupo, no lo muestres
+      if (!esIndividual && !esGrupo) return;
 
-        if (!esIndividual && !esGrupo) return;
-
-
-        // Seleccionar imagen aleatoria
-        const randomImg = `juego_golf_${Math.floor(Math.random() * 5) + 1}.png`;
-
-        // Crear tarjeta
-        const card = document.createElement("div");
-        card.classList.add("game-card");
-        card.innerHTML = `
-          <img src="${randomImg}" class="bg" alt="Juego">
-          <div class="info modes">
-            ${juego.modos.map(m => `<div>${m}</div>`).join("")}
+      // Crear tarjeta de juego
+      const card = document.createElement("div");
+      card.className = "juego-card";
+      card.innerHTML = `
+        <div class="info">
+          <div class="nombre">${juego.campoNombre || "Sin nombre"}</div>
+          <div class="date">
+            ${juego.createdAt && juego.createdAt.toDate
+              ? new Date(juego.createdAt.toDate()).toLocaleDateString("es-MX", { day: "2-digit", month: "short" })
+              : "Sin fecha"}
           </div>
-          <div class="info date">
-            ${juego.createdAt 
-                ? new Date(juego.createdAt.toDate()).toLocaleDateString("es-MX", { day: "2-digit", month: "short" }) 
-                : "Sin fecha"}
-          </div>
-
-          <div class="info course">${juego.campoNombre}</div>
-        `;
-
-        // Redirigir al detalle
-        card.addEventListener("click", () => {
-          window.location.href = `juego.html?id=${juegoId}`;
-        });
-
-        grid.appendChild(card);
-      });
-
-    } catch (err) {
-      console.error("Error al cargar juegos:", err);
-    }
+        </div>
+        <div class="modos">
+          ${(juego.modos || []).map(m => `<button onclick="abrirJuego('${juego.id}', '${m}')">${m}</button>`).join("")}
+        </div>
+      `;
+      juegosContainer.appendChild(card);
+    });
   }
+
 
   // Esperar login y luego cargar juegos
   auth.onAuthStateChanged(user => {
