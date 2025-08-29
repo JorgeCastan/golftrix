@@ -162,6 +162,25 @@
       right: 10px;
       font-size: 0.85rem;
     }
+    .game-card .modes {
+      position: absolute;
+      bottom: 10px;
+      left: 10px;
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .game-card .modes button {
+      background: white;
+      color: #007f00;
+      font-weight: bold;
+      border: 2px solid #007f00;
+      border-radius: 8px;
+      padding: 5px 10px;
+      cursor: pointer;
+    }
+
 
     @media(max-width: 768px) {
       .games-grid {
@@ -306,7 +325,7 @@
       const esIndividual = juego.tipo === "individual" && esOwner;
       const esGrupo = juego.tipo === "grupo" && userGrupoId && juego.grupoId === userGrupoId;
 
-      if (!esIndividual && !esGrupo) return; // 👈 filtro correcto
+      //if (!esIndividual && !esGrupo) return; // 👈 filtro correcto
 
       // Mapeo de nombres bonitos para los botones
       const nombresModos = {
