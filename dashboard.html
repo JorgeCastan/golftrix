@@ -263,7 +263,6 @@
       import('./menu.js');
     });
 </script>
-
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
   import { getFirestore, collection, query, orderBy, limit, getDocs, doc, getDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
@@ -292,9 +291,9 @@
       const usnap = await getDoc(uref);
       const perfil = usnap.exists() ? usnap.data() : {};
       const uid = user.uid;
-      const grupoUser = perfil?.grupo || perfil?.grupoId || null;
+      const grupoUser = (perfil?.grupo || perfil?.grupoId || "").trim();
 
-      console.log("Perfil cargado:", perfil); // para depuración
+      console.log("Perfil cargado:", perfil); // depuración
       console.log("UID:", uid, "Grupo:", grupoUser);
 
       // 2️⃣ Consultar últimos 10 juegos
@@ -310,19 +309,23 @@
       snapshot.forEach(doc => {
         const juego = doc.data();
 
+        // depuración para ver por qué se filtra
+        console.log("Juego:", juego.campoNombre, "Tipo:", juego.tipo, "OwnerUid:", juego.ownerUid, "GrupoId:", juego.grupoId);
+
         // 3️⃣ Filtrar juegos según tipo
         if (juego.tipo === "individual" && juego.ownerUid !== uid) return;
-        if (juego.tipo === "grupo" && juego.grupoId !== grupoUser) return;
+        if (juego.tipo === "grupo" && ((juego.grupoId || "").trim() !== grupoUser)) return;
 
         // 4️⃣ Imagen random
         const randomImg = gameImages[Math.floor(Math.random() * gameImages.length)];
 
         // 5️⃣ Formatear fecha
         let fecha = "";
-        if (juego.createdAt && typeof juego.createdAt.toDate === "function") {
-          fecha = juego.createdAt.toDate().toLocaleDateString("es-MX", {
-            day: "2-digit", month: "short", year: "2-digit"
-          });
+        if (juego.createdAt?.toDate) {
+          fecha = juego.createdAt.toDate().toLocaleDateString("es-MX", { day: "2-digit", month: "short", year: "2-digit" });
+        } else if (typeof juego.createdAt === "string") {
+          const d = new Date(juego.createdAt);
+          if (!isNaN(d)) fecha = d.toLocaleDateString("es-MX", { day: "2-digit", month: "short", year: "2-digit" });
         }
 
         // 6️⃣ Crear card
@@ -345,12 +348,13 @@
 
         gamesContainer.appendChild(card);
       });
+
     } catch (error) {
       console.error("Error cargando juegos:", error);
     }
   });
-
 </script>
+
 
 </body>
 </html>
