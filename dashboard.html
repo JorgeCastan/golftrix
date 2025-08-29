@@ -287,34 +287,30 @@
       const uid = user.uid;
       const grupoUser = (perfil?.grupo || perfil?.grupoId || "").trim();
 
-      // 2) HAZ DOS QUERIES (no uno global)
-      const qInd = query(
+     // 2) Construir filtros visiblesPara
+      const filtros = [`uid:${uid}`];
+      if (grupoUser) filtros.push(`grupo:${grupoUser}`);
+
+      // 3) Query con visiblesPara
+      const q = query(
         collection(db, "juegos"),
-        where("tipo", "==", "individual"),
-        where("ownerUid", "==", uid),
+        where("visiblesPara", "array-contains-any", filtros),
         orderBy("createdAt", "desc"),
         limit(10)
       );
 
-      const promesas = [getDocs(qInd)];
-      let qGrp = null;
-      if (grupoUser) {
-        qGrp = query(
-          collection(db, "juegos"),
-          where("tipo", "==", "grupo"),
-          where("grupoId", "==", grupoUser),
-          orderBy("createdAt", "desc"),
-          limit(10)
-        );
-        promesas.push(getDocs(qGrp));
-      }
+      const snap = await getDocs(q);
 
-      const [snapInd, snapGrp] = await Promise.all(promesas);
-      // 3) Mezcla, ordena por fecha y recorta a 10
-      const docs = [...snapInd.docs, ...(snapGrp ? snapGrp.docs : [])];
+      // 4) Procesar documentos
+     const docs = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    const sorted = docs
+  .sort((a, b) => {
+    const A = a.createdAt?.toMillis?.() ? a.createdAt.toMillis() : 0;
+    const B = b.createdAt?.toMillis?.() ? b.createdAt.toMillis() : 0;
+    return B - A;
+  })
+  .slice(0, 10);
 
-      const sorted = docs
-        .map(d => ({ id: d.id, ...d.data() }))
         .sort((a, b) => {
           const A = a.createdAt?.toMillis?.() ? a.createdAt.toMillis() : 0;
           const B = b.createdAt?.toMillis?.() ? b.createdAt.toMillis() : 0;
