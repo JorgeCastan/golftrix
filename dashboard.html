@@ -264,96 +264,102 @@
     });
 </script>
 <script type="module">
-  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-  import { getFirestore, collection, query, orderBy, limit, getDocs, doc, getDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+  import { app } from "./firebase-config.js";  // ← usa el MISMO app que ya funciona en nuevo_juego
+  import {
+    getFirestore, collection, query, where, orderBy, limit, getDocs, doc, getDoc
+  } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
   import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 
-  const firebaseConfig = {
-    apiKey: "TU_API_KEY",
-    authDomain: "TU_AUTH_DOMAIN",
-    projectId: "TU_PROJECT_ID",
-  };
-  const app = initializeApp(firebaseConfig);
   const db = getFirestore(app);
   const auth = getAuth(app);
 
   const gamesContainer = document.getElementById('gamesContainer');
-
-  // Array de imágenes posibles
   const gameImages = ["juego_golf_1.png","juego_golf_2.png","juego_golf_3.png","juego_golf_4.png","juego_golf_5.png"];
 
   onAuthStateChanged(auth, async (user) => {
     if (!user) return;
 
     try {
-      // 1️⃣ Traer perfil completo desde Firestore
+      // 1) Perfil del usuario para obtener grupo
       const uref = doc(db, "users", user.uid);
       const usnap = await getDoc(uref);
       const perfil = usnap.exists() ? usnap.data() : {};
       const uid = user.uid;
       const grupoUser = (perfil?.grupo || perfil?.grupoId || "").trim();
 
-      console.log("Perfil cargado:", perfil); // depuración
-      console.log("UID:", uid, "Grupo:", grupoUser);
-
-      // 2️⃣ Consultar últimos 10 juegos
-      const q = query(
+      // 2) HAZ DOS QUERIES (no uno global)
+      const qInd = query(
         collection(db, "juegos"),
+        where("tipo", "==", "individual"),
+        where("ownerUid", "==", uid),
         orderBy("createdAt", "desc"),
         limit(10)
       );
 
-      const snapshot = await getDocs(q);
+      const promesas = [getDocs(qInd)];
+      let qGrp = null;
+      if (grupoUser) {
+        qGrp = query(
+          collection(db, "juegos"),
+          where("tipo", "==", "grupo"),
+          where("grupoId", "==", grupoUser),
+          orderBy("createdAt", "desc"),
+          limit(10)
+        );
+        promesas.push(getDocs(qGrp));
+      }
+
+      const [snapInd, snapGrp] = await Promise.all(promesas);
+      // 3) Mezcla, ordena por fecha y recorta a 10
+      const docs = [...snapInd.docs, ...(snapGrp ? snapGrp.docs : [])];
+
+      const sorted = docs
+        .map(d => ({ id: d.id, ...d.data() }))
+        .sort((a, b) => {
+          const A = a.createdAt?.toMillis?.() ? a.createdAt.toMillis() : 0;
+          const B = b.createdAt?.toMillis?.() ? b.createdAt.toMillis() : 0;
+          return B - A;
+        })
+        .slice(0, 10);
+
+      // 4) Render
       gamesContainer.innerHTML = "";
+      if (sorted.length === 0) {
+        gamesContainer.innerHTML = `<div style="opacity:.7;text-align:center;">No tienes juegos recientes.</div>`;
+        return;
+      }
 
-      snapshot.forEach(doc => {
-        const juego = doc.data();
-
-        // depuración para ver por qué se filtra
-        console.log("Juego:", juego.campoNombre, "Tipo:", juego.tipo, "OwnerUid:", juego.ownerUid, "GrupoId:", juego.grupoId);
-
-        // 3️⃣ Filtrar juegos según tipo
-        if (juego.tipo === "individual" && juego.ownerUid !== uid) return;
-        if (juego.tipo === "grupo" && ((juego.grupoId || "").trim() !== grupoUser)) return;
-
-        // 4️⃣ Imagen random
+      for (const juego of sorted) {
         const randomImg = gameImages[Math.floor(Math.random() * gameImages.length)];
+        const fecha = juego.createdAt?.toDate
+          ? juego.createdAt.toDate().toLocaleDateString("es-MX", { day: "2-digit", month: "short", year: "2-digit" })
+          : "";
 
-        // 5️⃣ Formatear fecha
-        let fecha = "";
-        if (juego.createdAt?.toDate) {
-          fecha = juego.createdAt.toDate().toLocaleDateString("es-MX", { day: "2-digit", month: "short", year: "2-digit" });
-        } else if (typeof juego.createdAt === "string") {
-          const d = new Date(juego.createdAt);
-          if (!isNaN(d)) fecha = d.toLocaleDateString("es-MX", { day: "2-digit", month: "short", year: "2-digit" });
-        }
-
-        // 6️⃣ Crear card
         const card = document.createElement("div");
         card.className = "game-card";
         card.innerHTML = `
           <img src="${randomImg}" class="bg" alt="Juego">
           <div class="overlay">
-            <div style="display: flex; justify-content: space-between;">
-              <div class="modos">${juego.modos.map(m => m.replace("juego_", "").replace(".html","")).join("<br>")}</div>
+            <div style="display:flex;justify-content:space-between;">
+              <div class="modos">${(juego.modos||[]).map(m => m.replace("juego_", "").replace(".html","")).join("<br>")}</div>
               <div class="fecha">${fecha}</div>
             </div>
-            <div class="campo">${juego.campoNombre}</div>
+            <div class="campo">${juego.campoNombre||""}</div>
           </div>
         `;
-
         card.addEventListener("click", () => {
-          window.location.href = `juego_html.html?id=${doc.id}`;
+          window.location.href = `juego_html.html?id=${juego.id}`;
         });
-
         gamesContainer.appendChild(card);
-      });
+      }
 
-    } catch (error) {
-      console.error("Error cargando juegos:", error);
+    } catch (err) {
+      console.error("Error cargando juegos:", err);
+      gamesContainer.innerHTML = `<div style="color:#b00;">Error cargando juegos. Revisa la consola y los índices de Firestore.</div>`;
     }
   });
 </script>
+
 
 
 </body>
