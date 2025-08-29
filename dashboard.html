@@ -304,7 +304,7 @@
       // - Es individual y user es owner
       // - Es grupo y el grupoId coincide con el userProfile
       const uid = user.uid;
-      const grupoUser = "xXPOfcuLs5DSMnUlGsbn"; // TODO: obtener de perfil real del user
+      const grupoUser = user?.grupo || user?.grupoId || null;
       if (juego.tipo === "individual" && juego.ownerUid !== uid) return;
       if (juego.tipo === "grupo" && juego.grupoId !== grupoUser) return;
 
@@ -312,9 +312,13 @@
       const randomImg = gameImages[Math.floor(Math.random() * gameImages.length)];
 
       // Fecha resumida
-      const fecha = juego.createdAt?.toDate().toLocaleDateString("es-MX", {
-        day: "2-digit", month: "short", year: "2-digit"
-      }) || "";
+      let fecha = "";
+      if (juego.createdAt && typeof juego.createdAt.toDate === "function") {
+        fecha = juego.createdAt.toDate().toLocaleDateString("es-MX", {
+          day: "2-digit", month: "short", year: "2-digit"
+        });
+      }
+
 
       // Crear card
       const card = document.createElement("div");
