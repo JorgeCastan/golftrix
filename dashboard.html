@@ -286,62 +286,70 @@
   onAuthStateChanged(auth, async (user) => {
     if (!user) return;
 
-    // 🔹 1. Cargar perfil completo del usuario desde Firestore
-    const uref = doc(db, 'users', user.uid);
-    const usnap = await getDoc(uref);
-    const perfil = usnap.exists() ? usnap.data() : {};
+    try {
+      // 1️⃣ Traer perfil completo desde Firestore
+      const uref = doc(db, "users", user.uid);
+      const usnap = await getDoc(uref);
+      const perfil = usnap.exists() ? usnap.data() : {};
+      const uid = user.uid;
+      const grupoUser = perfil?.grupo || perfil?.grupoId || null;
 
-    const grupoUser = perfil?.grupo || perfil?.grupoId || null;
-    const uid = user.uid;
+      console.log("Perfil cargado:", perfil); // para depuración
+      console.log("UID:", uid, "Grupo:", grupoUser);
 
-    // 🔹 2. Consultar últimos 10 juegos
-    const q = query(
-      collection(db, "juegos"),
-      orderBy("createdAt", "desc"),
-      limit(10)
-    );
+      // 2️⃣ Consultar últimos 10 juegos
+      const q = query(
+        collection(db, "juegos"),
+        orderBy("createdAt", "desc"),
+        limit(10)
+      );
 
-    const snapshot = await getDocs(q);
-    gamesContainer.innerHTML = "";
+      const snapshot = await getDocs(q);
+      gamesContainer.innerHTML = "";
 
-    snapshot.forEach(doc => {
-      const juego = doc.data();
+      snapshot.forEach(doc => {
+        const juego = doc.data();
 
-      // 🔹 3. Filtrar juegos según tipo y grupo
-      if (juego.tipo === "individual" && juego.ownerUid !== uid) return;
-      if (juego.tipo === "grupo" && juego.grupoId !== grupoUser) return;
+        // 3️⃣ Filtrar juegos según tipo
+        if (juego.tipo === "individual" && juego.ownerUid !== uid) return;
+        if (juego.tipo === "grupo" && juego.grupoId !== grupoUser) return;
 
-      // 🔹 4. Imagen random
-      const randomImg = gameImages[Math.floor(Math.random() * gameImages.length)];
+        // 4️⃣ Imagen random
+        const randomImg = gameImages[Math.floor(Math.random() * gameImages.length)];
 
-      // 🔹 5. Fecha resumida
-      let fecha = "";
-      if (juego.createdAt && typeof juego.createdAt.toDate === "function") {
-        fecha = juego.createdAt.toDate().toLocaleDateString("es-MX", {
-          day: "2-digit", month: "short", year: "2-digit"
-        });
-      }
+        // 5️⃣ Formatear fecha
+        let fecha = "";
+        if (juego.createdAt && typeof juego.createdAt.toDate === "function") {
+          fecha = juego.createdAt.toDate().toLocaleDateString("es-MX", {
+            day: "2-digit", month: "short", year: "2-digit"
+          });
+        }
 
-      // 🔹 6. Crear card
-      const card = document.createElement("div");
-      card.className = "game-card";
-      card.innerHTML = `
-        <img src="${randomImg}" class="bg" alt="Juego">
-        <div class="overlay">
-          <div style="display: flex; justify-content: space-between;">
-            <div class="modos">${juego.modos.map(m => m.replace("juego_", "").replace(".html","")).join("<br>")}</div>
-            <div class="fecha">${fecha}</div>
+        // 6️⃣ Crear card
+        const card = document.createElement("div");
+        card.className = "game-card";
+        card.innerHTML = `
+          <img src="${randomImg}" class="bg" alt="Juego">
+          <div class="overlay">
+            <div style="display: flex; justify-content: space-between;">
+              <div class="modos">${juego.modos.map(m => m.replace("juego_", "").replace(".html","")).join("<br>")}</div>
+              <div class="fecha">${fecha}</div>
+            </div>
+            <div class="campo">${juego.campoNombre}</div>
           </div>
-          <div class="campo">${juego.campoNombre}</div>
-        </div>
-      `;
-      card.addEventListener("click", () => {
-        window.location.href = `juego_html.html?id=${doc.id}`;
-      });
+        `;
 
-      gamesContainer.appendChild(card);
-    });
+        card.addEventListener("click", () => {
+          window.location.href = `juego_html.html?id=${doc.id}`;
+        });
+
+        gamesContainer.appendChild(card);
+      });
+    } catch (error) {
+      console.error("Error cargando juegos:", error);
+    }
   });
+
 </script>
 
 </body>
