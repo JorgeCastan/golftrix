@@ -264,10 +264,9 @@
     });
 </script>
 
-<!-- Firebase SDK -->
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-  import { getFirestore, collection, query, where, orderBy, limit, getDocs } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+  import { getFirestore, collection, query, orderBy, limit, getDocs, doc, getDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
   import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 
   const firebaseConfig = {
@@ -287,7 +286,15 @@
   onAuthStateChanged(auth, async (user) => {
     if (!user) return;
 
-    // Consultar últimos 10 juegos del usuario (individuales y de grupo)
+    // 🔹 1. Cargar perfil completo del usuario desde Firestore
+    const uref = doc(db, 'users', user.uid);
+    const usnap = await getDoc(uref);
+    const perfil = usnap.exists() ? usnap.data() : {};
+
+    const grupoUser = perfil?.grupo || perfil?.grupoId || null;
+    const uid = user.uid;
+
+    // 🔹 2. Consultar últimos 10 juegos
     const q = query(
       collection(db, "juegos"),
       orderBy("createdAt", "desc"),
@@ -300,18 +307,14 @@
     snapshot.forEach(doc => {
       const juego = doc.data();
 
-      // Solo mostrar si:
-      // - Es individual y user es owner
-      // - Es grupo y el grupoId coincide con el userProfile
-      const uid = user.uid;
-      const grupoUser = user?.grupo || user?.grupoId || null;
+      // 🔹 3. Filtrar juegos según tipo y grupo
       if (juego.tipo === "individual" && juego.ownerUid !== uid) return;
       if (juego.tipo === "grupo" && juego.grupoId !== grupoUser) return;
 
-      // Imagen random
+      // 🔹 4. Imagen random
       const randomImg = gameImages[Math.floor(Math.random() * gameImages.length)];
 
-      // Fecha resumida
+      // 🔹 5. Fecha resumida
       let fecha = "";
       if (juego.createdAt && typeof juego.createdAt.toDate === "function") {
         fecha = juego.createdAt.toDate().toLocaleDateString("es-MX", {
@@ -319,8 +322,7 @@
         });
       }
 
-
-      // Crear card
+      // 🔹 6. Crear card
       const card = document.createElement("div");
       card.className = "game-card";
       card.innerHTML = `
@@ -341,8 +343,6 @@
     });
   });
 </script>
-
-
 
 </body>
 </html>
