@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -113,65 +112,63 @@
       padding: 15px;
     }
 
-    /* GRID para botones */
-    .games-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-      gap: 20px;
-      width: 100%;
-      margin-top: 30px;
-    }
-
-    /* Botón de juego */
-    .game-card {
+    .juego-card {
       position: relative;
-      background: linear-gradient(90deg, #007f00, #00cc44);
       border-radius: 20px;
       overflow: hidden;
-      height: 220px;
       cursor: pointer;
+      height: 220px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      background: linear-gradient(90deg, #007f00, #00cc44);
       box-shadow: 0 4px 12px rgba(0,0,0,0.4);
       font-family: 'Orbitron', sans-serif;
     }
 
-    .game-card img.bg {
+    .juego-card img.bg {
       width: 100%;
       height: 100%;
       object-fit: cover;
       position: absolute;
-      top: 0; left: 0;
+      top: 0;
+      left: 0;
     }
 
-    /* Overlay */
-    .game-card .overlay {
+    .juego-card .modos {
       position: absolute;
-      top: 0; left: 0; right: 0; bottom: 0;
+      top: 10px;
+      left: 10px;
+      background: rgba(0,0,0,0.6);
+      color: white;
+      padding: 5px 10px;
+      border-radius: 10px;
       display: flex;
       flex-direction: column;
-      justify-content: space-between;
-      padding: 12px;
-      color: #fff;
-      font-size: 0.9rem;
-    }
-
-    /* Modos (arriba izq) */
-    .game-card .modos {
-      text-align: left;
-      font-weight: bold;
-    }
-
-    /* Fecha (arriba der) */
-    .game-card .fecha {
-      text-align: right;
+      gap: 2px;
       font-size: 0.8rem;
-      opacity: 0.9;
     }
 
-    /* Campo (abajo der) */
-    .game-card .campo {
-      text-align: right;
+    .juego-card .fecha {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      background: rgba(0,0,0,0.6);
+      color: white;
+      padding: 5px 10px;
+      border-radius: 10px;
+      font-size: 0.8rem;
+    }
+
+    .juego-card .campo {
+      position: absolute;
+      bottom: 10px;
+      right: 10px;
+      background: rgba(0,0,0,0.6);
+      color: white;
+      padding: 5px 10px;
+      border-radius: 10px;
       font-size: 0.9rem;
-      font-weight: bold;
     }
 
 
@@ -230,7 +227,8 @@
     <div class="divider">
       <h2>──────── Juegos Actuales ────────</h2>
     </div>
-    <div id="gamesContainer" class="games-grid"></div>
+    <!-- Los botones de juegos actuales se generarán dinámicamente -->
+     <div id="juegosContainer" style="width:100%; display:grid; gap:20px; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); margin-top:20px;"></div>
 
   </main>
 
@@ -263,105 +261,6 @@
       import('./menu.js');
     });
 </script>
-<script type="module">
-  import { db, auth } from "./firebase-config.js";
-  import {
-    collection,
-    query,
-    where,
-    orderBy,
-    getDocs,
-    limit,
-  } from "https://www.gstatic.com/firebasejs/10.12.3/firebase-firestore.js";
-
-  async function cargarJuegos(uid, grupoId) {
-    const ref = collection(db, "juegos");
-
-    // Si el usuario pertenece a un grupo, buscar juegos de grupo o individuales suyos
-    let q;
-    if (grupoId) {
-      q = query(
-        ref,
-        where("modos", "array-contains-any", [
-          "juego_polla_grupo.html",
-          "juego_html.html",
-          "juego_solitario_individual.html",
-        ]),
-        orderBy("createdAt", "desc"),
-        limit(10)
-      );
-    } else {
-      // Solo individuales creados por él
-      q = query(
-        ref,
-        where("ownerUid", "==", uid),
-        orderBy("createdAt", "desc"),
-        limit(10)
-      );
-    }
-
-    const snap = await getDocs(q);
-    const docs = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
-
-    // ✅ ordenar por fecha manualmente (por seguridad)
-    const sorted = docs
-      .sort((a, b) => {
-        const A = a.createdAt?.toMillis?.() ? a.createdAt.toMillis() : 0;
-        const B = b.createdAt?.toMillis?.() ? b.createdAt.toMillis() : 0;
-        return B - A;
-      })
-      .slice(0, 10);
-
-    mostrarJuegos(sorted);
-  }
-
-  function mostrarJuegos(juegos) {
-    const container = document.getElementById("gamesContainer");
-    container.innerHTML = "";
-
-    if (juegos.length === 0) {
-      container.innerHTML = "<p>No hay juegos disponibles.</p>";
-      return;
-    }
-
-    juegos.forEach((juego) => {
-      const card = document.createElement("div");
-      card.classList.add("game-card");
-
-      // Botones de modos
-      let botones = "";
-      if (Array.isArray(juego.modos)) {
-        botones = juego.modos
-          .map(
-            (modo) =>
-              `<button onclick="window.location.href='${modo}?id=${juego.id}'">
-                ${modo.replace(".html", "").replace("juego_", "").replace("_", " ")}
-              </button>`
-          )
-          .join(" ");
-      }
-
-      card.innerHTML = `
-        <h3>${juego.campoNombre || "Juego sin nombre"}</h3>
-        <p><b>Tipo:</b> ${juego.tipo}</p>
-        <p><b>Estado:</b> ${juego.estado}</p>
-        <p><b>Creado:</b> ${juego.createdAt?.toDate
-          ? juego.createdAt.toDate().toLocaleString()
-          : "Desconocido"}</p>
-        <div class="botones">${botones}</div>
-      `;
-
-      container.appendChild(card);
-    });
-  }
-
-  // 🔑 Aquí pones el UID y grupo del usuario logueado (ejemplo)
-  const uid = "pL9fWQAtheTDQCJjhhxuBGQ9KVF3"; // el actual user.uid
-  const grupoId = "xXPOfcuLs5DSMnUlGsbn"; // si pertenece a grupo, si no deja null
-
-  cargarJuegos(uid, grupoId);
-</script>
-
 
 
 </body>
