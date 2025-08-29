@@ -262,6 +262,79 @@
     });
 </script>
 
+<script type="module">
+import { app } from './firebase-config.js';
+import { getFirestore, collection, getDocs, query, orderBy, limit } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+
+const db = getFirestore(app);
+const auth = getAuth(app);
+
+onAuthStateChanged(auth, async (user) => {
+  if (!user) {
+    window.location.href = 'index.html';
+    return;
+  }
+
+  const uid = user.uid;
+
+  // Contenedor
+  const container = document.getElementById('juegosContainer');
+
+  try {
+    const snapshot = await getDocs(collection(db, "juegos"));
+    let juegosArray = [];
+
+    snapshot.forEach(docSnap => {
+      const data = docSnap.data();
+      const tipo = data.tipo;
+      const grupoId = data.grupoId;
+      const ownerUid = data.ownerUid;
+
+      // Mostrar si es individual y es owner, o es grupo y pertenece al grupo del usuario
+      // Para simplificar asumimos que tu usuario tiene grupoId = "xXPOfcuLs5DSMnUlGsbn"
+      const userGrupoId = "xXPOfcuLs5DSMnUlGsbn"; // reemplaza con la lógica real si la tienes
+      if ((tipo === "individual" && ownerUid === uid) || (tipo === "grupo" && grupoId === userGrupoId)) {
+        juegosArray.push({id: docSnap.id, ...data});
+      }
+    });
+
+    // Ordenar por fecha (createdAt) descendente
+    juegosArray.sort((a,b) => b.createdAt.toDate().getTime() - a.createdAt.toDate().getTime());
+
+    // Tomar máximo 10
+    const juegos = juegosArray.slice(0,10);
+
+    // Crear botones
+    juegos.forEach(juego => {
+      const card = document.createElement('div');
+      card.className = 'juego-card';
+
+      const n = Math.floor(Math.random()*5)+1;
+      const imgSrc = `img/juego_golf_${n}.png`;
+
+      card.innerHTML = `
+        <img src="${imgSrc}" class="bg" alt="Juego">
+        <div class="modos">
+          ${juego.modos.map(m => m.replace(/^juego_|_(grupo|individual)\.html$/g,'').replace(/_/g,' ').replace(/\b\w/g,c=>c.toUpperCase())).join('<br>')}
+        </div>
+        <div class="fecha">${juego.createdAt.toDate().toLocaleDateString('es-MX')}</div>
+        <div class="campo">${juego.campoNombre}</div>
+      `;
+
+      card.addEventListener('click', () => {
+        window.location.href = `juego_html.html?juegoId=${juego.id}`;
+      });
+
+      container.appendChild(card);
+    });
+
+  } catch (error) {
+    console.error("Error cargando juegos:", error);
+  }
+});
+</script>
+
 
 </body>
 </html>
