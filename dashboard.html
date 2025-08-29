@@ -111,6 +111,64 @@
       text-align: center;
       padding: 15px;
     }
+        .games-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 20px;
+      width: 100%;
+      max-width: 1200px;
+      margin-top: 30px;
+    }
+
+    .game-card {
+      position: relative;
+      border-radius: 20px;
+      overflow: hidden;
+      cursor: pointer;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+      height: 250px;
+      background: linear-gradient(90deg, #007f00, #00cc44);
+    }
+
+    .game-card img.bg {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      position: absolute;
+      top: 0;
+      left: 0;
+    }
+
+    .game-card .info {
+      position: absolute;
+      color: white;
+      font-size: 0.9rem;
+      padding: 8px 12px;
+    }
+
+    .game-card .modes {
+      top: 10px;
+      left: 10px;
+      text-align: left;
+    }
+
+    .game-card .date {
+      top: 10px;
+      right: 10px;
+    }
+
+    .game-card .course {
+      bottom: 10px;
+      right: 10px;
+      font-size: 0.85rem;
+    }
+
+    @media(max-width: 768px) {
+      .games-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
 
     @media(max-width: 768px) {
       
@@ -167,6 +225,8 @@
     <div class="divider">
       <h2>──────── Juegos Actuales ────────</h2>
     </div>
+    <div id="gamesGrid" class="games-grid"></div>
+
     <!-- Los botones de juegos actuales se generarán dinámicamente -->
   </main>
 
@@ -200,6 +260,96 @@
     });
 </script>
 
+<!-- Firebase SDK -->
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js"></script>
+
+<script>
+  const firebaseConfig = {
+    apiKey: "TU_API_KEY",
+    authDomain: "TU_PROYECTO.firebaseapp.com",
+    projectId: "TU_PROYECTO",
+    storageBucket: "TU_PROYECTO.appspot.com",
+    messagingSenderId: "XXX",
+    appId: "XXX"
+  };
+
+  const app = firebase.initializeApp(firebaseConfig);
+  const db = firebase.firestore();
+  const auth = firebase.auth();
+</script>
+
+
+<script>
+  async function cargarJuegos() {
+    const user = auth.currentUser;
+    if (!user) {
+      console.log("Usuario no autenticado");
+      return;
+    }
+
+    const userUid = user.uid;
+
+    try {
+      // Traemos los juegos ordenados por fecha descendente
+      const snapshot = await db.collection("juegos")
+        .orderBy("fecha", "desc")
+        .limit(10)
+        .get();
+
+      const grid = document.getElementById("gamesGrid");
+      grid.innerHTML = ""; // limpiar
+
+      snapshot.forEach(doc => {
+        const juego = doc.data();
+        const juegoId = doc.id;
+
+        // Filtrar: juegos de grupo donde pertenece o individuales donde es owner
+        const esOwner = juego.ownerUid === userUid;
+        const esGrupo = juego.tipo === "grupo"; // Aquí luego validas membresía al grupo
+
+        if (!esOwner && !esGrupo) return;
+
+        // Seleccionar imagen aleatoria
+        const randomImg = `juego_golf_${Math.floor(Math.random() * 5) + 1}.png`;
+
+        // Crear tarjeta
+        const card = document.createElement("div");
+        card.classList.add("game-card");
+        card.innerHTML = `
+          <img src="${randomImg}" class="bg" alt="Juego">
+          <div class="info modes">
+            ${juego.modos.map(m => `<div>${m}</div>`).join("")}
+          </div>
+          <div class="info date">
+            ${new Date(juego.fecha.toDate()).toLocaleDateString("es-MX", { day: "2-digit", month: "short" })}
+          </div>
+          <div class="info course">${juego.campoNombre}</div>
+        `;
+
+        // Redirigir al detalle
+        card.addEventListener("click", () => {
+          window.location.href = `juego.html?id=${juegoId}`;
+        });
+
+        grid.appendChild(card);
+      });
+
+    } catch (err) {
+      console.error("Error al cargar juegos:", err);
+    }
+  }
+
+  // Esperar login y luego cargar juegos
+  auth.onAuthStateChanged(user => {
+    if (user) {
+      cargarJuegos();
+    }
+  });
+</script>
+
 
 </body>
+
 </html>
