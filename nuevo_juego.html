@@ -424,7 +424,7 @@ const seleccionados = Array.from(
     // Tomar nombre del campo del option seleccionado
     const campoNombre = selCampo.options[selCampo.selectedIndex]?.textContent || '';
 
-    // Preparar datos base
+   // Preparar datos base
     const juegoData = {
       ownerUid: currentUser.uid,
       tipo,
@@ -432,8 +432,24 @@ const seleccionados = Array.from(
       campoNombre,
       modos: seleccionados, // nombres de archivo (p.ej. juego_polla_grupo.html)
       estado: 'pendiente',
-      createdAt: serverTimestamp()
+      createdAt: serverTimestamp(),
+      createdAtMillis: Date.now() // útil para ordenar sin esperar timestamp de Firestore
     };
+
+    // --- NUEVO: definir visiblesPara ---
+    if (tipo === 'individual') {
+      juegoData.visiblesPara = [`uid:${currentUser.uid}`];
+    } else if (tipo === 'grupo') {
+      const grupoId = userProfile?.grupoId || userProfile?.grupo || userProfile?.groupId || null;
+      if (grupoId) {
+        juegoData.grupoId = grupoId;
+        juegoData.visiblesPara = [`grupo:${grupoId}`];
+      } else {
+        alert('No se encontró un grupo válido en tu perfil.');
+        return;
+      }
+    }
+
 
     // Si es juego en grupo, guardar el grupo del usuario creador
     if (tipo === 'grupo') {
