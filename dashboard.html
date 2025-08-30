@@ -170,28 +170,10 @@
       border-radius: 10px;
       font-size: 0.9rem;
     }
-    /* --- GRADIENT TEXT (verde header) --- */
-    /* se usa un span interno para aplicar el gradiente sobre el texto */
-    .juego-card .modos .modos-text,
-    .juego-card .fecha .fecha-text,
-    .juego-card .campo .campo-text {
-      display: inline-block;
-      background: linear-gradient(90deg, #007f00, #00cc44);
-      -webkit-background-clip: text;
-      background-clip: text;
-      -webkit-text-fill-color: transparent; /* Safari/Chrome */
-      font-weight: 700;
-    }
-
-    /* Mantener la "cajita" oscura detrás para legibilidad */
-    .juego-card .modos { background: rgba(0,0,0,0.55); }
-    .juego-card .fecha { background: rgba(0,0,0,0.55); }
-    .juego-card .campo { background: rgba(0,0,0,0.55); }
 
 
-
-   @media(max-width: 768px) {
-
+    @media(max-width: 768px) {
+      
       header {
         flex-direction: column;
         text-align: center;
@@ -208,52 +190,10 @@
         margin-top: 10px;
       }
 
-      /* Ajustes de layout móvil */
       main {
         margin-left: 0;
-        padding: 20px;
-      }
-
-      /* --- Ajuste específico del botón "Nuevo Juego" en móvil --- */
-      .new-game {
-        width: calc(100% - 32px); /* ocupa ancho disponible con margen */
-        max-width: 420px;         /* límite razonable */
-        height: 160px;            /* más pequeño en móvil */
-        margin: 0 auto 14px;      /* centro y separa del resto */
-        border-radius: 14px;
-      }
-
-      .new-game .content {
-        padding: 10px 14px;
-      }
-
-      .new-game .icon {
-        width: 28px;
-        height: 28px;
-      }
-
-      .new-game .icon img { width: 65%; height: 65%; }
-      .new-game .text { font-size: 1rem; }
-
-      /* Forzar 1 columna en móvil para los botones de juegos */
-      #juegosContainer {
-        grid-template-columns: 1fr !important;
-        padding: 0 8px;
-      }
-
-      /* Opcional: reducir la altura de las tarjetas en móvil */
-      .juego-card { height: 180px; }
-
-      /* Asegurar que las "cajitas" (modos/fecha/campo) no ocupen demasiado */
-      .juego-card .modos,
-      .juego-card .fecha,
-      .juego-card .campo {
-        padding: 6px 8px;
-        font-size: 0.78rem;
-        border-radius: 8px;
       }
     }
-
   </style>
 </head>
 <body>
@@ -374,19 +314,13 @@ onAuthStateChanged(auth, async (user) => {
       const imgSrc = `img/juego_golf_${n}.png`;
 
       card.innerHTML = `
-      <img src="${imgSrc}" class="bg" alt="Juego">
-      <div class="modos">
-        <span class="modos-text">
-          ${ (juego.modos || [])
-              .map(m => m.replace(/^juego_|_(grupo|individual)\.html$/g,'').replace(/_/g,' ').replace(/\b\w/g,c=>c.toUpperCase()))
-              .join('<br>')
-          }
-        </span>
-      </div>
-      <div class="fecha"><span class="fecha-text">${juego.createdAt?.toDate ? juego.createdAt.toDate().toLocaleDateString('es-MX') : ''}</span></div>
-      <div class="campo"><span class="campo-text">${juego.campoNombre || ''}</span></div>
-    `;
-
+        <img src="${imgSrc}" class="bg" alt="Juego">
+        <div class="modos">
+          ${juego.modos.map(m => m.replace(/^juego_|_(grupo|individual)\.html$/g,'').replace(/_/g,' ').replace(/\b\w/g,c=>c.toUpperCase())).join('<br>')}
+        </div>
+        <div class="fecha">${juego.createdAt.toDate().toLocaleDateString('es-MX')}</div>
+        <div class="campo">${juego.campoNombre}</div>
+      `;
 
       card.addEventListener('click', () => {
         window.location.href = `juego_html.html?juegoId=${juego.id}`;
