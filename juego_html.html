@@ -34,6 +34,23 @@
 
     .small-note { color:#666; font-size:0.9rem; }
 
+    /* botones de tarjeta y modos en fila en PC */
+        .botones-acciones {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        margin-top: 12px;
+        }
+
+        /* en móvil se muestran en columna centrada */
+        @media(max-width: 900px) {
+        .botones-acciones {
+            flex-direction: column;
+            align-items: center;
+        }
+        }
+
+
     /* responsive: en móviles mostramos columna unica */
     @media(max-width: 900px) {
       .top-row { flex-direction:column; }
@@ -52,9 +69,10 @@
   <main>
     <div class="top-row">
       <div class="left card" id="leftArea">
-        <!-- Iframe tarjeta se inyecta aquí -->
-        <div style="text-align:center;color:#666;">Cargando tarjeta...</div>
-      </div>
+        <!-- Aquí se inyecta la tarjeta o los modos -->
+        <div style="text-align:center;color:#666;">Selecciona Tarjeta o un Modo para empezar.</div>
+        </div>
+
 
       <div class="right card" id="rightArea">
         <div id="gameInfo">
@@ -163,29 +181,50 @@
           tarjetaDocId = added.id;
         }
 
-        // 3) insertar iframe tarjeta (izquierda)
-        leftArea.innerHTML = `<iframe class="tarjeta-frame" src="tarjeta.html?tarjetaId=${tarjetaDocId}&juegoId=${juegoId}" loading="lazy"></iframe>`;
-
-        // 4) generar botones de modos usando juego.modos (array de strings)
+       // 3) generar botón de tarjeta y botones de modos
         modosContainer.innerHTML = '';
+        const accionesDiv = document.createElement('div');
+        accionesDiv.className = 'botones-acciones';
+
+        // botón Tarjeta
+        const tarjetaBtn = document.createElement('button');
+        tarjetaBtn.className = 'modo-btn';
+        tarjetaBtn.textContent = 'Tarjeta';
+        tarjetaBtn.addEventListener('click', () => {
+        leftArea.innerHTML = `<iframe class="tarjeta-frame" src="tarjeta.html?tarjetaId=${tarjetaDocId}&juegoId=${juegoId}" loading="lazy"></iframe>`;
+        });
+        accionesDiv.appendChild(tarjetaBtn);
+
+        // botones de modos
         const modos = Array.isArray(juego.modos) ? juego.modos : [];
         if (modos.length === 0) {
-          modosContainer.innerHTML = '<div style="color:#666;">No hay modos configurados en este juego.</div>';
+        const noModes = document.createElement('div');
+        noModes.style.color = '#666';
+        noModes.textContent = 'No hay modos configurados en este juego.';
+        accionesDiv.appendChild(noModes);
         } else {
-          modos.forEach(m => {
-            // extraer label bonito
+        modos.forEach(m => {
             const label = m.replace(/^juego_/,'').replace(/_(grupo|individual)\.html$/,'').replace(/_/g,' ');
             const btn = document.createElement('button');
             btn.className = 'modo-btn';
             btn.textContent = label;
-            btn.addEventListener('click', () => {
-              // abrir en nueva pestaña y pasar contexto
-              const url = `${m}?juegoId=${juegoId}&tarjetaId=${tarjetaDocId}`;
-              window.open(url, '_blank');
+            btn.addEventListener('click', async () => {
+            try {
+                const resp = await fetch(m);
+                const html = await resp.text();
+                leftArea.innerHTML = html;
+                // aquí luego podemos inyectar scripts del modo si es necesario
+            } catch (err) {
+                leftArea.innerHTML = `<div style="color:#b00;">Error cargando modo ${label}</div>`;
+                console.error(err);
+            }
             });
-            modosContainer.appendChild(btn);
-          });
+            accionesDiv.appendChild(btn);
+        });
         }
+
+        modosContainer.appendChild(accionesDiv);
+
 
       } catch (err) {
         console.error('Error en juego_html:', err);
