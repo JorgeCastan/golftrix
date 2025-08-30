@@ -93,11 +93,11 @@ if (!tarjetaId) {
 const authInst = getAuth(app);
 let currentTarjeta = null;
 
-// Genera 18 inputs de hoyo
+// Genera los 18 inputs de hoyo
 function renderHoyoInputs(scores) {
   hoyosContainer.innerHTML = '';
-  for (let i=1;i<=18;i++){
-    const golpes = scores?.find(s=>s.hoyo===i)?.golpes || '';
+  for (let i = 1; i <= 18; i++) {
+    const golpes = scores?.find(s => s.hoyo === i)?.golpes || '';
     const div = document.createElement('div');
     div.className = 'hoyo-card';
     div.innerHTML = `
@@ -110,33 +110,38 @@ function renderHoyoInputs(scores) {
 
 // Cargar tarjeta desde Firestore
 async function cargarTarjeta() {
-  const tref = doc(db, 'tarjetas', tarjetaId);
-  const snap = await getDoc(tref);
-  if (!snap.exists()) {
-    metaEl.textContent = 'Tarjeta no encontrada';
-    return;
+  try {
+    const tref = doc(db, 'tarjetas', tarjetaId);
+    const snap = await getDoc(tref);
+    if (!snap.exists()) {
+      metaEl.textContent = 'Tarjeta no encontrada';
+      return;
+    }
+    const data = snap.data();
+    currentTarjeta = data;
+    metaEl.textContent = `Campo: ${data.campoNombre || 'N/A'} | Juego: ${data.juegoId || ''}`;
+    renderHoyoInputs(data.scores || []);
+  } catch(err) {
+    console.error('Error cargando tarjeta', err);
+    metaEl.textContent = 'Error cargando tarjeta';
   }
-  const data = snap.data();
-  currentTarjeta = data;
-  metaEl.textContent = `Campo: ${data.campoNombre || 'N/A'} | Juego: ${data.juegoId || ''}`;
-  renderHoyoInputs(data.scores || []);
 }
 
 // Guardar la tarjeta completa
-tarjetaForm.addEventListener('submit', async (e)=>{
+tarjetaForm.addEventListener('submit', async (e) => {
   e.preventDefault();
   try {
     const scoresArray = [];
-    for(let i=1;i<=18;i++){
-      const val = parseInt(document.getElementById(`hoyo${i}`).value,10);
-      if(!isNaN(val)) scoresArray.push({ hoyo:i, golpes:val, createdAt: serverTimestamp() });
+    for (let i = 1; i <= 18; i++) {
+      const val = parseInt(document.getElementById(`hoyo${i}`).value, 10);
+      if (!isNaN(val)) scoresArray.push({ hoyo: i, golpes: val, createdAt: serverTimestamp() });
     }
-    const tref = doc(db,'tarjetas',tarjetaId);
+    const tref = doc(db, 'tarjetas', tarjetaId);
     await updateDoc(tref, { scores: scoresArray, lastUpdated: serverTimestamp() });
     await cargarTarjeta();
-    alert('Tarjeta guardada!');
-  } catch(err){
-    console.error(err);
+    alert('Tarjeta guardada correctamente!');
+  } catch (err) {
+    console.error('Error guardando tarjeta', err);
     alert('Error guardando tarjeta');
   }
 });
