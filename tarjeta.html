@@ -50,7 +50,8 @@ button.save { background:linear-gradient(90deg,#007f00,#00cc44); color:#fff; bor
       <form id="tarjetaForm">
         <div id="hoyosContainer" style="display:grid; grid-template-columns: 1fr 1fr; gap:8px;"></div>
         <button type="submit" class="save" style="margin-top:12px;">Guardar Tarjeta</button>
-        </form>
+    </form>
+
 
 
             <div class="list" id="entriesList">
@@ -82,11 +83,6 @@ button.save { background:linear-gradient(90deg,#007f00,#00cc44); color:#fff; bor
     const juegoId = getQueryParam('juegoId');
 
     const metaEl = document.getElementById('meta');
-    const resumenEl = document.getElementById('resumen');
-    const entriesList = document.getElementById('entriesList');
-    const hoyoIn = document.getElementById('hoyo');
-    const golpesIn = document.getElementById('golpes');
-    const guardarBtn = document.getElementById('guardarBtn');
     const refrescarBtn = document.getElementById('refrescar');
 
     if (!tarjetaId) {
@@ -125,8 +121,6 @@ button.save { background:linear-gradient(90deg,#007f00,#00cc44); color:#fff; bor
       const data = snap.data();
       currentTarjeta = data;
       metaEl.innerHTML = `<b>Campo:</b> ${data.campoNombre || 'N/A'} <br/><b>Juego:</b> ${data.juegoId || ''}`;
-      resumenEl.innerHTML = `<div><b>Entradas:</b> ${(data.scores||[]).length}</div>`;
-      renderEntries(data.scores || []);
       renderHoyoInputs(data.scores || []);
 
     }
