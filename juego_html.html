@@ -95,8 +95,9 @@
     import { app, db, auth } from './firebase-config.js';
     import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.3/firebase-auth.js";
     import {
-      doc, getDoc, collection, query, where, getDocs, addDoc, serverTimestamp, updateDoc, arrayUnion, runTransaction
-    } from "https://www.gstatic.com/firebasejs/10.12.3/firebase-firestore.js";
+    doc, getDoc, collection, query, where, getDocs, addDoc, serverTimestamp, updateDoc, arrayUnion, runTransaction
+    } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
 
     const juegoId = getQueryParam('id') || getQueryParam('juegoId');
     const leftArea = document.getElementById('leftArea');
