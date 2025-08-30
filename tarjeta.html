@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Tarjeta - Golftrix</title>
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@700&display=swap" rel="stylesheet" />
+  <style>
+    body { font-family:'Orbitron',sans-serif; margin:0; padding:12px; background: #f6f6f6; color:#111; }
+    .container { max-width:900px; margin:0 auto; display:flex; gap:12px; flex-wrap:wrap; }
+    .form-card { background:white; border-radius:12px; padding:12px; box-shadow:0 6px 18px rgba(0,0,0,0.08); flex:1; min-width:280px; }
+    h2 { margin:0 0 12px 0; color:#005600; }
+    label { display:block; font-weight:700; margin-bottom:6px; }
+    input[type="number"] { width:100%; padding:8px; border-radius:8px; border:1px solid #ddd; margin-bottom:10px; }
+    .row { display:flex; gap:8px; }
+    .row>div { flex:1; }
+    button.save { background:linear-gradient(90deg,#007f00,#00cc44); color:#fff; border:none; padding:10px 12px; border-radius:10px; cursor:pointer; font-weight:800; }
+    .list { margin-top:12px; max-height:260px; overflow:auto; }
+    .entry { background:#f0f0f0; padding:8px 10px; border-radius:8px; margin-bottom:8px; display:flex; justify-content:space-between; }
+    .small { font-size:0.85rem; color:#666; }
+    @media(max-width:700px){ .container{ flex-direction:column;} }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="form-card" id="formCard">
+      <h2>Tu Tarjeta</h2>
+      <div id="meta" class="small">Cargando...</div>
+
+      <div style="margin-top:12px;">
+        <label for="hoyo">Hoyo</label>
+        <input id="hoyo" type="number" min="1" placeholder="Número de hoyo (ej. 1)" />
+
+        <label for="golpes">Golpes</label>
+        <input id="golpes" type="number" min="0" placeholder="Número de golpes" />
+
+        <button class="save" id="guardarBtn">Guardar entrada</button>
+      </div>
+
+      <div class="list" id="entriesList">
+        <!-- entradas guardadas -->
+      </div>
+    </div>
+
+    <div class="form-card" id="helpCard">
+      <h3>Resumen</h3>
+      <div id="resumen" class="small">Cargando tarjeta...</div>
+      <div style="margin-top:12px;">
+        <button id="refrescar" style="padding:8px 10px;border-radius:8px;border:1px solid #ddd;background:#fff;cursor:pointer;">Refrescar</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    function getQueryParam(n){ const u=new URL(location.href); return u.searchParams.get(n); }
+  </script>
+
+  <script type="module">
+    import { app, db, auth } from './firebase-config.js';
+    import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.3/firebase-auth.js";
+    import {
+      doc, getDoc, updateDoc, arrayUnion, serverTimestamp
+    } from "https://www.gstatic.com/firebasejs/10.12.3/firebase-firestore.js";
+
+    const tarjetaId = getQueryParam('tarjetaId');
+    const juegoId = getQueryParam('juegoId');
+
+    const metaEl = document.getElementById('meta');
+    const resumenEl = document.getElementById('resumen');
+    const entriesList = document.getElementById('entriesList');
+    const hoyoIn = document.getElementById('hoyo');
+    const golpesIn = document.getElementById('golpes');
+    const guardarBtn = document.getElementById('guardarBtn');
+    const refrescarBtn = document.getElementById('refrescar');
+
+    if (!tarjetaId) {
+      metaEl.textContent = 'Falta tarjetaId en la URL';
+      throw new Error('Falta tarjetaId');
+    }
+
+    const authInst = getAuth(app);
+
+    let currentTarjeta = null;
+
+    async function cargarTarjeta() {
+      const tref = doc(db, 'tarjetas', tarjetaId);
+      const snap = await getDoc(tref);
+      if (!snap.exists()) {
+        metaEl.textContent = 'Tarjeta no encontrada';
+        return;
+      }
+      const data = snap.data();
+      currentTarjeta = data;
+      metaEl.innerHTML = `<b>Campo:</b> ${data.campoNombre || 'N/A'} <br/><b>Juego:</b> ${data.juegoId || ''}`;
+      resumenEl.innerHTML = `<div><b>Entradas:</b> ${(data.scores||[]).length}</div>`;
+      renderEntries(data.scores || []);
+    }
+
+    function renderEntries(arr) {
+      entriesList.innerHTML = '';
+      if (!arr.length) {
+        entriesList.innerHTML = '<div class="small">No hay entradas aún.</div>';
+        return;
+      }
+      // mostrar en orden cronológico
+      arr.slice().reverse().forEach(e => {
+        const d = document.createElement('div');
+        d.className = 'entry';
+        const left = document.createElement('div');
+        left.innerHTML = `<b>Hoyo ${e.hoyo}</b><div class="small">${new Date(e.createdAt?.toMillis ? e.createdAt.toMillis() : (e.createdAt||Date.now())).toLocaleString()}</div>`;
+        const right = document.createElement('div');
+        right.innerHTML = `<div style="font-weight:800">${e.golpes}</div>`;
+        d.appendChild(left); d.appendChild(right);
+        entriesList.appendChild(d);
+      });
+    }
+
+    guardarBtn.addEventListener('click', async () => {
+      const hoyo = parseInt(hoyoIn.value,10);
+      const golpes = parseInt(golpesIn.value,10);
+      if (!hoyo || isNaN(hoyo) || isNaN(golpes)) {
+        alert('Ingresa hoyo y golpes válidos');
+        return;
+      }
+      try {
+        const tref = doc(db,'tarjetas',tarjetaId);
+        const entry = { hoyo, golpes, createdAt: serverTimestamp() };
+        // actualizar array 'scores' con arrayUnion
+        await updateDoc(tref, { scores: arrayUnion(entry), lastUpdated: serverTimestamp() });
+        hoyoIn.value=''; golpesIn.value='';
+        await cargarTarjeta();
+      } catch (err) {
+        console.error('Error guardando entrada', err);
+        alert('Error guardando. Revisa consola.');
+      }
+    });
+
+    refrescarBtn.addEventListener('click', cargarTarjeta);
+
+    // cargar al inicio (no espera auth estricto)
+    cargarTarjeta();
+  </script>
+</body>
+</html>

@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Juego - Golftrix</title>
+  <link rel="icon" href="logo_golftrix.png" type="image/png" />
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="menu.css" />
+
+  <style>
+    * { box-sizing: border-box; }
+    body { font-family: 'Orbitron', sans-serif; margin:0; min-height:100vh; display:flex; flex-direction:column; }
+    header { background: linear-gradient(90deg,#007f00,#00cc44); color:white; display:flex; align-items:center; justify-content:space-between; padding:12px 20px; }
+    header h1 { margin:0; font-size:1.6rem; text-align:center; flex:1; }
+    main { flex:1; padding:20px; max-width:1200px; margin:0 auto; width:100%; display:flex; flex-direction:column; gap:16px; }
+
+    .top-row { display:flex; gap:16px; align-items:flex-start; width:100%; }
+    /* left column is iframe tarjeta, right column is resumen del juego */
+    .left { flex:1; min-width:280px; }
+    .right { width:360px; max-width:40%; min-width:220px; display:flex; flex-direction:column; gap:12px; }
+
+    .card { background: rgba(255,255,255,0.95); padding:12px; border-radius:14px; box-shadow: 0 6px 18px rgba(0,0,0,0.12); }
+    .game-title { font-size:1.25rem; font-weight:700; color:#004d00; }
+
+    iframe.tarjeta-frame { width:100%; height:520px; border-radius:12px; border:0; box-shadow:0 4px 12px rgba(0,0,0,0.15); }
+
+    .modos-grid { display:flex; flex-wrap:wrap; gap:10px; margin-top:8px; }
+    .modo-btn { background: linear-gradient(90deg,#007f00,#00cc44); color:white; border:none; padding:10px 12px; border-radius:10px; cursor:pointer; font-weight:700; font-family:'Orbitron'; }
+    .modo-btn:hover{ transform:translateY(-2px); }
+
+    .meta-row { display:flex; gap:8px; flex-wrap:wrap; margin-top:6px; color:#333; font-size:0.95rem; }
+    .meta { background: rgba(0,0,0,0.06); padding:6px 8px; border-radius:8px; }
+
+    .small-note { color:#666; font-size:0.9rem; }
+
+    /* responsive: en móviles mostramos columna unica */
+    @media(max-width: 900px) {
+      .top-row { flex-direction:column; }
+      .right { width:100%; max-width:none; }
+      iframe.tarjeta-frame { height:420px; }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div id="menuContainer"></div>
+    <h1>Juego — Golftrix</h1>
+    <img src="logo_golftrix.png" alt="logo" style="height:44px" />
+  </header>
+
+  <main>
+    <div class="top-row">
+      <div class="left card" id="leftArea">
+        <!-- Iframe tarjeta se inyecta aquí -->
+        <div style="text-align:center;color:#666;">Cargando tarjeta...</div>
+      </div>
+
+      <div class="right card" id="rightArea">
+        <div id="gameInfo">
+          <div class="game-title" id="campoNombre">Cargando...</div>
+          <div class="meta-row">
+            <div class="meta" id="tipoBadge"></div>
+            <div class="meta" id="estadoBadge"></div>
+            <div class="meta" id="fechaBadge"></div>
+          </div>
+          <div class="small-note" id="ownerNote" style="margin-top:8px;"></div>
+
+          <div style="margin-top:12px;">
+            <div style="font-weight:700;margin-bottom:6px;">Modos disponibles</div>
+            <div class="modos-grid" id="modosContainer"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div style="font-weight:700;margin-bottom:8px;">Instrucciones rápidas</div>
+      <div class="small-note">
+        1) En la tarjeta (a la izquierda) llena los hoyos y guarda. <br/>
+        2) Usa los botones de Modo para abrir el modo elegido (se abrirá en nueva pestaña con contexto del juego).<br/>
+        3) Si necesitas cargar la tarjeta en otra pantalla, copia el link (se generó una tarjeta personal para ti).
+      </div>
+    </div>
+  </main>
+
+  <footer style="background:#000;color:#fff;padding:10px;text-align:center;">&copy; 2025 Golftrix</footer>
+
+  <script>
+    // helper para leer query param
+    function getQueryParam(n){ const u=new URL(location.href); return u.searchParams.get(n); }
+  </script>
+
+  <script type="module">
+    import { app, db, auth } from './firebase-config.js';
+    import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.3/firebase-auth.js";
+    import {
+      doc, getDoc, collection, query, where, getDocs, addDoc, serverTimestamp, updateDoc, arrayUnion, runTransaction
+    } from "https://www.gstatic.com/firebasejs/10.12.3/firebase-firestore.js";
+
+    const juegoId = getQueryParam('id') || getQueryParam('juegoId');
+    const leftArea = document.getElementById('leftArea');
+    const modosContainer = document.getElementById('modosContainer');
+    const campoNombreEl = document.getElementById('campoNombre');
+    const tipoBadge = document.getElementById('tipoBadge');
+    const estadoBadge = document.getElementById('estadoBadge');
+    const fechaBadge = document.getElementById('fechaBadge');
+    const ownerNote = document.getElementById('ownerNote');
+
+    if (!juegoId) {
+      leftArea.innerHTML = '<div style="color:#b33;">Falta el parámetro id en la URL</div>';
+      throw new Error('Falta id en URL');
+    }
+
+    const authInst = getAuth(app);
+
+    onAuthStateChanged(authInst, async (user) => {
+      if (!user) {
+        // si no está logueado redirigir
+        window.location.href = 'index.html';
+        return;
+      }
+      try {
+        // 1) traer documento juego
+        const jref = doc(db, 'juegos', juegoId);
+        const jsnap = await getDoc(jref);
+        if (!jsnap.exists()) {
+          leftArea.innerHTML = '<div style="color:#b33;">Juego no encontrado</div>';
+          return;
+        }
+        const juego = jsnap.data();
+
+        // llenar info del panel derecho
+        campoNombreEl.textContent = juego.campoNombre || 'Juego sin nombre';
+        tipoBadge.textContent = (juego.tipo || '').toUpperCase();
+        estadoBadge.textContent = (juego.estado || '');
+        fechaBadge.textContent = juego.createdAt?.toDate ? juego.createdAt.toDate().toLocaleDateString('es-MX', { day:'2-digit', month:'short', year:'2-digit' }) : '';
+        ownerNote.textContent = `Creado por: ${juego.ownerUid || 'desconocido'}`;
+
+        // 2) buscar o crear tarjeta del usuario para este juego
+        const uid = user.uid;
+        // query tarjetas where juegoId == juegoId and userUid == uid
+        const tarjetasCol = collection(db, 'tarjetas');
+        const q = query(tarjetasCol, where('juegoId','==', juegoId), where('userUid','==', uid));
+        const snap = await getDocs(q);
+        let tarjetaDocId = null;
+        if (snap.size > 0) {
+          tarjetaDocId = snap.docs[0].id;
+        } else {
+          // crear tarjeta
+          const newTarjeta = {
+            juegoId,
+            campoId: juego.campoId || null,
+            campoNombre: juego.campoNombre || null,
+            userUid: uid,
+            ownerUid: juego.ownerUid || null,
+            createdAt: serverTimestamp(),
+            estado: 'activa',
+            scores: [] // array de objetos { hoyo: number, golpes: number, createdAt: Timestamp }
+          };
+          const added = await addDoc(tarjetasCol, newTarjeta);
+          tarjetaDocId = added.id;
+        }
+
+        // 3) insertar iframe tarjeta (izquierda)
+        leftArea.innerHTML = `<iframe class="tarjeta-frame" src="tarjeta.html?tarjetaId=${tarjetaDocId}&juegoId=${juegoId}" loading="lazy"></iframe>`;
+
+        // 4) generar botones de modos usando juego.modos (array de strings)
+        modosContainer.innerHTML = '';
+        const modos = Array.isArray(juego.modos) ? juego.modos : [];
+        if (modos.length === 0) {
+          modosContainer.innerHTML = '<div style="color:#666;">No hay modos configurados en este juego.</div>';
+        } else {
+          modos.forEach(m => {
+            // extraer label bonito
+            const label = m.replace(/^juego_/,'').replace(/_(grupo|individual)\.html$/,'').replace(/_/g,' ');
+            const btn = document.createElement('button');
+            btn.className = 'modo-btn';
+            btn.textContent = label;
+            btn.addEventListener('click', () => {
+              // abrir en nueva pestaña y pasar contexto
+              const url = `${m}?juegoId=${juegoId}&tarjetaId=${tarjetaDocId}`;
+              window.open(url, '_blank');
+            });
+            modosContainer.appendChild(btn);
+          });
+        }
+
+      } catch (err) {
+        console.error('Error en juego_html:', err);
+        leftArea.innerHTML = `<div style="color:#b00;">Error cargando juego. Revisa consola.</div>`;
+      }
+    });
+  </script>
+
+  <!-- carga el menu.html y menu.js (igual a otras páginas) -->
+  <script>
+    fetch('menu.html')
+      .then(res => res.text())
+      .then(html => {
+        const temp = document.createElement('div');
+        temp.innerHTML = html;
+        const hamburgerBtn = temp.querySelector('.hamburger') || temp.querySelector('#hamburger');
+        const sidebarMenu = temp.querySelector('.sidebar-mobile') || temp.querySelector('#sidebarMenu');
+        if (hamburgerBtn) document.getElementById('menuContainer').appendChild(hamburgerBtn);
+        if (sidebarMenu) document.body.appendChild(sidebarMenu);
+        import('./menu.js').catch(e=>console.error(e));
+      }).catch(e=>console.error('menu.html:',e));
+  </script>
+</body>
+</html>
