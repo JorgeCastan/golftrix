@@ -10,9 +10,6 @@ body { font-family:'Orbitron',sans-serif; margin:0; padding:12px; background: #f
 .container {
   max-width:900px;
   margin:0 auto;
-  display:grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap:12px;
 }
 .form-card { 
   background:white; 
@@ -38,11 +35,6 @@ button.save { background:linear-gradient(90deg,#007f00,#00cc44); color:#fff; bor
   text-align:center;
 }
 .small { font-size:0.85rem; color:#666; text-align:center; margin-bottom:8px; }
-
-@media(max-width:700px){
-  .container{ grid-template-columns: 1fr; }
-  #hoyosContainer { grid-template-columns: 1fr; }
-}
 </style>
 </head>
 <body>
@@ -56,17 +48,6 @@ button.save { background:linear-gradient(90deg,#007f00,#00cc44); color:#fff; bor
       <button type="submit" class="save">Guardar Tarjeta</button>
     </form>
   </div>
-
-  <div class="form-card" id="helpCard">
-    <h3>Instrucciones</h3>
-    <div class="small">
-      Llena los 18 hoyos y haz clic en "Guardar Tarjeta".<br/>
-      Puedes actualizar tus valores en cualquier momento.
-    </div>
-    <div style="margin-top:12px; text-align:center;">
-      <button id="refrescar" style="padding:8px 10px;border-radius:8px;border:1px solid #ddd;background:#fff;cursor:pointer;">Refrescar</button>
-    </div>
-  </div>
 </div>
 
 <script>
@@ -74,14 +55,12 @@ function getQueryParam(n){ const u=new URL(location.href); return u.searchParams
 </script>
 
 <script type="module">
-import { app, db, auth } from './firebase-config.js';
+import { app, db } from './firebase-config.js';
 import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 import { doc, getDoc, updateDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
 const tarjetaId = getQueryParam('tarjetaId');
-
 const metaEl = document.getElementById('meta');
-const refrescarBtn = document.getElementById('refrescar');
 const hoyosContainer = document.getElementById('hoyosContainer');
 const tarjetaForm = document.getElementById('tarjetaForm');
 
@@ -93,7 +72,7 @@ if (!tarjetaId) {
 const authInst = getAuth(app);
 let currentTarjeta = null;
 
-// Genera los 18 inputs de hoyo
+// Render de los hoyos
 function renderHoyoInputs(scores) {
   hoyosContainer.innerHTML = '';
   for (let i = 1; i <= 18; i++) {
@@ -127,17 +106,28 @@ async function cargarTarjeta() {
   }
 }
 
-// Guardar la tarjeta completa
+// Guardar la tarjeta (uno o todos los hoyos)
 tarjetaForm.addEventListener('submit', async (e) => {
   e.preventDefault();
   try {
-    const scoresArray = [];
+    // Usamos los scores actuales como base
+    let updatedScores = currentTarjeta?.scores ? [...currentTarjeta.scores] : [];
+
     for (let i = 1; i <= 18; i++) {
       const val = parseInt(document.getElementById(`hoyo${i}`).value, 10);
-      if (!isNaN(val)) scoresArray.push({ hoyo: i, golpes: val, createdAt: serverTimestamp() });
+      if (!isNaN(val)) {
+        // Si ya existe el hoyo, actualiza; si no, agrega
+        const idx = updatedScores.findIndex(s => s.hoyo === i);
+        if (idx >= 0) {
+          updatedScores[idx] = { ...updatedScores[idx], golpes: val, updatedAt: serverTimestamp() };
+        } else {
+          updatedScores.push({ hoyo: i, golpes: val, createdAt: serverTimestamp() });
+        }
+      }
     }
+
     const tref = doc(db, 'tarjetas', tarjetaId);
-    await updateDoc(tref, { scores: scoresArray, lastUpdated: serverTimestamp() });
+    await updateDoc(tref, { scores: updatedScores, lastUpdated: serverTimestamp() });
     await cargarTarjeta();
     alert('Tarjeta guardada correctamente!');
   } catch (err) {
@@ -146,10 +136,7 @@ tarjetaForm.addEventListener('submit', async (e) => {
   }
 });
 
-// Botón refrescar
-refrescarBtn.addEventListener('click', cargarTarjeta);
-
-// Cargar al inicio solo si usuario logueado
+// Inicia cargando
 onAuthStateChanged(authInst, async (user) => {
   if (!user) {
     metaEl.textContent = 'Debes iniciar sesión';
@@ -158,6 +145,5 @@ onAuthStateChanged(authInst, async (user) => {
   await cargarTarjeta();
 });
 </script>
-
 </body>
 </html>
