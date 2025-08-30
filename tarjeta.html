@@ -107,27 +107,49 @@ async function cargarTarjeta() {
 }
 
 // Guardar la tarjeta (uno o todos los hoyos)
+// Guardar la tarjeta (uno o varios hoyos) — REEMPLAZAR todo el bloque actual
 tarjetaForm.addEventListener('submit', async (e) => {
   e.preventDefault();
   try {
-    // Usamos los scores actuales como base
+    // Clonamos las scores actuales como base (si existen)
     let updatedScores = currentTarjeta?.scores ? [...currentTarjeta.scores] : [];
 
+    // Marcador temporal cliente para entradas nuevas/actualizadas
+    const nowMillis = Date.now();
+
     for (let i = 1; i <= 18; i++) {
-      const val = parseInt(document.getElementById(`hoyo${i}`).value, 10);
+      const input = document.getElementById(`hoyo${i}`);
+      // si el input no existe lo saltamos (defensivo)
+      if (!input) continue;
+      const val = parseInt(input.value, 10);
       if (!isNaN(val)) {
-        // Si ya existe el hoyo, actualiza; si no, agrega
         const idx = updatedScores.findIndex(s => s.hoyo === i);
         if (idx >= 0) {
-          updatedScores[idx] = { ...updatedScores[idx], golpes: val, updatedAt: serverTimestamp() };
+          // Actualiza el registro existente (no usamos serverTimestamp dentro del array)
+          updatedScores[idx] = {
+            ...updatedScores[idx],
+            golpes: val,
+            updatedAtMillis: nowMillis
+          };
         } else {
-          updatedScores.push({ hoyo: i, golpes: val, createdAt: serverTimestamp() });
+          // Agrega nueva entrada con marca de tiempo cliente (millis)
+          updatedScores.push({
+            hoyo: i,
+            golpes: val,
+            createdAtMillis: nowMillis
+          });
         }
       }
     }
 
+    // Guardamos el array (con timestamps numéricos dentro) y actualizamos lastUpdated con serverTimestamp fuera del array
     const tref = doc(db, 'tarjetas', tarjetaId);
-    await updateDoc(tref, { scores: updatedScores, lastUpdated: serverTimestamp() });
+    await updateDoc(tref, {
+      scores: updatedScores,
+      lastUpdated: serverTimestamp() // serverTimestamp SÓLO en campo top-level
+    });
+
+    // recargar la tarjeta desde Firestore para reflejar datos actualizados
     await cargarTarjeta();
     alert('Tarjeta guardada correctamente!');
   } catch (err) {
@@ -135,6 +157,7 @@ tarjetaForm.addEventListener('submit', async (e) => {
     alert('Error guardando tarjeta');
   }
 });
+
 
 // Inicia cargando
 onAuthStateChanged(authInst, async (user) => {
