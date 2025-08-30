@@ -75,8 +75,8 @@ function getQueryParam(n){ const u=new URL(location.href); return u.searchParams
 
 <script type="module">
 import { app, db, auth } from './firebase-config.js';
-import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.3/firebase-auth.js";
-import { doc, getDoc, updateDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.3/firebase-firestore.js";
+import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+import { doc, getDoc, updateDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
 const tarjetaId = getQueryParam('tarjetaId');
 
@@ -158,5 +158,6 @@ onAuthStateChanged(authInst, async (user) => {
   await cargarTarjeta();
 });
 </script>
+
 </body>
 </html>
