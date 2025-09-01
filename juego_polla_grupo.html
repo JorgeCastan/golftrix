@@ -75,7 +75,7 @@
         <div class="top-controls">
           <label style="font-weight:700;margin-right:6px;">Precio por jugador (MXN)</label>
           <input id="precioInput" type="number" min="0" placeholder="Ej: 100" />
-          <button id="startBtn" class="btn">Comenzar Polla</button>
+          <button id="startBtn" class="btn" disabled>Comenzar Polla</button>
           <button id="refreshBtn" class="ghost">Actualizar</button>
         </div>
         <div class="status" id="statusInfo">Estado: esperando iniciar</div>
@@ -167,15 +167,12 @@
           const csnap = await getDoc(cref);
           if (csnap.exists()) {
             const cdata = csnap.data();
-            // Posibles campos: cdata.parPorHoyo (array), cdata.pars (array), cdata.parCampo (single)
-            if (Array.isArray(cdata.parPorHoyo)) campoPar = cdata.parPorHoyo;
+            // Posibles campos: paresHoyo (real), parPorHoyo, pars, parCampo
+            if (Array.isArray(cdata.paresHoyo)) campoPar = cdata.paresHoyo;
+            else if (Array.isArray(cdata.parPorHoyo)) campoPar = cdata.parPorHoyo;
             else if (Array.isArray(cdata.pars)) campoPar = cdata.pars;
-            else if (typeof cdata.parCampo === 'number') {
-              // fallback: all holes equal to parCampo
-              campoPar = new Array(18).fill(cdata.parCampo);
-            } else {
-              campoPar = new Array(18).fill(4);
-            }
+            else if (typeof cdata.parCampo === 'number') campoPar = new Array(18).fill(cdata.parCampo);
+            else campoPar = new Array(18).fill(4);
           } else {
             campoPar = new Array(18).fill(4);
           }
@@ -185,6 +182,7 @@
       } else {
         campoPar = new Array(18).fill(4);
       }
+
     }
 
     // cargar tarjetas para este juego
@@ -216,15 +214,19 @@
         }
       }
     }
+    console.log('Tarjetas cargadas:', tarjetas);
+    console.log('UsersMap:', usersMap);
+
 
     // construye y muestra la tabla con colores y totales
     function renderTabla() {
+      tableWrap.style.display = 'block';
       if (!tarjetas.length) {
-        tableWrap.style.display = 'block';
         tableWrap.innerHTML = `<div style="padding:14px;">No hay tarjetas registradas para este juego.</div>`;
         summaryArea.style.display = 'none';
         return;
       }
+
 
       // preprocesar cada tarjeta -> row: name, scoresMap, sum, adjusted
       const rows = tarjetas.map(t => {
@@ -383,20 +385,21 @@
       const snap = await getDocs(q);
 
       if (snap.size === 0) {
-        const added = await addDoc(pollaCol, {
-          juegoId,
-          precio,
-          ownerUid: currentUser.uid,
-          modo: 'polla_grupo',
-          createdAt: serverTimestamp(),
-          lastCalculated: null
-        });
-        pollaId = added.id;
-      } else {
-        pollaId = snap.docs[0].id;
-        const pref = snap.docs[0].ref;
-        await updateDoc(pref, { precio, lastUpdated: serverTimestamp() });
-      }
+      const added = await addDoc(pollaCol, {
+        juegoId,
+        precio,
+        ownerUid: currentUser.uid,
+        modo: 'polla_grupo',
+        createdAt: serverTimestamp(),
+        lastCalculated: null
+      });
+      pollaId = added.id;
+    } else {
+      pollaId = snap.docs[0].id;
+      const pref = snap.docs[0].ref;
+      await updateDoc(pref, { precio, lastUpdated: serverTimestamp() });
+}
+
 
       // 2️⃣ Asegurarse de que campoPar esté cargado
       if (!campoPar) await cargarJuegoYCampo();
@@ -434,16 +437,22 @@
 
     // iniciar: auth listener
     onAuthStateChanged(authInst, async (user) => {
-      currentUser = user || null;
-      try {
-        await cargarJuegoYCampo();      // carga campoPar
-        await cargarTarjetas();        // carga tarjetas
-        await recalcAndRender();       // render y actualizar resumen
-      } catch (err) {
-        console.error('Error inicializando polla:', err);
-        statusInfo.textContent = 'Error inicializando';
-      }
-    });
+    currentUser = user || null;
+    if(currentUser && currentUser.uid){
+      startBtn.disabled = false;  // habilita botón cuando hay usuario
+    } else {
+      startBtn.disabled = true;   // deshabilitado si no hay usuario
+    }
+    try {
+      await cargarJuegoYCampo();      // carga campoPar
+      await cargarTarjetas();        // carga tarjetas
+      await recalcAndRender();       // render y actualizar resumen
+    } catch (err) {
+      console.error('Error inicializando polla:', err);
+      statusInfo.textContent = 'Error inicializando';
+    }
+  });
+
   </script>
 
   <!-- cargar menú (igual que en otras páginas) -->
