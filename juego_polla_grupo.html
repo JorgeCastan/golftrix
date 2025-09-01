@@ -1,454 +1,218 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Polla - Golftrix</title>
-  <link rel="icon" href="logo_golftrix.png" type="image/png" />
-  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@700&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="menu.css" />
-
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Polla por Grupo</title>
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@700&display=swap" rel="stylesheet">
+  <script type="module" src="firebase-config.js"></script>
   <style>
-    * { box-sizing: border-box; }
-    body { font-family: 'Orbitron', sans-serif; margin:0; min-height:100vh; display:flex; flex-direction:column; background:#f6f6f6; color:#111; }
-    header { background: linear-gradient(90deg,#007f00,#00cc44); color:white; display:flex; align-items:center; justify-content:space-between; padding:14px 18px; }
-    header h1 { margin:0; font-size:1.2rem; text-align:center; flex:1; }
-    main { flex:1; padding:18px; max-width:1200px; margin:0 auto; width:100%; display:flex; flex-direction:column; gap:14px; }
-
-    .card { background: rgba(255,255,255,0.98); padding:14px; border-radius:12px; box-shadow:0 8px 24px rgba(0,0,0,0.08); }
-
-    .top-controls { display:flex; gap:12px; align-items:center; flex-wrap:wrap; }
-    input[type="number"] { padding:10px 12px; border-radius:10px; border:2px solid transparent; min-width:140px;
-      background-image: linear-gradient(white,white), linear-gradient(90deg,#007f00,#00cc44);
-      background-origin: padding-box, border-box; background-clip: padding-box, border-box;
-      font-family:'Orbitron'; font-weight:700; }
-    input[type="number"]::placeholder { font-weight:400; }
-
-    button.btn { background:linear-gradient(90deg,#007f00,#00cc44); color:white; border:0; padding:10px 14px; border-radius:10px; cursor:pointer; font-weight:800; }
-    button.ghost { background:transparent; border:2px solid rgba(0,0,0,0.06); color:#333; padding:8px 10px; border-radius:8px; }
-
-    .status { font-size:0.95rem; color:#333; }
-
-    /* tabla con scroll en móvil */
-    .table-wrap { overflow:auto; margin-top:8px; border-radius:10px; }
-    table { border-collapse:collapse; width:100%; min-width:900px; font-family:'Orbitron'; }
-    th, td { padding:8px 10px; border-bottom:1px solid rgba(0,0,0,0.06); text-align:center; font-size:0.9rem; }
-    th { background: linear-gradient(90deg,#f3fff3,#eefef0); position:sticky; top:0; z-index:2; }
-    tr.player-row:hover { background: rgba(0,0,0,0.02); }
-
-    /* nombre + icono */
-    .player-name { display:flex; align-items:center; gap:8px; justify-content:flex-start; }
-    .avatar-icon {
-      width:28px; height:28px; border-radius:50%; display:inline-flex; align-items:center; justify-content:center;
-      background: linear-gradient(90deg,#007f00,#00cc44); color:white; border:2px solid #000; font-size:0.75rem; font-weight:900;
+    body {
+      font-family: Arial, sans-serif;
+      padding: 20px;
+      background: #f2f2f2;
     }
-
-    /* colores puntaje respecto al par */
-    .par-eq { color: #000; }     /* igual a par */
-    .par-better { color: #0a7f0a; } /* menos que par -> verde */
-    .par-worse { color: #b00000; }  /* mas que par -> rojo */
-
-    /* resumen y saldo */
-    .summary { display:flex; gap:12px; align-items:center; flex-wrap:wrap; margin-top:10px; }
-    .summary .box { padding:10px 12px; border-radius:10px; background:#fff; box-shadow:0 6px 18px rgba(0,0,0,0.04); }
-
-    /* responsive */
-    @media(max-width:900px){
-      th, td { padding:8px 6px; font-size:0.85rem; }
-      table { min-width:700px; }
-      .top-controls { flex-direction:column; align-items:stretch; }
-      input[type="number"] { width:100%; min-width:unset; }
-      .summary { flex-direction:column; align-items:stretch; }
+    .form-container {
+      margin-bottom: 20px;
+      padding: 10px;
+      background: #fff;
+      border-radius: 10px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+    }
+    table {
+      border-collapse: collapse;
+      width: 100%;
+      margin-top: 20px;
+      background: #fff;
+      border-radius: 10px;
+      overflow: hidden;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+    }
+    th, td {
+      border: 1px solid #ccc;
+      padding: 6px;
+      text-align: center;
+    }
+    th {
+      background: #ddd;
+    }
+    .player-cell {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .player-icon {
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #28a745, #0f5c1a);
+      color: white;
+      border: 2px solid black;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 14px;
+      font-weight: bold;
+    }
+    .red { color: red; font-weight: bold; }
+    .green { color: green; font-weight: bold; }
+    .black { color: black; font-weight: bold; }
+    .saldo {
+      margin-top: 20px;
+      font-size: 18px;
+      font-weight: bold;
     }
   </style>
 </head>
 <body>
-  <header>
-    <div id="menuContainer"></div>
-    <h1>Polla — Golftrix</h1>
-    <img src="logo_golftrix.png" alt="logo" style="height:44px;cursor:pointer" id="logo">
-  </header>
 
-  <main>
-    <div class="card">
-      <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;">
-        <div class="top-controls">
-          <label style="font-weight:700;margin-right:6px;">Precio por jugador (MXN)</label>
-          <input id="precioInput" type="number" min="0" placeholder="Ej: 100" />
-          <button id="startBtn" class="btn">Comenzar Polla</button>
-          <button id="refreshBtn" class="ghost">Actualizar</button>
-        </div>
-        <div class="status" id="statusInfo">Estado: esperando iniciar</div>
-      </div>
+  <div class="form-container">
+    <label>Precio por jugador: </label>
+    <input type="number" id="precioInput" min="1" />
+    <button id="comenzarBtn">Comenzar Juego</button>
+  </div>
 
-      <div id="tableArea" style="margin-top:14px;">
-        <!-- tabla se genera aquí -->
-        <div class="table-wrap card" id="tableWrap" style="display:none;"></div>
-      </div>
-
-      <div class="summary" id="summaryArea" style="display:none; margin-top:12px;">
-        <div class="box" id="miSaldoBox">Mi saldo: --</div>
-        <div class="box" id="poolBox">Pozo total: --</div>
-      </div>
-    </div>
-  </main>
-
-  <footer style="background:#000;color:#fff;padding:10px;text-align:center;">&copy; 2025 Golftrix</footer>
-
-  <script>
-    function getQueryParam(n){ const u=new URL(location.href); return u.searchParams.get(n); }
-  </script>
+  <div id="tablaContainer"></div>
+  <div id="saldoContainer" class="saldo"></div>
 
   <script type="module">
-    import { app, db, auth } from './firebase-config.js';
-    import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.3/firebase-auth.js";
-    import {
-      doc, getDoc, collection, query, where, getDocs, addDoc, serverTimestamp, updateDoc, orderBy
-    } from "https://www.gstatic.com/firebasejs/10.12.3/firebase-firestore.js";
+    import { db, auth } from "./firebase-config.js";
+    import { 
+      collection, doc, setDoc, getDoc, getDocs, query, where 
+    } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
-    // Parám: juegoId (igual que en dashboard)
-    const juegoId = getQueryParam('juegoId') || getQueryParam('id');
-    if (!juegoId) {
-      alert('Falta parámetro juegoId en la URL');
-      throw new Error('Falta juegoId');
-    }
-
-    const precioInput = document.getElementById('precioInput');
-    const startBtn = document.getElementById('startBtn');
-    const refreshBtn = document.getElementById('refreshBtn');
-    const statusInfo = document.getElementById('statusInfo');
-    const tableWrap = document.getElementById('tableWrap');
-    const summaryArea = document.getElementById('summaryArea');
-    const miSaldoBox = document.getElementById('miSaldoBox');
-    const poolBox = document.getElementById('poolBox');
-    const logo = document.getElementById('logo');
-
-    logo.addEventListener('click', () => window.location.href = 'dashboard.html');
-
-    const authInst = getAuth(app);
+    let currentJuegoId = new URLSearchParams(window.location.search).get("juegoId");
     let currentUser = null;
+    let currentPollaId = null;
+    let precioPolla = 0;
 
-    // datos cache
-    let juegoDoc = null;
-    let campoPar = null; // array de par por hoyo length 18 (fallback a 4)
-    let tarjetas = []; // array { id, userUid, scores: [{hoyo,golpes}], campoNombre, ... }
-    let usersMap = {}; // uid => { name, handicap }
-
-    // colección donde guardaremos la instancia de la polla
-    const pollaCol = collection(db, 'polla_juegos'); // top-level
-
-    // util: obtener par por hoyo (index 1..18)
-    function getPar(hoyoIndex) {
-      if (Array.isArray(campoPar) && campoPar.length >= hoyoIndex) return Number(campoPar[hoyoIndex-1]) || 4;
-      // si campoPar es objeto con claves '1','2' ...
-      if (campoPar && typeof campoPar === 'object') {
-        return Number(campoPar[hoyoIndex]) || 4;
+    // 🔹 Detectar usuario actual
+    auth.onAuthStateChanged(user => {
+      if (user) {
+        currentUser = user;
       }
-      return 4;
-    }
+    });
 
-    // formato label del jugador y chip icon
-    function makePlayerCellLabel(name) {
-      return `<div class="player-name"><div class="avatar-icon">${(name||'U').slice(0,1).toUpperCase()}</div><div style="text-align:left;">${name||'Sin nombre'}</div></div>`;
-    }
-
-    // lee juego y campo (par)
-    async function cargarJuegoYCampo() {
-      const jref = doc(db, 'juegos', juegoId);
-      const jsnap = await getDoc(jref);
-      if (!jsnap.exists()) throw new Error('Juego no encontrado');
-      juegoDoc = jsnap.data();
-
-      // intento leer campo y par por hoyo
-      const campoId = juegoDoc.campoId;
-      if (campoId) {
-        try {
-          const cref = doc(db, 'camposGolf', campoId);
-          const csnap = await getDoc(cref);
-          if (csnap.exists()) {
-            const cdata = csnap.data();
-            // Posibles campos: cdata.parPorHoyo (array), cdata.pars (array), cdata.parCampo (single)
-            if (Array.isArray(cdata.parPorHoyo)) campoPar = cdata.parPorHoyo;
-            else if (Array.isArray(cdata.pars)) campoPar = cdata.pars;
-            else if (typeof cdata.parCampo === 'number') {
-              // fallback: all holes equal to parCampo
-              campoPar = new Array(18).fill(cdata.parCampo);
-            } else {
-              campoPar = new Array(18).fill(4);
-            }
-          } else {
-            campoPar = new Array(18).fill(4);
-          }
-        } catch (e) {
-          campoPar = new Array(18).fill(4);
-        }
-      } else {
-        campoPar = new Array(18).fill(4);
-      }
-    }
-
-    // cargar tarjetas para este juego
-    async function cargarTarjetas() {
-      tarjetas = [];
-      usersMap = {};
-      const tarjetasRef = collection(db, 'tarjetas');
-      const q = query(tarjetasRef, where('juegoId','==', juegoId));
-      const snap = await getDocs(q);
-      for (const d of snap.docs) {
-        const data = d.data();
-        tarjetas.push({ id: d.id, ...data });
-      }
-
-      // traer info de users (batch)
-      const uids = Array.from(new Set(tarjetas.map(t=>t.userUid).filter(Boolean)));
-      for (const uid of uids) {
-        try {
-          const uref = doc(db, 'users', uid);
-          const usnap = await getDoc(uref);
-          if (usnap.exists()) {
-            const ud = usnap.data();
-            usersMap[uid] = { name: `${ud.name || ''} ${ud.lastname || ud.lastName || ud.lastname || ''}`.trim() || (ud.displayName || ''), handicap: Number(ud.handicap || ud.hcp || ud.handicapNumero || 0) };
-          } else {
-            usersMap[uid] = { name: 'Usuario', handicap: 0 };
-          }
-        } catch (e) {
-          usersMap[uid] = { name: 'Usuario', handicap: 0 };
-        }
-      }
-    }
-
-    // construye y muestra la tabla con colores y totales
-    function renderTabla() {
-      if (!tarjetas.length) {
-        tableWrap.style.display = 'block';
-        tableWrap.innerHTML = `<div style="padding:14px;">No hay tarjetas registradas para este juego.</div>`;
-        summaryArea.style.display = 'none';
+    document.getElementById("comenzarBtn").addEventListener("click", async () => {
+      precioPolla = parseInt(document.getElementById("precioInput").value);
+      if (!precioPolla || !currentJuegoId) {
+        alert("Falta precio o juegoId");
         return;
       }
+      // 🔹 Crear documento del modo polla
+      const pollaRef = doc(collection(db, "polla_grupo"));
+      await setDoc(pollaRef, {
+        juegoId: currentJuegoId,
+        precio: precioPolla,
+        creadoEn: new Date()
+      });
+      currentPollaId = pollaRef.id;
+      // 🔹 Cargar lógica
+      cargarTabla();
+    });
 
-      // preprocesar cada tarjeta -> row: name, scoresMap, sum, adjusted
-      const rows = tarjetas.map(t => {
-        const uid = t.userUid;
-        const user = usersMap[uid] || { name: 'Usuario', handicap: 0 };
-        // build map hoyo->golpes
-        const scoresArr = Array.isArray(t.scores) ? t.scores : [];
-        const scoresMap = {};
-        for (const s of scoresArr) {
-          if (s && typeof s.hoyo !== 'undefined') scoresMap[Number(s.hoyo)] = Number(s.golpes);
+    async function cargarTabla() {
+      if (!currentJuegoId) return;
+
+      const tarjetasSnap = await getDocs(
+        query(collection(db, "tarjetas"), where("juegoId", "==", currentJuegoId))
+      );
+
+      let jugadores = [];
+
+      for (let tarjetaDoc of tarjetasSnap.docs) {
+        let tarjeta = tarjetaDoc.data();
+        let userId = tarjeta.userId;
+
+        // 🔹 Traer info de usuario
+        let userSnap = await getDoc(doc(db, "users", userId));
+        let userData = userSnap.exists() ? userSnap.data() : { name: "Anon", handicap: 0 };
+
+        // 🔹 Traer campo de golf
+        let campoSnap = await getDoc(doc(db, "camposGolf", tarjeta.campoId));
+        let campoData = campoSnap.exists() ? campoSnap.data() : { paresHoyo: [] };
+
+        // 🔹 Calcular golpes y total
+        let total = 0;
+        let hoyos = [];
+        for (let i = 0; i < 18; i++) {
+          let golpes = tarjeta.scores?.find(s => s.hoyo === i+1)?.golpes || 0;
+          total += golpes;
+          let par = campoData.paresHoyo[i] || 0;
+          hoyos.push({ golpes, par });
         }
-        // sum total
-        let sum = 0;
-        for (let i=1;i<=18;i++) {
-          const v = Number(scoresMap[i] || 0);
-          sum += v;
-        }
-        const handicap = Number(user.handicap||0);
-        const adjusted = sum - handicap;
-        return { tarjetaId: t.id, uid, name: user.name || uid, handicap, scoresMap, sum, adjusted };
+
+        let totalConHandicap = total - (userData.handicap || 0);
+
+        jugadores.push({
+          id: tarjetaDoc.id,
+          name: userData.name,
+          handicap: userData.handicap || 0,
+          hoyos,
+          total,
+          totalConHandicap
+        });
+      }
+
+      // 🔹 Ordenar
+      jugadores.sort((a,b) => a.totalConHandicap - b.totalConHandicap);
+
+      renderTabla(jugadores);
+      calcularSaldo(jugadores);
+    }
+
+    function renderTabla(jugadores) {
+      let html = `<table>
+        <thead>
+          <tr>
+            <th>Jugador</th>`;
+      for (let i=1; i<=18; i++) {
+        html += `<th>${i}</th>`;
+      }
+      html += `<th>Total</th><th>Total c/Handicap</th></tr></thead><tbody>`;
+
+      jugadores.forEach(j => {
+        html += `<tr>
+          <td class="player-cell">
+            <div class="player-icon">${j.name[0]?.toUpperCase()}</div> ${j.name}
+          </td>`;
+        j.hoyos.forEach(h => {
+          let cls = h.golpes > h.par ? "red" : h.golpes < h.par ? "green" : "black";
+          html += `<td class="${cls}">${h.golpes}</td>`;
+        });
+        html += `<td>${j.total}</td><td>${j.totalConHandicap}</td></tr>`;
       });
 
-      // ordenar asc por adjusted (menos golpes = mejor)
-      rows.sort((a,b) => a.adjusted - b.adjusted);
+      html += "</tbody></table>";
+      document.getElementById("tablaContainer").innerHTML = html;
+    }
 
-      // winners = those with minimal adjusted
-      const minAdj = rows[0].adjusted;
-      const winners = rows.filter(r => r.adjusted === minAdj);
+    function calcularSaldo(jugadores) {
+      if (!currentUser) return;
+      let yo = jugadores.find(j => j.id.includes(currentUser.uid));
+      if (!yo) return;
 
-      // build HTML table
-      let html = '<table><thead><tr>';
-      html += '<th>Jugador</th>';
-      for (let h=1; h<=18; h++) html += `<th>H${h}</th>`;
-      html += '<th>Total</th><th>Aj. (Hcp)</th></tr></thead><tbody>';
-      for (const r of rows) {
-        html += `<tr class="player-row">`;
-        html += `<td style="text-align:left">${makePlayerCellLabel(r.name)}</td>`;
-        for (let h=1; h<=18; h++) {
-          const v = r.scoresMap[h];
-          const par = getPar(h);
-          let cls = 'par-eq'; let text = v ? v : '-';
-          if (typeof v !== 'undefined' && v !== null && v !== '') {
-            if (v > par) cls = 'par-worse';
-            else if (v < par) cls = 'par-better';
-            else cls = 'par-eq';
-          } else {
-            cls = 'par-eq';
-            text = '-';
-          }
-          html += `<td class="${cls}">${text}</td>`;
-        }
-        html += `<td><strong>${r.sum}</strong></td>`;
-        html += `<td><strong>${r.adjusted}</strong></td>`;
-        html += `</tr>`;
-      }
-      html += '</tbody></table>';
+      let ganadores = jugadores.filter(j => j.totalConHandicap === jugadores[0].totalConHandicap);
+      let esGanador = ganadores.some(g => g.id.includes(currentUser.uid));
 
-      tableWrap.style.display = 'block';
-      tableWrap.innerHTML = html;
-
-      // calcular saldo para el usuario actual
-      const numPlayers = rows.length;
-      const price = Number(precioInput.value) || 0;
-      const totalPool = price * numPlayers;
-      let miSaldoText = 'Sin usuario';
-      if (currentUser && currentUser.uid) {
-        const mine = rows.find(r => r.uid === currentUser.uid);
-        if (!mine) {
-          // user not in table: owes nothing? (we'll show -price because not playing)
-          miSaldoText = `No estás en la tabla de jugadores.`;
-        } else {
-          const isWinner = winners.some(w => w.uid === currentUser.uid);
-          if (isWinner) {
-            if (winners.length === 1) {
-              // winner collects others' stakes (not their own)
-              const gain = price * (numPlayers - 1);
-              miSaldoText = `¡Vas ganando! Saldo estimado: +${gain.toFixed(2)} MXN`;
-            } else {
-              // split totalPool among winners
-              const each = totalPool / winners.length;
-              miSaldoText = `¡Empate entre ${winners.length}! Saldo estimado: +${each.toFixed(2)} MXN (cada uno)`;
-            }
-          } else {
-            // owes price
-            miSaldoText = `No vas ganando. Debes: -${price.toFixed(2)} MXN`;
-          }
-        }
+      let saldo = 0;
+      if (esGanador) {
+        let montoTotal = (jugadores.length - ganadores.length) * precioPolla;
+        saldo = montoTotal / ganadores.length;
+        document.getElementById("saldoContainer").innerText = `+${saldo}`;
       } else {
-        miSaldoText = 'Inicia sesión para ver tu saldo';
-      }
-
-      miSaldoBox.textContent = miSaldoText;
-      poolBox.textContent = `Pozo total: ${totalPool.toFixed(2)} MXN (${numPlayers} jugadores x ${price.toFixed(2)})`;
-      summaryArea.style.display = 'flex';
-
-      // actualizar estado info
-      statusInfo.textContent = `Tarjetas: ${numPlayers} — Ganador(es): ${winners.map(w=>w.name).join(', ')}`;
-
-      // actualizar documento polla_juegos con resultados (si existe ya)
-      // lo hacemos abajo en su propia función
-      return { rows, winners, totalPool, price };
-    }
-
-    // crea instancia de polla en Firestore
-    async function crearPolla(precio) {
-      const payload = {
-        juegoId,
-        precio: Number(precio || 0),
-        ownerUid: currentUser.uid,
-        modo: 'polla_grupo',
-        createdAt: serverTimestamp()
-      };
-      const added = await addDoc(pollaCol, payload);
-      return added.id;
-    }
-
-    // update poll result doc if exists by juegoId (first doc) else create one
-    async function updatePollaResultSummary(summaryObj) {
-      try {
-        // buscar doc que referencie a este juego y modo
-        const q = query(pollaCol, where('juegoId','==', juegoId), where('modo','==','polla_grupo'), orderBy('createdAt','desc'));
-        const snap = await getDocs(q);
-        let docRef;
-        if (snap.size > 0) {
-          docRef = snap.docs[0].ref;
-        } else {
-          // no hay doc, crear uno
-          const id = await crearPolla(precioInput.value || 0);
-          // obtener su ref
-          docRef = doc(db, 'polla_juegos', id);
-        }
-
-        const winnersUids = summaryObj.winners.map(w => ({ uid: w.uid, name: w.name, adjusted: w.adjusted }));
-        await updateDoc(docRef, {
-          lastCalculated: serverTimestamp(),
-          winners: winnersUids,
-          playerCount: summaryObj.rows.length,
-          totalPool: summaryObj.totalPool
-        });
-      } catch (e) {
-        console.warn('No se pudo actualizar resumen de polla:', e);
+        saldo = -precioPolla;
+        document.getElementById("saldoContainer").innerText = `${saldo}`;
       }
     }
 
-    // handler: start or update
-    startBtn.addEventListener('click', async () => {
-      const precio = Number(precioInput.value);
-      if (!precio || precio < 0) { alert('Ingresa un precio válido'); return; }
-      try {
-        statusInfo.textContent = 'Iniciando polla...';
-        // crear doc polla si no existe (buscamos)
-        const q = query(pollaCol, where('juegoId','==', juegoId), where('modo','==','polla_grupo'));
-        const snap = await getDocs(q);
-        let pollaId;
-        if (snap.size === 0) {
-          const added = await addDoc(pollaCol, {
-            juegoId,
-            precio,
-            ownerUid: currentUser.uid,
-            modo: 'polla_grupo',
-            createdAt: serverTimestamp()
-          });
-          pollaId = added.id;
-        } else {
-          pollaId = snap.docs[0].id;
-          // si existe actualizar precio (opcional)
-          const pref = snap.docs[0].ref;
-          await updateDoc(pref, { precio, lastUpdated: serverTimestamp() });
-        }
-
-        // luego cargar tarjetas y renderizar
-        await recalcAndRender();
-        statusInfo.textContent = `Polla iniciada (id: ${pollaId})`;
-      } catch (err) {
-        console.error('Error iniciando polla', err);
-        alert('Error iniciando polla — revisa consola');
-        statusInfo.textContent = 'Error iniciando polla';
+    // 🔹 Auto-cargar si ya hay un juego
+    window.addEventListener("load", () => {
+      if (currentJuegoId) {
+        cargarTabla();
       }
     });
 
-    // refrescar manual
-    refreshBtn.addEventListener('click', async () => {
-      await recalcAndRender();
-    });
-
-    // recalcula todo: cargar tarjetas, users, render tabla, actualizar polla doc
-    async function recalcAndRender() {
-      try {
-        await cargarTarjetas();
-        const summaryObj = renderTabla();
-        if (summaryObj) await updatePollaResultSummary(summaryObj);
-      } catch (e) {
-        console.error('Error recalcAndRender', e);
-        statusInfo.textContent = 'Error cargando datos';
-      }
-    }
-
-    // iniciar: auth listener
-    onAuthStateChanged(authInst, async (user) => {
-      currentUser = user || null;
-      try {
-        await cargarJuegoYCampo();      // carga campoPar
-        await cargarTarjetas();        // carga tarjetas
-        await recalcAndRender();       // render y actualizar resumen
-      } catch (err) {
-        console.error('Error inicializando polla:', err);
-        statusInfo.textContent = 'Error inicializando';
-      }
-    });
-  </script>
-
-  <!-- cargar menú (igual que en otras páginas) -->
-  <script>
-    fetch('menu.html')
-      .then(res => res.text())
-      .then(html => {
-        const temp = document.createElement('div');
-        temp.innerHTML = html;
-        const hamburgerBtn = temp.querySelector('.hamburger') || temp.querySelector('#hamburger');
-        const sidebarMenu = temp.querySelector('.sidebar-mobile') || temp.querySelector('#sidebarMenu');
-        if (hamburgerBtn) document.getElementById('menuContainer').appendChild(hamburgerBtn);
-        if (sidebarMenu) document.body.appendChild(sidebarMenu);
-        import('./menu.js').catch(e=>console.error(e));
-      }).catch(e=>console.error('menu.html:',e));
   </script>
 </body>
 </html>
