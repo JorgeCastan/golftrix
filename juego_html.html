@@ -63,7 +63,10 @@
   <header>
     <div id="menuContainer"></div>
     <h1>Juego — Golftrix</h1>
-    <img src="logo_golftrix.png" alt="logo" style="height:44px" />
+    <a href="dashboard.html" title="Ir al Dashboard" aria-label="Ir al Dashboard">
+      <img src="logo_golftrix.png" alt="logo" id="logo" style="height:80px; cursor:pointer;" />
+    </a>
+
   </header>
 
   <main>
@@ -92,14 +95,14 @@
       </div>
     </div>
 
-    <div class="card">
+    <!-- <div class="card">
       <div style="font-weight:700;margin-bottom:8px;">Instrucciones rápidas</div>
       <div class="small-note">
         1) En la tarjeta (a la izquierda) llena los hoyos y guarda. <br/>
         2) Usa los botones de Modo para abrir el modo elegido (se abrirá en nueva pestaña con contexto del juego).<br/>
         3) Si necesitas cargar la tarjeta en otra pantalla, copia el link (se generó una tarjeta personal para ti).
       </div>
-    </div>
+    </div> -->
   </main>
 
   <footer style="background:#000;color:#fff;padding:10px;text-align:center;">&copy; 2025 Golftrix</footer>
@@ -154,7 +157,27 @@
         tipoBadge.textContent = (juego.tipo || '').toUpperCase();
         estadoBadge.textContent = (juego.estado || '');
         fechaBadge.textContent = juego.createdAt?.toDate ? juego.createdAt.toDate().toLocaleDateString('es-MX', { day:'2-digit', month:'short', year:'2-digit' }) : '';
-        ownerNote.textContent = `Creado por: ${juego.ownerUid || 'desconocido'}`;
+        // Mostrar nombre del creador usando su documento en "users" (fallback al UID)
+        let ownerLabel = juego.ownerUid || 'desconocido';
+        if (juego.ownerUid) {
+          try {
+            const uref = doc(db, 'users', juego.ownerUid);
+            const usnap = await getDoc(uref);
+            if (usnap.exists()) {
+              const udata = usnap.data();
+              // Intentar varios nombres de campo comunes
+              const first = udata.name ?? udata.nombre ?? udata.firstName ?? udata.firstname ?? '';
+              const last  = udata.lastName ?? udata.apellido ?? udata.lastname ?? udata.lastame ?? udata.apellidoPaterno ?? '';
+              const fullName = [first, last].filter(Boolean).join(' ').trim();
+              if (fullName) ownerLabel = fullName;
+            }
+          } catch (e) {
+            console.error('Error cargando usuario creador:', e);
+            // fallback: dejar ownerLabel como el UID
+          }
+        }
+        ownerNote.textContent = `Creado por: ${ownerLabel}`;
+
 
         // 2) buscar o crear tarjeta del usuario para este juego
         const uid = user.uid;
