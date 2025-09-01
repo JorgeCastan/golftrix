@@ -99,391 +99,259 @@
     function getQueryParam(n){ const u=new URL(location.href); return u.searchParams.get(n); }
   </script>
 
-  <script type="module">
-    import { app, db, auth } from './firebase-config.js';
-    import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.3/firebase-auth.js";
-    import {
-      doc, getDoc, collection, query, where, getDocs, addDoc, serverTimestamp, updateDoc, orderBy
-    } from "https://www.gstatic.com/firebasejs/10.12.3/firebase-firestore.js";
+<script type="module">
+  import { app, db } from './firebase-config.js';
+  import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.3/firebase-auth.js";
+  import {
+    doc, getDoc, collection, query, where, getDocs, addDoc, serverTimestamp, updateDoc, orderBy
+  } from "https://www.gstatic.com/firebasejs/10.12.3/firebase-firestore.js";
 
-    // Parám: juegoId (igual que en dashboard)
-    const juegoId = getQueryParam('juegoId') || getQueryParam('id');
-    if (!juegoId) {
-      alert('Falta parámetro juegoId en la URL');
-      throw new Error('Falta juegoId');
-    }
+  // leer juegoId de la URL
+  const juegoId = getQueryParam('juegoId') || getQueryParam('id');
+  if (!juegoId) {
+    alert('Falta parámetro juegoId en la URL');
+    throw new Error('Falta juegoId');
+  }
 
-    const precioInput = document.getElementById('precioInput');
-    const startBtn = document.getElementById('startBtn');
-    const refreshBtn = document.getElementById('refreshBtn');
-    const statusInfo = document.getElementById('statusInfo');
-    const tableWrap = document.getElementById('tableWrap');
-    const summaryArea = document.getElementById('summaryArea');
-    const miSaldoBox = document.getElementById('miSaldoBox');
-    const poolBox = document.getElementById('poolBox');
-    const logo = document.getElementById('logo');
+  // refs DOM
+  const precioInput = document.getElementById('precioInput');
+  const startBtn = document.getElementById('startBtn');
+  const refreshBtn = document.getElementById('refreshBtn');
+  const statusInfo = document.getElementById('statusInfo');
+  const tableWrap = document.getElementById('tableWrap');
+  const summaryArea = document.getElementById('summaryArea');
+  const miSaldoBox = document.getElementById('miSaldoBox');
+  const poolBox = document.getElementById('poolBox');
+  const logo = document.getElementById('logo');
+  logo.addEventListener('click', () => window.location.href = 'dashboard.html');
 
-    logo.addEventListener('click', () => window.location.href = 'dashboard.html');
+  // auth
+  const authInst = getAuth(app);
+  let currentUser = null;
 
-    const authInst = getAuth(app);
-    let currentUser = null;
+  // cache
+  let juegoDoc = null;
+  let campoPar = null;
+  let tarjetas = [];
+  let usersMap = {};
+  let pollaCol = null;
 
-    // datos cache
-    let juegoDoc = null;
-    let campoPar = null; // array de par por hoyo length 18 (fallback a 4)
-    let tarjetas = []; // array { id, userUid, scores: [{hoyo,golpes}], campoNombre, ... }
-    let usersMap = {}; // uid => { name, handicap }
+  function getPollaCol() {
+    if (!pollaCol) pollaCol = collection(db, 'polla_juegos');
+    return pollaCol;
+  }
 
-    // colección donde guardaremos la instancia de la polla (se crea cuando db esté listo)
-    let pollaCol = null;
-    function getPollaCol() {
-      if (!db) {
-        console.error('Firestore "db" está indefinido. Revisa import de firebase-config.js y la consola.');
-        throw new Error('db undefined');
-      }
-      if (!pollaCol) pollaCol = collection(db, 'polla_juegos');
-      return pollaCol;
-    }
+  function getPar(hoyoIndex) {
+    if (Array.isArray(campoPar) && campoPar.length >= hoyoIndex) return Number(campoPar[hoyoIndex-1]) || 4;
+    if (campoPar && typeof campoPar === 'object') return Number(campoPar[hoyoIndex]) || 4;
+    return 4;
+  }
 
+  function makePlayerCellLabel(name) {
+    return `<div class="player-name"><div class="avatar-icon">${(name||'U').slice(0,1).toUpperCase()}</div><div>${name||'Sin nombre'}</div></div>`;
+  }
 
-    // util: obtener par por hoyo (index 1..18)
-    function getPar(hoyoIndex) {
-      if (Array.isArray(campoPar) && campoPar.length >= hoyoIndex) return Number(campoPar[hoyoIndex-1]) || 4;
-      // si campoPar es objeto con claves '1','2' ...
-      if (campoPar && typeof campoPar === 'object') {
-        return Number(campoPar[hoyoIndex]) || 4;
-      }
-      return 4;
-    }
+  async function cargarJuegoYCampo() {
+    console.log('Cargando juego y campo...');
+    const jref = doc(db, 'juegos', juegoId);
+    const jsnap = await getDoc(jref);
+    if (!jsnap.exists()) throw new Error('Juego no encontrado');
+    juegoDoc = jsnap.data();
 
-    // formato label del jugador y chip icon
-    function makePlayerCellLabel(name) {
-      return `<div class="player-name"><div class="avatar-icon">${(name||'U').slice(0,1).toUpperCase()}</div><div style="text-align:left;">${name||'Sin nombre'}</div></div>`;
-    }
-
-    // lee juego y campo (par)
-    async function cargarJuegoYCampo() {
-      const jref = doc(db, 'juegos', juegoId);
-      const jsnap = await getDoc(jref);
-      if (!jsnap.exists()) throw new Error('Juego no encontrado');
-      juegoDoc = jsnap.data();
-
-      // intento leer campo y par por hoyo
-      const campoId = juegoDoc.campoId;
-      if (campoId) {
-        try {
-          const cref = doc(db, 'camposGolf', campoId);
-          const csnap = await getDoc(cref);
-          if (csnap.exists()) {
-            const cdata = csnap.data();
-            // Posibles campos: paresHoyo (real), parPorHoyo, pars, parCampo
-            if (Array.isArray(cdata.paresHoyo)) campoPar = cdata.paresHoyo;
-            else if (Array.isArray(cdata.parPorHoyo)) campoPar = cdata.parPorHoyo;
-            else if (Array.isArray(cdata.pars)) campoPar = cdata.pars;
-            else if (typeof cdata.parCampo === 'number') campoPar = new Array(18).fill(cdata.parCampo);
-            else campoPar = new Array(18).fill(4);
-          } else {
-            campoPar = new Array(18).fill(4);
-          }
-        } catch (e) {
-          campoPar = new Array(18).fill(4);
-        }
-      } else {
+    const campoId = juegoDoc.campoId;
+    if (campoId) {
+      try {
+        const cref = doc(db, 'camposGolf', campoId);
+        const csnap = await getDoc(cref);
+        if (csnap.exists()) {
+          const cdata = csnap.data();
+          if (Array.isArray(cdata.paresHoyo)) campoPar = cdata.paresHoyo;
+          else if (Array.isArray(cdata.parPorHoyo)) campoPar = cdata.parPorHoyo;
+          else if (Array.isArray(cdata.pars)) campoPar = cdata.pars;
+          else if (typeof cdata.parCampo === 'number') campoPar = new Array(18).fill(cdata.parCampo);
+          else campoPar = new Array(18).fill(4);
+        } else campoPar = new Array(18).fill(4);
+      } catch (e) {
+        console.error('Error cargando campo:', e);
         campoPar = new Array(18).fill(4);
       }
+    } else {
+      campoPar = new Array(18).fill(4);
+    }
+  }
 
+  async function cargarTarjetas() {
+    console.log('Cargando tarjetas...');
+    tarjetas = [];
+    usersMap = {};
+    const tarjetasRef = collection(db, 'tarjetas');
+    const q = query(tarjetasRef, where('juegoId','==', juegoId));
+    const snap = await getDocs(q);
+
+    for (const d of snap.docs) {
+      const data = d.data();
+      tarjetas.push({ id: d.id, ...data });
     }
 
-    // cargar tarjetas para este juego
-    async function cargarTarjetas() {
-      tarjetas = [];
-      usersMap = {};
-      const tarjetasRef = collection(db, 'tarjetas');
-      const q = query(tarjetasRef, where('juegoId','==', juegoId));
-      const snap = await getDocs(q);
-      for (const d of snap.docs) {
-        const data = d.data();
-        tarjetas.push({ id: d.id, ...data });
-      }
-
-      // traer info de users (batch)
-      const uids = Array.from(new Set(tarjetas.map(t => t.userUid).filter(Boolean)));
-
-      for (const uid of uids) {
-        try {
-          const uref = doc(db, 'users', uid);
-          const usnap = await getDoc(uref);
-          if (usnap.exists()) {
-            const ud = usnap.data();
-            usersMap[uid] = {
-              name: `${ud.name || ''} ${ud.lastname || ''}`.trim() || ud.email || 'Usuario',
-              handicap: Number(ud.handicap || 0),
-              genero: ud.genero || '',
-              grupo: ud.grupo || ''
-            };
-          } else {
-            usersMap[uid] = { name: 'Usuario desconocido', handicap: 0 };
-          }
-        } catch (e) {
-          console.error(`Error cargando usuario ${uid}:`, e);
-          usersMap[uid] = { name: 'Usuario error', handicap: 0 };
+    const uids = Array.from(new Set(tarjetas.map(t => t.userUid).filter(Boolean)));
+    for (const uid of uids) {
+      try {
+        const uref = doc(db, 'users', uid);
+        const usnap = await getDoc(uref);
+        if (usnap.exists()) {
+          const ud = usnap.data();
+          usersMap[uid] = {
+            name: `${ud.name || ''} ${ud.lastname || ''}`.trim() || ud.email || 'Usuario',
+            handicap: Number(ud.handicap || 0)
+          };
+        } else {
+          usersMap[uid] = { name: 'Usuario desconocido', handicap: 0 };
         }
+      } catch (e) {
+        console.error(`Error cargando usuario ${uid}:`, e);
+        usersMap[uid] = { name: 'Error usuario', handicap: 0 };
       }
-      console.log('👉 cargarTarjetas terminó:', { tarjetas, usersMap });
-
-      console.log('cargarTarjetas -> tarjetas:', tarjetas);
-      console.log('cargarTarjetas -> usersMap:', usersMap);
-
     }
-  
-    // construye y muestra la tabla con colores y totales
-    function renderTabla() {
-    console.log('👉 renderTabla() tarjetas:', tarjetas, 'usersMap:', usersMap);
+    console.log('👉 cargarTarjetas terminó:', { tarjetas, usersMap });
+  }
+
+  function renderTabla() {
+    console.log('Renderizando tabla con', tarjetas.length, 'tarjetas');
+    if (!tarjetas.length) {
+      tableWrap.innerHTML = `<div style="padding:14px;">No hay tarjetas registradas para este juego.</div>`;
       tableWrap.style.display = 'block';
-      if (!tarjetas.length) {
-        tableWrap.innerHTML = `<div style="padding:14px;">No hay tarjetas registradas para este juego.</div>`;
-        summaryArea.style.display = 'none';
-        return;
-      }
+      summaryArea.style.display = 'none';
+      return null;
+    }
 
-
-      // preprocesar cada tarjeta -> row: name, scoresMap, sum, adjusted
-      const rows = tarjetas.map(t => {
-        const uid = t.userUid;
-        const user = usersMap[uid] || { name: 'Usuario', handicap: 0 };
-        // build map hoyo->golpes
-        const scoresArr = Array.isArray(t.scores) ? t.scores : [];
-        const scoresMap = {};
-        for (const s of scoresArr) {
-          if (s && typeof s.hoyo !== 'undefined') scoresMap[Number(s.hoyo)] = Number(s.golpes);
-        }
-        // sum total
-        let sum = 0;
-        for (let i=1;i<=18;i++) {
-          const v = Number(scoresMap[i] || 0);
-          sum += v;
-        }
-        const handicap = Number(user.handicap||0);
-        const adjusted = sum - handicap;
-        return { tarjetaId: t.id, uid, name: user.name || uid, handicap, scoresMap, sum, adjusted };
+    const rows = tarjetas.map(t => {
+      const user = usersMap[t.userUid] || { name: 'Usuario', handicap: 0 };
+      const scoresMap = {};
+      (Array.isArray(t.scores) ? t.scores : []).forEach(s => {
+        if (s && s.hoyo) scoresMap[Number(s.hoyo)] = Number(s.golpes);
       });
+      let sum = 0;
+      for (let i=1;i<=18;i++) sum += Number(scoresMap[i] || 0);
+      const adjusted = sum - user.handicap;
+      return { uid: t.userUid, name: user.name, handicap: user.handicap, scoresMap, sum, adjusted };
+    });
 
-      // ordenar asc por adjusted (menos golpes = mejor)
-      rows.sort((a,b) => a.adjusted - b.adjusted);
+    rows.sort((a,b)=>a.adjusted - b.adjusted);
+    const minAdj = rows[0].adjusted;
+    const winners = rows.filter(r => r.adjusted === minAdj);
 
-      // winners = those with minimal adjusted
-      const minAdj = rows[0].adjusted;
-      const winners = rows.filter(r => r.adjusted === minAdj);
+    let html = '<table><thead><tr><th>Jugador</th>';
+    for (let h=1;h<=18;h++) html += `<th>H${h}</th>`;
+    html += '<th>Total</th><th>Aj. (Hcp)</th></tr></thead><tbody>';
 
-      // build HTML table
-      let html = '<table><thead><tr>';
-      html += '<th>Jugador</th>';
-      for (let h=1; h<=18; h++) html += `<th>H${h}</th>`;
-      html += '<th>Total</th><th>Aj. (Hcp)</th></tr></thead><tbody>';
-      for (const r of rows) {
-        html += `<tr class="player-row">`;
-        html += `<td style="text-align:left">${makePlayerCellLabel(r.name)}</td>`;
-        for (let h=1; h<=18; h++) {
-          const v = r.scoresMap[h];
-          const par = getPar(h);
-          let cls = 'par-eq'; let text = v ? v : '-';
-          if (typeof v !== 'undefined' && v !== null && v !== '') {
-            if (v > par) cls = 'par-worse';
-            else if (v < par) cls = 'par-better';
-            else cls = 'par-eq';
-          } else {
-            cls = 'par-eq';
-            text = '-';
-          }
-          html += `<td class="${cls}">${text}</td>`;
+    for (const r of rows) {
+      html += `<tr><td>${makePlayerCellLabel(r.name)}</td>`;
+      for (let h=1;h<=18;h++) {
+        const v = r.scoresMap[h];
+        const par = getPar(h);
+        let cls = 'par-eq', text='-';
+        if (v) {
+          text=v;
+          if (v>par) cls='par-worse';
+          else if (v<par) cls='par-better';
         }
-        html += `<td><strong>${r.sum}</strong></td>`;
-        html += `<td><strong>${r.adjusted}</strong></td>`;
-        html += `</tr>`;
+        html += `<td class="${cls}">${text}</td>`;
       }
-      html += '</tbody></table>';
-
-      tableWrap.style.display = 'block';
-      tableWrap.innerHTML = html;
-
-      // calcular saldo para el usuario actual
-      const numPlayers = rows.length;
-      const price = Number(precioInput.value) || 0;
-      const totalPool = price * numPlayers;
-      let miSaldoText = 'Sin usuario';
-      if (currentUser && currentUser.uid) {
-        const mine = rows.find(r => r.uid === currentUser.uid);
-        if (!mine) {
-          // user not in table: owes nothing? (we'll show -price because not playing)
-          miSaldoText = `No estás en la tabla de jugadores.`;
-        } else {
-          const isWinner = winners.some(w => w.uid === currentUser.uid);
-          if (isWinner) {
-            if (winners.length === 1) {
-              // winner collects others' stakes (not their own)
-              const gain = price * (numPlayers - 1);
-              miSaldoText = `¡Vas ganando! Saldo estimado: +${gain.toFixed(2)} MXN`;
-            } else {
-              // split totalPool among winners
-              const each = totalPool / winners.length;
-              miSaldoText = `¡Empate entre ${winners.length}! Saldo estimado: +${each.toFixed(2)} MXN (cada uno)`;
-            }
-          } else {
-            // owes price
-            miSaldoText = `No vas ganando. Debes: -${price.toFixed(2)} MXN`;
-          }
-        }
-      } else {
-        miSaldoText = 'Inicia sesión para ver tu saldo';
-      }
-
-      miSaldoBox.textContent = miSaldoText;
-      poolBox.textContent = `Pozo total: ${totalPool.toFixed(2)} MXN (${numPlayers} jugadores x ${price.toFixed(2)})`;
-      summaryArea.style.display = 'flex';
-
-      // actualizar estado info
-      statusInfo.textContent = `Tarjetas: ${numPlayers} — Ganador(es): ${winners.map(w=>w.name).join(', ')}`;
-
-      // actualizar documento polla_juegos con resultados (si existe ya)
-      // lo hacemos abajo en su propia función
-      return { rows, winners, totalPool, price };
+      html += `<td><b>${r.sum}</b></td><td><b>${r.adjusted}</b></td></tr>`;
     }
+    html += '</tbody></table>';
 
-   // crea instancia de polla en Firestore
-    async function crearPolla(precio) {
-      try {
-        const payload = {
-          juegoId,
-          precio: Number(precio || 0),
-          ownerUid: currentUser?.uid || null,
-          modo: 'polla_grupo',
-          createdAt: serverTimestamp()
-        };
-        const added = await addDoc(getPollaCol(), payload);
-        console.log('crearPolla: creado doc polla_juegos id=', added.id);
-        return added.id;
-      } catch (err) {
-        console.error('crearPolla error:', err);
-        throw err;
-      }
+    tableWrap.innerHTML = html;
+    tableWrap.style.display = 'block';
+
+    const numPlayers = rows.length;
+    const price = Number(precioInput.value)||0;
+    const totalPool = price * numPlayers;
+    let saldo='--';
+    if (currentUser?.uid) {
+      const mine = rows.find(r=>r.uid===currentUser.uid);
+      if (mine) {
+        if (winners.some(w=>w.uid===currentUser.uid)) {
+          if (winners.length===1) saldo = `+${price*(numPlayers-1)} MXN`;
+          else saldo = `+${(totalPool/winners.length).toFixed(2)} MXN (empate)`;
+        } else saldo = `-${price} MXN`;
+      } else saldo='No estás en la tabla';
     }
+    miSaldoBox.textContent = `Mi saldo: ${saldo}`;
+    poolBox.textContent = `Pozo total: ${totalPool} MXN`;
+    summaryArea.style.display = 'flex';
 
+    statusInfo.textContent = `Jugadores: ${numPlayers}, Ganador(es): ${winners.map(w=>w.name).join(', ')}`;
+    return {rows,winners,totalPool,price};
+  }
 
-    // update poll result doc if exists by juegoId (first doc) else create one
-    async function updatePollaResultSummary(summaryObj) {
-      try {
-        // buscar doc que referencie a este juego y modo
-        const q = query(getPollaCol(), where('juegoId','==', juegoId), where('modo','==','polla_grupo'), orderBy('createdAt','desc'));
-        const snap = await getDocs(q);
-
-        let docRef;
-        if (snap.size > 0) {
-          docRef = snap.docs[0].ref;
-        } else {
-          // no hay doc, crear uno
-          const id = await crearPolla(precioInput.value || 0);
-          // obtener su ref
-          docRef = doc(db, 'polla_juegos', id);
-        }
-
-        const winnersUids = summaryObj.winners.map(w => ({ uid: w.uid, name: w.name, adjusted: w.adjusted }));
-        await updateDoc(docRef, {
-          lastCalculated: serverTimestamp(),
-          winners: winnersUids,
-          playerCount: summaryObj.rows.length,
-          totalPool: summaryObj.totalPool
+  async function updatePollaResultSummary(summary) {
+    try {
+      const q = query(getPollaCol(), where('juegoId','==',juegoId), where('modo','==','polla_grupo'), orderBy('createdAt','desc'));
+      const snap = await getDocs(q);
+      let ref;
+      if (snap.size>0) ref = snap.docs[0].ref;
+      else {
+        const added = await addDoc(getPollaCol(), {
+          juegoId, precio:Number(precioInput.value)||0,
+          ownerUid: currentUser?.uid||null,
+          modo:'polla_grupo', createdAt:serverTimestamp()
         });
-      } catch (e) {
-        console.warn('No se pudo actualizar resumen de polla:', e);
+        ref = doc(db,'polla_juegos',added.id);
       }
+      await updateDoc(ref,{
+        lastCalculated:serverTimestamp(),
+        winners: summary.winners.map(w=>({uid:w.uid,name:w.name,adjusted:w.adjusted})),
+        playerCount: summary.rows.length,
+        totalPool: summary.totalPool
+      });
+    } catch(e){console.warn('updatePollaResultSummary error',e);}
+  }
+
+  async function recalcAndRender() {
+    try {
+      if (!campoPar) await cargarJuegoYCampo();
+      await cargarTarjetas();
+      const summary=renderTabla();
+      if (summary) await updatePollaResultSummary(summary);
+    } catch(e){
+      console.error('Error en recalcAndRender',e);
+      statusInfo.textContent='Error cargando';
     }
+  }
 
-    startBtn.addEventListener('click', async () => {
-      console.log('startBtn clicked');
-      const precio = Number(precioInput.value);
-      console.log('Precio introducido:', precio);
-      if (!precio || precio < 0) { alert('Ingresa un precio válido'); return; }
-      if (!currentUser || !currentUser.uid) { alert('Debes iniciar sesión'); return; }
+  startBtn.addEventListener('click', async ()=>{
+    console.log('Click en Comenzar Polla');
+    const precio=Number(precioInput.value);
+    if(!precio){alert('Ingresa precio válido');return;}
+    if(!currentUser){alert('Debes iniciar sesión');return;}
 
-      try {
-        statusInfo.textContent = 'Iniciando polla...';
-
-        // 1) buscar si ya existe un doc para este juego/mode
-        const q = query(getPollaCol(), where('juegoId','==', juegoId), where('modo','==','polla_grupo'));
-        const snap = await getDocs(q);
-        console.log('Consulta polla_juegos result count:', snap.size);
-
-        let pollaId;
-        if (snap.size === 0) {
-          // crear nuevo
-          const added = await addDoc(getPollaCol(), {
-            juegoId,
-            precio,
-            ownerUid: currentUser.uid,
-            modo: 'polla_grupo',
-            createdAt: serverTimestamp(),
-            lastCalculated: null
-          });
-          pollaId = added.id;
-          console.log('Polla creada con id:', pollaId);
-        } else {
-          // usar el primero (puedes ajustar lógica si quieres multiples)
-          pollaId = snap.docs[0].id;
-          const pref = snap.docs[0].ref;
-          await updateDoc(pref, { precio, lastUpdated: serverTimestamp() });
-          console.log('Polla existente actualizada id:', pollaId);
-        }
-
-        // asegurar par por hoyo
-        if (!campoPar) await cargarJuegoYCampo();
-
-        // recalc y render
-        await recalcAndRender();
-
-        statusInfo.textContent = `Polla iniciada (id: ${pollaId})`;
-      } catch (err) {
-        console.error('Error iniciando polla (click handler):', err);
-        alert('Error iniciando polla — revisa la consola para ver detalles.');
-        statusInfo.textContent = 'Error iniciando polla';
+    try{
+      statusInfo.textContent='Creando/actualizando polla...';
+      const q=query(getPollaCol(),where('juegoId','==',juegoId),where('modo','==','polla_grupo'));
+      const snap=await getDocs(q);
+      if(snap.empty){
+        await addDoc(getPollaCol(),{juegoId,precio,ownerUid:currentUser.uid,modo:'polla_grupo',createdAt:serverTimestamp()});
+      }else{
+        await updateDoc(snap.docs[0].ref,{precio,lastUpdated:serverTimestamp()});
       }
-    });
-
-
-
-    // refrescar manual
-    refreshBtn.addEventListener('click', async () => {
       await recalcAndRender();
-    });
-
-    // recalcula todo: cargar tarjetas, users, render tabla, actualizar polla doc
-    async function recalcAndRender() {
-      try {
-        if (!campoPar) await cargarJuegoYCampo();  // asegurar par por hoyo
-        await cargarTarjetas();
-        const summaryObj = renderTabla();
-        if (summaryObj) await updatePollaResultSummary(summaryObj);
-      } catch (e) {
-        console.error('Error recalcAndRender', e);
-        statusInfo.textContent = 'Error cargando datos';
-      }
+    }catch(e){
+      console.error('Error en startBtn',e);
+      statusInfo.textContent='Error iniciando polla';
     }
+  });
 
-    // iniciar: auth listener
-    onAuthStateChanged(authInst, async (user) => {
-      currentUser = user || null;
-      startBtn.disabled = !currentUser;
+  refreshBtn.addEventListener('click', recalcAndRender);
 
-      try {
-        await cargarJuegoYCampo();      
-        await recalcAndRender();       // recalc ya llama a cargarTarjetas
-      } catch (err) {
-        console.error('Error inicializando polla:', err);
-        statusInfo.textContent = 'Error inicializando';
-      }
-    });
+  onAuthStateChanged(authInst, async (user)=>{
+    currentUser=user||null;
+    startBtn.disabled=!currentUser;
+    console.log('Auth state:', currentUser?.uid||'no user');
+    await recalcAndRender();
+  });
+</script>
 
-
-  </script>
 
   <!-- cargar menú (igual que en otras páginas) -->
   <script>
