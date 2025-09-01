@@ -7,52 +7,35 @@
   <link rel="icon" href="logo_golftrix.png" type="image/png" />
   <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@700&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="menu.css" />
-
   <style>
     * { box-sizing: border-box; }
     body { font-family: 'Orbitron', sans-serif; margin:0; min-height:100vh; display:flex; flex-direction:column; background:#f6f6f6; color:#111; }
     header { background: linear-gradient(90deg,#007f00,#00cc44); color:white; display:flex; align-items:center; justify-content:space-between; padding:14px 18px; }
     header h1 { margin:0; font-size:1.2rem; text-align:center; flex:1; }
     main { flex:1; padding:18px; max-width:1200px; margin:0 auto; width:100%; display:flex; flex-direction:column; gap:14px; }
-
     .card { background: rgba(255,255,255,0.98); padding:14px; border-radius:12px; box-shadow:0 8px 24px rgba(0,0,0,0.08); }
-
     .top-controls { display:flex; gap:12px; align-items:center; flex-wrap:wrap; }
     input[type="number"] { padding:10px 12px; border-radius:10px; border:2px solid transparent; min-width:140px;
       background-image: linear-gradient(white,white), linear-gradient(90deg,#007f00,#00cc44);
       background-origin: padding-box, border-box; background-clip: padding-box, border-box;
       font-family:'Orbitron'; font-weight:700; }
     input[type="number"]::placeholder { font-weight:400; }
-
     button.btn { background:linear-gradient(90deg,#007f00,#00cc44); color:white; border:0; padding:10px 14px; border-radius:10px; cursor:pointer; font-weight:800; }
     button.ghost { background:transparent; border:2px solid rgba(0,0,0,0.06); color:#333; padding:8px 10px; border-radius:8px; }
-
     .status { font-size:0.95rem; color:#333; }
-
-    /* tabla con scroll en móvil */
     .table-wrap { overflow:auto; margin-top:8px; border-radius:10px; }
     table { border-collapse:collapse; width:100%; min-width:900px; font-family:'Orbitron'; }
     th, td { padding:8px 10px; border-bottom:1px solid rgba(0,0,0,0.06); text-align:center; font-size:0.9rem; }
     th { background: linear-gradient(90deg,#f3fff3,#eefef0); position:sticky; top:0; z-index:2; }
     tr.player-row:hover { background: rgba(0,0,0,0.02); }
-
-    /* nombre + icono */
     .player-name { display:flex; align-items:center; gap:8px; justify-content:flex-start; }
-    .avatar-icon {
-      width:28px; height:28px; border-radius:50%; display:inline-flex; align-items:center; justify-content:center;
-      background: linear-gradient(90deg,#007f00,#00cc44); color:white; border:2px solid #000; font-size:0.75rem; font-weight:900;
-    }
-
-    /* colores puntaje respecto al par */
-    .par-eq { color: #000; }     /* igual a par */
-    .par-better { color: #0a7f0a; } /* menos que par -> verde */
-    .par-worse { color: #b00000; }  /* mas que par -> rojo */
-
-    /* resumen y saldo */
+    .avatar-icon { width:28px; height:28px; border-radius:50%; display:inline-flex; align-items:center; justify-content:center;
+      background: linear-gradient(90deg,#007f00,#00cc44); color:white; border:2px solid #000; font-size:0.75rem; font-weight:900; }
+    .par-eq { color: #000; }
+    .par-better { color: #0a7f0a; }
+    .par-worse { color: #b00000; }
     .summary { display:flex; gap:12px; align-items:center; flex-wrap:wrap; margin-top:10px; }
     .summary .box { padding:10px 12px; border-radius:10px; background:#fff; box-shadow:0 6px 18px rgba(0,0,0,0.04); }
-
-    /* responsive */
     @media(max-width:900px){
       th, td { padding:8px 6px; font-size:0.85rem; }
       table { min-width:700px; }
@@ -82,7 +65,6 @@
       </div>
 
       <div id="tableArea" style="margin-top:14px;">
-        <!-- tabla se genera aquí -->
         <div class="table-wrap card" id="tableWrap" style="display:none;"></div>
       </div>
 
@@ -100,327 +82,214 @@
   </script>
 
 <script type="module">
-  import { app, db } from './firebase-config.js';
-  import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.3/firebase-auth.js";
-  import {
-    doc, getDoc, collection, query, where, getDocs, addDoc, serverTimestamp, updateDoc, orderBy
-  } from "https://www.gstatic.com/firebasejs/10.12.3/firebase-firestore.js";
-  // -> INSERTAR justo después de las importaciones
-  console.log('[polla] module loaded');
-  if (!db) console.error('[polla] ERROR: variable "db" indefinida (ver firebase-config.js)');
+import { app, db } from './firebase-config.js';
+import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.3/firebase-auth.js";
+import { doc, getDoc, collection, query, where, getDocs, addDoc, serverTimestamp, updateDoc, orderBy } from "https://www.gstatic.com/firebasejs/10.12.3/firebase-firestore.js";
 
+console.log('[polla] module loaded');
+if (!db) console.error('[polla] ERROR: variable "db" indefinida');
 
-  // leer juegoId de la URL
-  const juegoId = getQueryParam('juegoId') || getQueryParam('id');
-  if (!juegoId) {
-    alert('Falta parámetro juegoId en la URL');
-    throw new Error('Falta juegoId');
+const juegoId = getQueryParam('juegoId') || getQueryParam('id');
+if (!juegoId) { alert('Falta parámetro juegoId en la URL'); throw new Error('Falta juegoId'); }
+
+const precioInput = document.getElementById('precioInput');
+const startBtn = document.getElementById('startBtn');
+const refreshBtn = document.getElementById('refreshBtn');
+const statusInfo = document.getElementById('statusInfo');
+const tableWrap = document.getElementById('tableWrap');
+const summaryArea = document.getElementById('summaryArea');
+const miSaldoBox = document.getElementById('miSaldoBox');
+const poolBox = document.getElementById('poolBox');
+const logo = document.getElementById('logo');
+logo.addEventListener('click', () => window.location.href = 'dashboard.html');
+
+precioInput.addEventListener('input', () => {
+  const hasPrice = Number(precioInput.value) > 0;
+  startBtn.disabled = !hasPrice || !currentUser;
+});
+
+const authInst = getAuth(app);
+let currentUser = null;
+let juegoDoc = null;
+let campoPar = null;
+let tarjetas = [];
+let usersMap = {};
+let pollaCol = null;
+
+function getPollaCol() { if(!pollaCol) pollaCol = collection(db,'polla_juegos'); return pollaCol; }
+
+function getPar(hoyoIndex) { 
+  if(Array.isArray(campoPar) && campoPar.length>=hoyoIndex) return Number(campoPar[hoyoIndex-1])||4;
+  if(campoPar && typeof campoPar==='object') return Number(campoPar[hoyoIndex])||4;
+  return 4;
+}
+
+function makePlayerCellLabel(name){ return `<div class="player-name"><div class="avatar-icon">${(name||'U').slice(0,1).toUpperCase()}</div><div>${name||'Sin nombre'}</div></div>`; }
+
+async function cargarJuegoYCampo(){
+  console.log('Cargando juego y campo...');
+  const jref=doc(db,'juegos',juegoId);
+  const jsnap=await getDoc(jref);
+  if(!jsnap.exists()) throw new Error('Juego no encontrado');
+  juegoDoc=jsnap.data();
+  const campoId=juegoDoc.campoId;
+  if(campoId){
+    try{
+      const cref=doc(db,'camposGolf',campoId);
+      const csnap=await getDoc(cref);
+      if(csnap.exists()){
+        const cdata=csnap.data();
+        if(Array.isArray(cdata.paresHoyo)) campoPar=cdata.paresHoyo;
+        else if(Array.isArray(cdata.parPorHoyo)) campoPar=cdata.parPorHoyo;
+        else if(Array.isArray(cdata.pars)) campoPar=cdata.pars;
+        else if(typeof cdata.parCampo==='number') campoPar=new Array(18).fill(cdata.parCampo);
+        else campoPar=new Array(18).fill(4);
+      }else campoPar=new Array(18).fill(4);
+    }catch(e){ console.error('Error cargando campo:',e); campoPar=new Array(18).fill(4); }
+  } else campoPar=new Array(18).fill(4);
+}
+
+async function cargarTarjetas(){
+  console.log('Cargando tarjetas...');
+  tarjetas=[]; usersMap={};
+  const tarjetasRef=collection(db,'tarjetas');
+  const q=query(tarjetasRef,where('juegoId','==',juegoId));
+  const snap=await getDocs(q);
+  for(const d of snap.docs){ const data=d.data(); tarjetas.push({id:d.id,...data}); }
+  const uids=Array.from(new Set(tarjetas.map(t=>t.userUid).filter(Boolean)));
+  for(const uid of uids){
+    try{
+      const uref=doc(db,'users',uid);
+      const usnap=await getDoc(uref);
+      if(usnap.exists()){
+        const ud=usnap.data();
+        usersMap[uid]={ name:`${ud.name||''} ${ud.lastname||''}`.trim()||ud.email||'Usuario', handicap:Number(ud.handicap||0) };
+      }else usersMap[uid]={ name:'Usuario desconocido', handicap:0 };
+    }catch(e){ console.error(`Error cargando usuario ${uid}:`,e); usersMap[uid]={name:'Error usuario',handicap:0}; }
   }
+  console.log('👉 cargarTarjetas terminó:',{tarjetas,usersMap});
+}
 
-  // refs DOM
-  const precioInput = document.getElementById('precioInput');
-  const startBtn = document.getElementById('startBtn');
-  const refreshBtn = document.getElementById('refreshBtn');
-  const statusInfo = document.getElementById('statusInfo');
-  const tableWrap = document.getElementById('tableWrap');
-  const summaryArea = document.getElementById('summaryArea');
-  const miSaldoBox = document.getElementById('miSaldoBox');
-  const poolBox = document.getElementById('poolBox');
-  const logo = document.getElementById('logo');
-  logo.addEventListener('click', () => window.location.href = 'dashboard.html');
-  // -> AGREGAR (después de logo.addEventListener(...))
-  precioInput.addEventListener('input', () => {
-    // habilita el botón sólo si hay usuario y precio válido (útil para pruebas)
-    const hasPrice = Number(precioInput.value) > 0;
-    startBtn.disabled = !currentUser || !hasPrice;
+function renderTabla(){
+  console.log('Renderizando tabla con',tarjetas.length,'tarjetas');
+  if(!tarjetas.length){ tableWrap.innerHTML='<div style="padding:14px;">No hay tarjetas registradas para este juego.</div>'; tableWrap.style.display='block'; summaryArea.style.display='none'; return null; }
+  const rows=tarjetas.map(t=>{
+    const user=usersMap[t.userUid]||{name:'Usuario',handicap:0};
+    const scoresMap={}; (Array.isArray(t.scores)?t.scores:[]).forEach(s=>{ if(s&&s.hoyo) scoresMap[Number(s.hoyo)]=Number(s.golpes); });
+    let sum=0; for(let i=1;i<=18;i++) sum+=Number(scoresMap[i]||0);
+    const adjusted=sum-user.handicap;
+    return {uid:t.userUid,name:user.name,handicap:user.handicap,scoresMap,sum,adjusted};
   });
+  rows.sort((a,b)=>a.adjusted-b.adjusted);
+  const minAdj=rows[0].adjusted;
+  const winners=rows.filter(r=>r.adjusted===minAdj);
 
-
-  // auth
-  const authInst = getAuth(app);
-  let currentUser = null;
-
-  // cache
-  let juegoDoc = null;
-  let campoPar = null;
-  let tarjetas = [];
-  let usersMap = {};
-  let pollaCol = null;
-
-  function getPollaCol() {
-    if (!pollaCol) pollaCol = collection(db, 'polla_juegos');
-    return pollaCol;
-  }
-
-  function getPar(hoyoIndex) {
-    if (Array.isArray(campoPar) && campoPar.length >= hoyoIndex) return Number(campoPar[hoyoIndex-1]) || 4;
-    if (campoPar && typeof campoPar === 'object') return Number(campoPar[hoyoIndex]) || 4;
-    return 4;
-  }
-
-  function makePlayerCellLabel(name) {
-    return `<div class="player-name"><div class="avatar-icon">${(name||'U').slice(0,1).toUpperCase()}</div><div>${name||'Sin nombre'}</div></div>`;
-  }
-
-  async function cargarJuegoYCampo() {
-    console.log('Cargando juego y campo...');
-    const jref = doc(db, 'juegos', juegoId);
-    const jsnap = await getDoc(jref);
-    if (!jsnap.exists()) throw new Error('Juego no encontrado');
-    juegoDoc = jsnap.data();
-
-    const campoId = juegoDoc.campoId;
-    if (campoId) {
-      try {
-        const cref = doc(db, 'camposGolf', campoId);
-        const csnap = await getDoc(cref);
-        if (csnap.exists()) {
-          const cdata = csnap.data();
-          if (Array.isArray(cdata.paresHoyo)) campoPar = cdata.paresHoyo;
-          else if (Array.isArray(cdata.parPorHoyo)) campoPar = cdata.parPorHoyo;
-          else if (Array.isArray(cdata.pars)) campoPar = cdata.pars;
-          else if (typeof cdata.parCampo === 'number') campoPar = new Array(18).fill(cdata.parCampo);
-          else campoPar = new Array(18).fill(4);
-        } else campoPar = new Array(18).fill(4);
-      } catch (e) {
-        console.error('Error cargando campo:', e);
-        campoPar = new Array(18).fill(4);
-      }
-    } else {
-      campoPar = new Array(18).fill(4);
+  let html='<table><thead><tr><th>Jugador</th>';
+  for(let h=1;h<=18;h++) html+=`<th>H${h}</th>`;
+  html+='<th>Total</th><th>Aj. (Hcp)</th></tr></thead><tbody>';
+  for(const r of rows){
+    html+=`<tr><td>${makePlayerCellLabel(r.name)}</td>`;
+    for(let h=1;h<=18;h++){
+      const v=r.scoresMap[h]; const par=getPar(h);
+      let cls='par-eq', text='-';
+      if(v){ text=v; if(v>par) cls='par-worse'; else if(v<par) cls='par-better'; }
+      html+=`<td class="${cls}">${text}</td>`;
     }
+    html+=`<td><b>${r.sum}</b></td><td><b>${r.adjusted}</b></td></tr>`;
   }
+  html+='</tbody></table>';
+  tableWrap.innerHTML=html; tableWrap.style.display='block';
 
-  async function cargarTarjetas() {
-    console.log('Cargando tarjetas...');
-    tarjetas = [];
-    usersMap = {};
-    const tarjetasRef = collection(db, 'tarjetas');
-    const q = query(tarjetasRef, where('juegoId','==', juegoId));
-    const snap = await getDocs(q);
-
-    for (const d of snap.docs) {
-      const data = d.data();
-      tarjetas.push({ id: d.id, ...data });
-    }
-
-    const uids = Array.from(new Set(tarjetas.map(t => t.userUid).filter(Boolean)));
-    for (const uid of uids) {
-      try {
-        const uref = doc(db, 'users', uid);
-        const usnap = await getDoc(uref);
-        if (usnap.exists()) {
-          const ud = usnap.data();
-          usersMap[uid] = {
-            name: `${ud.name || ''} ${ud.lastname || ''}`.trim() || ud.email || 'Usuario',
-            handicap: Number(ud.handicap || 0)
-          };
-        } else {
-          usersMap[uid] = { name: 'Usuario desconocido', handicap: 0 };
-        }
-      } catch (e) {
-        console.error(`Error cargando usuario ${uid}:`, e);
-        usersMap[uid] = { name: 'Error usuario', handicap: 0 };
-      }
-    }
-    console.log('👉 cargarTarjetas terminó:', { tarjetas, usersMap });
+  const numPlayers=rows.length;
+  const price=Number(precioInput.value)||0;
+  const totalPool=price*numPlayers;
+  let saldo='--';
+  if(currentUser?.uid){
+    const mine=rows.find(r=>r.uid===currentUser.uid);
+    if(mine){
+      if(winners.some(w=>w.uid===currentUser.uid)){
+        if(winners.length===1) saldo=`+${price*(numPlayers-1)} MXN`;
+        else saldo=`+${(totalPool/winners.length).toFixed(2)} MXN (empate)`;
+      }else saldo=`-${price} MXN`;
+    }else saldo='No estás en la tabla';
   }
+  miSaldoBox.textContent=`Mi saldo: ${saldo}`;
+  poolBox.textContent=`Pozo total: ${totalPool} MXN`;
+  summaryArea.style.display='flex';
 
-  function renderTabla() {
-    console.log('Renderizando tabla con', tarjetas.length, 'tarjetas');
-    if (!tarjetas.length) {
-      tableWrap.innerHTML = `<div style="padding:14px;">No hay tarjetas registradas para este juego.</div>`;
-      tableWrap.style.display = 'block';
-      summaryArea.style.display = 'none';
-      return null;
+  statusInfo.textContent=`Jugadores: ${numPlayers}, Ganador(es): ${winners.map(w=>w.name).join(', ')}`;
+  return {rows,winners,totalPool,price};
+}
+
+async function updatePollaResultSummary(summary){
+  try{
+    const q=query(getPollaCol(),where('juegoId','==',juegoId),where('modo','==','polla_grupo'),orderBy('createdAt','desc'));
+    const snap=await getDocs(q);
+    let ref;
+    if(snap.size>0) ref=snap.docs[0].ref;
+    else{
+      const added=await addDoc(getPollaCol(),{juegoId, precio:Number(precioInput.value)||0, ownerUid:currentUser?.uid||null, modo:'polla_grupo', createdAt:serverTimestamp()});
+      ref=doc(db,'polla_juegos',added.id);
     }
-
-    const rows = tarjetas.map(t => {
-      const user = usersMap[t.userUid] || { name: 'Usuario', handicap: 0 };
-      const scoresMap = {};
-      (Array.isArray(t.scores) ? t.scores : []).forEach(s => {
-        if (s && s.hoyo) scoresMap[Number(s.hoyo)] = Number(s.golpes);
-      });
-      let sum = 0;
-      for (let i=1;i<=18;i++) sum += Number(scoresMap[i] || 0);
-      const adjusted = sum - user.handicap;
-      return { uid: t.userUid, name: user.name, handicap: user.handicap, scoresMap, sum, adjusted };
+    await updateDoc(ref,{
+      lastCalculated:serverTimestamp(),
+      winners:summary.winners.map(w=>({uid:w.uid,name:w.name,adjusted:w.adjusted})),
+      playerCount:summary.rows.length,
+      totalPool:summary.totalPool
     });
+  }catch(e){ console.warn('updatePollaResultSummary error',e); }
+}
 
-    rows.sort((a,b)=>a.adjusted - b.adjusted);
-    const minAdj = rows[0].adjusted;
-    const winners = rows.filter(r => r.adjusted === minAdj);
+async function recalcAndRender(){
+  try{ if(!campoPar) await cargarJuegoYCampo(); await cargarTarjetas(); const summary=renderTabla(); if(summary) await updatePollaResultSummary(summary); }
+  catch(e){ console.error('Error en recalcAndRender',e); statusInfo.textContent='Error cargando'; }
+}
 
-    let html = '<table><thead><tr><th>Jugador</th>';
-    for (let h=1;h<=18;h++) html += `<th>H${h}</th>`;
-    html += '<th>Total</th><th>Aj. (Hcp)</th></tr></thead><tbody>';
-
-    for (const r of rows) {
-      html += `<tr><td>${makePlayerCellLabel(r.name)}</td>`;
-      for (let h=1;h<=18;h++) {
-        const v = r.scoresMap[h];
-        const par = getPar(h);
-        let cls = 'par-eq', text='-';
-        if (v) {
-          text=v;
-          if (v>par) cls='par-worse';
-          else if (v<par) cls='par-better';
-        }
-        html += `<td class="${cls}">${text}</td>`;
-      }
-      html += `<td><b>${r.sum}</b></td><td><b>${r.adjusted}</b></td></tr>`;
+startBtn.addEventListener('click', async ()=>{
+  console.log('[polla] startBtn clicked');
+  const precio=Number(precioInput.value);
+  if(!Number.isFinite(precio)||precio<=0){ alert('Ingresa un precio válido'); return; }
+  if(!currentUser||!currentUser.uid){ alert('Debes iniciar sesión'); return; }
+  try{
+    statusInfo.textContent='Creando/actualizando polla...';
+    const pollaCollection=getPollaCol();
+    const q=query(pollaCollection,where('juegoId','==',juegoId),where('modo','==','polla_grupo'));
+    const snap=await getDocs(q);
+    let pollaRef;
+    if(!snap||snap.empty){
+      const added=await addDoc(pollaCollection,{juegoId, precio, ownerUid:currentUser.uid, modo:'polla_grupo', createdAt:serverTimestamp(), lastCalculated:null});
+      pollaRef=doc(db,'polla_juegos',added.id);
+    }else{
+      pollaRef=snap.docs[0].ref;
+      await updateDoc(pollaRef,{precio, lastUpdated:serverTimestamp()});
     }
-    html += '</tbody></table>';
+    await recalcAndRender();
+    statusInfo.textContent=`Polla iniciada (id: ${pollaRef.id})`;
+  }catch(err){ console.error('[polla] Error en startBtn handler:',err); alert('Error iniciando polla — revisa la consola'); statusInfo.textContent='Error iniciando polla'; }
+});
 
-    tableWrap.innerHTML = html;
-    tableWrap.style.display = 'block';
+refreshBtn.addEventListener('click', recalcAndRender);
 
-    const numPlayers = rows.length;
-    const price = Number(precioInput.value)||0;
-    const totalPool = price * numPlayers;
-    let saldo='--';
-    if (currentUser?.uid) {
-      const mine = rows.find(r=>r.uid===currentUser.uid);
-      if (mine) {
-        if (winners.some(w=>w.uid===currentUser.uid)) {
-          if (winners.length===1) saldo = `+${price*(numPlayers-1)} MXN`;
-          else saldo = `+${(totalPool/winners.length).toFixed(2)} MXN (empate)`;
-        } else saldo = `-${price} MXN`;
-      } else saldo='No estás en la tabla';
-    }
-    miSaldoBox.textContent = `Mi saldo: ${saldo}`;
-    poolBox.textContent = `Pozo total: ${totalPool} MXN`;
-    summaryArea.style.display = 'flex';
-
-    statusInfo.textContent = `Jugadores: ${numPlayers}, Ganador(es): ${winners.map(w=>w.name).join(', ')}`;
-    return {rows,winners,totalPool,price};
-  }
-
-  async function updatePollaResultSummary(summary) {
-    try {
-      const q = query(getPollaCol(), where('juegoId','==',juegoId), where('modo','==','polla_grupo'), orderBy('createdAt','desc'));
-      const snap = await getDocs(q);
-      let ref;
-      if (snap.size>0) ref = snap.docs[0].ref;
-      else {
-        const added = await addDoc(getPollaCol(), {
-          juegoId, precio:Number(precioInput.value)||0,
-          ownerUid: currentUser?.uid||null,
-          modo:'polla_grupo', createdAt:serverTimestamp()
-        });
-        ref = doc(db,'polla_juegos',added.id);
-      }
-      await updateDoc(ref,{
-        lastCalculated:serverTimestamp(),
-        winners: summary.winners.map(w=>({uid:w.uid,name:w.name,adjusted:w.adjusted})),
-        playerCount: summary.rows.length,
-        totalPool: summary.totalPool
-      });
-    } catch(e){console.warn('updatePollaResultSummary error',e);}
-  }
-
-  async function recalcAndRender() {
-    try {
-      if (!campoPar) await cargarJuegoYCampo();
-      await cargarTarjetas();
-      const summary=renderTabla();
-      if (summary) await updatePollaResultSummary(summary);
-    } catch(e){
-      console.error('Error en recalcAndRender',e);
-      statusInfo.textContent='Error cargando';
-    }
-  }
-
-  // -> REEMPLAZAR el handler actual por este bloque:
-  startBtn.addEventListener('click', async () => {
-    console.log('[polla] startBtn clicked');
-    const precio = Number(precioInput.value);
-    console.log('[polla] precioInput =>', precio);
-
-    if (!Number.isFinite(precio) || precio <= 0) {
-      alert('Ingresa un precio válido');
-      return;
-    }
-    if (!currentUser || !currentUser.uid) {
-      alert('Debes iniciar sesión');
-      return;
-    }
-
-    try {
-      statusInfo.textContent = 'Creando/actualizando polla...';
-
-      const pollaCollection = getPollaCol();
-      const q = query(pollaCollection, where('juegoId', '==', juegoId), where('modo', '==', 'polla_grupo'));
-      const snap = await getDocs(q);
-      console.log('[polla] Consulta polla_juegos result count:', snap.size ?? (snap.docs && snap.docs.length));
-
-      let pollaRef;
-      if (!snap || snap.empty) {
-        // crear nueva instancia
-        const added = await addDoc(pollaCollection, {
-          juegoId,
-          precio,
-          ownerUid: currentUser.uid,
-          modo: 'polla_grupo',
-          createdAt: serverTimestamp(),
-          lastCalculated: null
-        });
-        pollaRef = doc(db, 'polla_juegos', added.id);
-        console.log('[polla] creada id=', added.id);
-      } else {
-        // tomar la primera encontrada y actualizar precio
-        pollaRef = snap.docs[0].ref;
-        await updateDoc(pollaRef, { precio, lastUpdated: serverTimestamp() });
-        console.log('[polla] actualizada id=', pollaRef.id);
-      }
-
-      // recalc y render
-      await recalcAndRender();
-
-      statusInfo.textContent = `Polla iniciada (id: ${pollaRef.id})`;
-    } catch (err) {
-      console.error('[polla] Error en startBtn handler:', err);
-      alert('Error iniciando polla — revisa la consola');
-      statusInfo.textContent = 'Error iniciando polla';
-    }
-  });
-
-  refreshBtn.addEventListener('click', recalcAndRender);
-
-  // -> REEMPLAZAR el onAuthStateChanged por este (más robusto + logs)
-  console.log('[polla] Instanciando Auth listener...');
-  const auth = getAuth(app); // si no lo tienes ya como `authInst`
-  onAuthStateChanged(auth, async (user) => {
-    console.log('[polla] onAuthStateChanged ->', user ? user.uid : null);
-    currentUser = user || null;
-    // habilitar el botón si hay usuario y precio válido
-    startBtn.disabled = !currentUser || !(Number(precioInput.value) > 0);
-    try {
-      // cargar datos iniciales aunque no haya usuario (tabla visible)
-      await cargarJuegoYCampo();
-      await recalcAndRender();
-    } catch (err) {
-      console.error('[polla] Error inicializando en onAuthStateChanged:', err);
-      statusInfo.textContent = 'Error inicializando';
-    }
-  });
+onAuthStateChanged(authInst, async (user)=>{
+  console.log('[polla] onAuthStateChanged ->',user?.uid||null);
+  currentUser=user||null;
+  startBtn.disabled=!currentUser||!(Number(precioInput.value)>0);
+  try{ await cargarJuegoYCampo(); await recalcAndRender(); }catch(err){ console.error('[polla] Error inicializando en onAuthStateChanged:',err); statusInfo.textContent='Error inicializando'; }
+});
 
 </script>
 
-
-  <!-- cargar menú (igual que en otras páginas) -->
-  <script>
-    fetch('menu.html')
-      .then(res => res.text())
-      .then(html => {
-        const temp = document.createElement('div');
-        temp.innerHTML = html;
-        const hamburgerBtn = temp.querySelector('.hamburger') || temp.querySelector('#hamburger');
-        const sidebarMenu = temp.querySelector('.sidebar-mobile') || temp.querySelector('#sidebarMenu');
-        if (hamburgerBtn) document.getElementById('menuContainer').appendChild(hamburgerBtn);
-        if (sidebarMenu) document.body.appendChild(sidebarMenu);
-        import('./menu.js').catch(e=>console.error(e));
-      }).catch(e=>console.error('menu.html:',e));
-  </script>
+<script>
+  fetch('menu.html')
+    .then(res=>res.text())
+    .then(html=>{
+      const temp=document.createElement('div'); temp.innerHTML=html;
+      const hamburgerBtn=temp.querySelector('.hamburger')||temp.querySelector('#hamburger');
+      const sidebarMenu=temp.querySelector('.sidebar-mobile')||temp.querySelector('#sidebarMenu');
+      if(hamburgerBtn) document.getElementById('menuContainer').appendChild(hamburgerBtn);
+      if(sidebarMenu) document.body.appendChild(sidebarMenu);
+      import('./menu.js').catch(e=>console.error(e));
+    }).catch(e=>console.error('menu.html:',e));
+</script>
 </body>
 </html>
