@@ -105,6 +105,10 @@
   import {
     doc, getDoc, collection, query, where, getDocs, addDoc, serverTimestamp, updateDoc, orderBy
   } from "https://www.gstatic.com/firebasejs/10.12.3/firebase-firestore.js";
+  // -> INSERTAR justo después de las importaciones
+  console.log('[polla] module loaded');
+  if (!db) console.error('[polla] ERROR: variable "db" indefinida (ver firebase-config.js)');
+
 
   // leer juegoId de la URL
   const juegoId = getQueryParam('juegoId') || getQueryParam('id');
@@ -124,6 +128,13 @@
   const poolBox = document.getElementById('poolBox');
   const logo = document.getElementById('logo');
   logo.addEventListener('click', () => window.location.href = 'dashboard.html');
+  // -> AGREGAR (después de logo.addEventListener(...))
+  precioInput.addEventListener('input', () => {
+    // habilita el botón sólo si hay usuario y precio válido (útil para pruebas)
+    const hasPrice = Number(precioInput.value) > 0;
+    startBtn.disabled = !currentUser || !hasPrice;
+  });
+
 
   // auth
   const authInst = getAuth(app);
@@ -320,36 +331,80 @@
     }
   }
 
-  startBtn.addEventListener('click', async ()=>{
-    console.log('Click en Comenzar Polla');
-    const precio=Number(precioInput.value);
-    if(!precio){alert('Ingresa precio válido');return;}
-    if(!currentUser){alert('Debes iniciar sesión');return;}
+  // -> REEMPLAZAR el handler actual por este bloque:
+  startBtn.addEventListener('click', async () => {
+    console.log('[polla] startBtn clicked');
+    const precio = Number(precioInput.value);
+    console.log('[polla] precioInput =>', precio);
 
-    try{
-      statusInfo.textContent='Creando/actualizando polla...';
-      const q=query(getPollaCol(),where('juegoId','==',juegoId),where('modo','==','polla_grupo'));
-      const snap=await getDocs(q);
-      if(snap.empty){
-        await addDoc(getPollaCol(),{juegoId,precio,ownerUid:currentUser.uid,modo:'polla_grupo',createdAt:serverTimestamp()});
-      }else{
-        await updateDoc(snap.docs[0].ref,{precio,lastUpdated:serverTimestamp()});
+    if (!Number.isFinite(precio) || precio <= 0) {
+      alert('Ingresa un precio válido');
+      return;
+    }
+    if (!currentUser || !currentUser.uid) {
+      alert('Debes iniciar sesión');
+      return;
+    }
+
+    try {
+      statusInfo.textContent = 'Creando/actualizando polla...';
+
+      const pollaCollection = getPollaCol();
+      const q = query(pollaCollection, where('juegoId', '==', juegoId), where('modo', '==', 'polla_grupo'));
+      const snap = await getDocs(q);
+      console.log('[polla] Consulta polla_juegos result count:', snap.size ?? (snap.docs && snap.docs.length));
+
+      let pollaRef;
+      if (!snap || snap.empty) {
+        // crear nueva instancia
+        const added = await addDoc(pollaCollection, {
+          juegoId,
+          precio,
+          ownerUid: currentUser.uid,
+          modo: 'polla_grupo',
+          createdAt: serverTimestamp(),
+          lastCalculated: null
+        });
+        pollaRef = doc(db, 'polla_juegos', added.id);
+        console.log('[polla] creada id=', added.id);
+      } else {
+        // tomar la primera encontrada y actualizar precio
+        pollaRef = snap.docs[0].ref;
+        await updateDoc(pollaRef, { precio, lastUpdated: serverTimestamp() });
+        console.log('[polla] actualizada id=', pollaRef.id);
       }
+
+      // recalc y render
       await recalcAndRender();
-    }catch(e){
-      console.error('Error en startBtn',e);
-      statusInfo.textContent='Error iniciando polla';
+
+      statusInfo.textContent = `Polla iniciada (id: ${pollaRef.id})`;
+    } catch (err) {
+      console.error('[polla] Error en startBtn handler:', err);
+      alert('Error iniciando polla — revisa la consola');
+      statusInfo.textContent = 'Error iniciando polla';
     }
   });
 
   refreshBtn.addEventListener('click', recalcAndRender);
 
-  onAuthStateChanged(authInst, async (user)=>{
-    currentUser=user||null;
-    startBtn.disabled=!currentUser;
-    console.log('Auth state:', currentUser?.uid||'no user');
-    await recalcAndRender();
+  // -> REEMPLAZAR el onAuthStateChanged por este (más robusto + logs)
+  console.log('[polla] Instanciando Auth listener...');
+  const auth = getAuth(app); // si no lo tienes ya como `authInst`
+  onAuthStateChanged(auth, async (user) => {
+    console.log('[polla] onAuthStateChanged ->', user ? user.uid : null);
+    currentUser = user || null;
+    // habilitar el botón si hay usuario y precio válido
+    startBtn.disabled = !currentUser || !(Number(precioInput.value) > 0);
+    try {
+      // cargar datos iniciales aunque no haya usuario (tabla visible)
+      await cargarJuegoYCampo();
+      await recalcAndRender();
+    } catch (err) {
+      console.error('[polla] Error inicializando en onAuthStateChanged:', err);
+      statusInfo.textContent = 'Error inicializando';
+    }
   });
+
 </script>
 
 
