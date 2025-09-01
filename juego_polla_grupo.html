@@ -134,8 +134,17 @@
     let tarjetas = []; // array { id, userUid, scores: [{hoyo,golpes}], campoNombre, ... }
     let usersMap = {}; // uid => { name, handicap }
 
-    // colección donde guardaremos la instancia de la polla
-    const pollaCol = collection(db, 'polla_juegos'); // top-level
+    // colección donde guardaremos la instancia de la polla (se crea cuando db esté listo)
+    let pollaCol = null;
+    function getPollaCol() {
+      if (!db) {
+        console.error('Firestore "db" está indefinido. Revisa import de firebase-config.js y la consola.');
+        throw new Error('db undefined');
+      }
+      if (!pollaCol) pollaCol = collection(db, 'polla_juegos');
+      return pollaCol;
+    }
+
 
     // util: obtener par por hoyo (index 1..18)
     function getPar(hoyoIndex) {
@@ -213,6 +222,9 @@
           usersMap[uid] = { name: 'Usuario', handicap: 0 };
         }
       }
+      console.log('cargarTarjetas -> tarjetas:', tarjetas);
+      console.log('cargarTarjetas -> usersMap:', usersMap);
+
     }
     console.log('Tarjetas cargadas:', tarjetas);
     console.log('UsersMap:', usersMap);
@@ -330,25 +342,33 @@
       return { rows, winners, totalPool, price };
     }
 
-    // crea instancia de polla en Firestore
+   // crea instancia de polla en Firestore
     async function crearPolla(precio) {
-      const payload = {
-        juegoId,
-        precio: Number(precio || 0),
-        ownerUid: currentUser.uid,
-        modo: 'polla_grupo',
-        createdAt: serverTimestamp()
-      };
-      const added = await addDoc(pollaCol, payload);
-      return added.id;
+      try {
+        const payload = {
+          juegoId,
+          precio: Number(precio || 0),
+          ownerUid: currentUser?.uid || null,
+          modo: 'polla_grupo',
+          createdAt: serverTimestamp()
+        };
+        const added = await addDoc(getPollaCol(), payload);
+        console.log('crearPolla: creado doc polla_juegos id=', added.id);
+        return added.id;
+      } catch (err) {
+        console.error('crearPolla error:', err);
+        throw err;
+      }
     }
+
 
     // update poll result doc if exists by juegoId (first doc) else create one
     async function updatePollaResultSummary(summaryObj) {
       try {
         // buscar doc que referencie a este juego y modo
-        const q = query(pollaCol, where('juegoId','==', juegoId), where('modo','==','polla_grupo'), orderBy('createdAt','desc'));
+        const q = query(getPollaCol(), where('juegoId','==', juegoId), where('modo','==','polla_grupo'), orderBy('createdAt','desc'));
         const snap = await getDocs(q);
+
         let docRef;
         if (snap.size > 0) {
           docRef = snap.docs[0].ref;
@@ -372,49 +392,55 @@
     }
 
     startBtn.addEventListener('click', async () => {
-    const precio = Number(precioInput.value);
-    if (!precio || precio < 0) { alert('Ingresa un precio válido'); return; }
-    if (!currentUser || !currentUser.uid) { alert('Debes iniciar sesión'); return; }
+      console.log('startBtn clicked');
+      const precio = Number(precioInput.value);
+      console.log('Precio introducido:', precio);
+      if (!precio || precio < 0) { alert('Ingresa un precio válido'); return; }
+      if (!currentUser || !currentUser.uid) { alert('Debes iniciar sesión'); return; }
 
-    try {
-      statusInfo.textContent = 'Iniciando polla...';
+      try {
+        statusInfo.textContent = 'Iniciando polla...';
 
-      // 1️⃣ Crear documento de polla si no existe
-      let pollaId;
-      const q = query(pollaCol, where('juegoId','==', juegoId), where('modo','==','polla_grupo'));
-      const snap = await getDocs(q);
+        // 1) buscar si ya existe un doc para este juego/mode
+        const q = query(getPollaCol(), where('juegoId','==', juegoId), where('modo','==','polla_grupo'));
+        const snap = await getDocs(q);
+        console.log('Consulta polla_juegos result count:', snap.size);
 
-      if (snap.size === 0) {
-      const added = await addDoc(pollaCol, {
-        juegoId,
-        precio,
-        ownerUid: currentUser.uid,
-        modo: 'polla_grupo',
-        createdAt: serverTimestamp(),
-        lastCalculated: null
-      });
-      pollaId = added.id;
-    } else {
-      pollaId = snap.docs[0].id;
-      const pref = snap.docs[0].ref;
-      await updateDoc(pref, { precio, lastUpdated: serverTimestamp() });
-}
+        let pollaId;
+        if (snap.size === 0) {
+          // crear nuevo
+          const added = await addDoc(getPollaCol(), {
+            juegoId,
+            precio,
+            ownerUid: currentUser.uid,
+            modo: 'polla_grupo',
+            createdAt: serverTimestamp(),
+            lastCalculated: null
+          });
+          pollaId = added.id;
+          console.log('Polla creada con id:', pollaId);
+        } else {
+          // usar el primero (puedes ajustar lógica si quieres multiples)
+          pollaId = snap.docs[0].id;
+          const pref = snap.docs[0].ref;
+          await updateDoc(pref, { precio, lastUpdated: serverTimestamp() });
+          console.log('Polla existente actualizada id:', pollaId);
+        }
 
+        // asegurar par por hoyo
+        if (!campoPar) await cargarJuegoYCampo();
 
-      // 2️⃣ Asegurarse de que campoPar esté cargado
-      if (!campoPar) await cargarJuegoYCampo();
+        // recalc y render
+        await recalcAndRender();
 
-      // 3️⃣ Cargar tarjetas, users y renderizar tabla
-      await recalcAndRender();
+        statusInfo.textContent = `Polla iniciada (id: ${pollaId})`;
+      } catch (err) {
+        console.error('Error iniciando polla (click handler):', err);
+        alert('Error iniciando polla — revisa la consola para ver detalles.');
+        statusInfo.textContent = 'Error iniciando polla';
+      }
+    });
 
-      statusInfo.textContent = `Polla iniciada (id: ${pollaId})`;
-
-    } catch (err) {
-      console.error('Error iniciando polla', err);
-      alert('Error iniciando polla — revisa consola');
-      statusInfo.textContent = 'Error iniciando polla';
-    }
-  });
 
 
     // refrescar manual
@@ -439,10 +465,11 @@
     onAuthStateChanged(authInst, async (user) => {
     currentUser = user || null;
     if(currentUser && currentUser.uid){
-      startBtn.disabled = false;  // habilita botón cuando hay usuario
+      startBtn.disabled = false;
     } else {
-      startBtn.disabled = true;   // deshabilitado si no hay usuario
+      startBtn.disabled = true;
     }
+
     try {
       await cargarJuegoYCampo();      // carga campoPar
       await cargarTarjetas();        // carga tarjetas
