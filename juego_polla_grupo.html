@@ -207,31 +207,38 @@
       }
 
       // traer info de users (batch)
-      const uids = Array.from(new Set(tarjetas.map(t=>t.userUid).filter(Boolean)));
+      const uids = Array.from(new Set(tarjetas.map(t => t.userUid).filter(Boolean)));
+
       for (const uid of uids) {
         try {
           const uref = doc(db, 'users', uid);
           const usnap = await getDoc(uref);
           if (usnap.exists()) {
             const ud = usnap.data();
-            usersMap[uid] = { name: `${ud.name || ''} ${ud.lastname || ud.lastName || ud.lastname || ''}`.trim() || (ud.displayName || ''), handicap: Number(ud.handicap || ud.hcp || ud.handicapNumero || 0) };
+            usersMap[uid] = {
+              name: `${ud.name || ''} ${ud.lastname || ''}`.trim() || ud.email || 'Usuario',
+              handicap: Number(ud.handicap || 0),
+              genero: ud.genero || '',
+              grupo: ud.grupo || ''
+            };
           } else {
-            usersMap[uid] = { name: 'Usuario', handicap: 0 };
+            usersMap[uid] = { name: 'Usuario desconocido', handicap: 0 };
           }
         } catch (e) {
-          usersMap[uid] = { name: 'Usuario', handicap: 0 };
+          console.error(`Error cargando usuario ${uid}:`, e);
+          usersMap[uid] = { name: 'Usuario error', handicap: 0 };
         }
       }
+      console.log('👉 cargarTarjetas terminó:', { tarjetas, usersMap });
+
       console.log('cargarTarjetas -> tarjetas:', tarjetas);
       console.log('cargarTarjetas -> usersMap:', usersMap);
 
     }
-    console.log('Tarjetas cargadas:', tarjetas);
-    console.log('UsersMap:', usersMap);
-
-
+  
     // construye y muestra la tabla con colores y totales
     function renderTabla() {
+    console.log('👉 renderTabla() tarjetas:', tarjetas, 'usersMap:', usersMap);
       tableWrap.style.display = 'block';
       if (!tarjetas.length) {
         tableWrap.innerHTML = `<div style="padding:14px;">No hay tarjetas registradas para este juego.</div>`;
@@ -463,22 +470,18 @@
 
     // iniciar: auth listener
     onAuthStateChanged(authInst, async (user) => {
-    currentUser = user || null;
-    if(currentUser && currentUser.uid){
-      startBtn.disabled = false;
-    } else {
-      startBtn.disabled = true;
-    }
+      currentUser = user || null;
+      startBtn.disabled = !currentUser;
 
-    try {
-      await cargarJuegoYCampo();      // carga campoPar
-      await cargarTarjetas();        // carga tarjetas
-      await recalcAndRender();       // render y actualizar resumen
-    } catch (err) {
-      console.error('Error inicializando polla:', err);
-      statusInfo.textContent = 'Error inicializando';
-    }
-  });
+      try {
+        await cargarJuegoYCampo();      
+        await recalcAndRender();       // recalc ya llama a cargarTarjetas
+      } catch (err) {
+        console.error('Error inicializando polla:', err);
+        statusInfo.textContent = 'Error inicializando';
+      }
+    });
+
 
   </script>
 
