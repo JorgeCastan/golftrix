@@ -20,83 +20,117 @@ body { font-family:'Orbitron',sans-serif; margin:0; padding:12px; background: #f
   flex-direction:column; 
 }
 h2 { margin:0 0 12px 0; color:#005600; text-align:center; }
-/* ETIQUETAS (labels) con texto en gradiente verde */
+/* -> Asegura box-sizing para que paddings no rompan columnas */
+* { box-sizing: border-box; }
+
+/* ETIQUETAS (labels) con texto en gradiente verde (ajustadas) */
 .hoyo-card label {
   display: block;
   font-weight: 700;
   margin-bottom: 6px;
   font-family: 'Orbitron', sans-serif;
-  font-size: 0.95rem;
-  /* texto con gradiente */
+  font-size: 0.88rem; /* un poco más pequeño para ahorrar espacio */
+  /* texto con gradiente (fallback color usado si no soporta background-clip) */
   background: linear-gradient(90deg, #007f00, #00cc44);
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
-  /* mantener legibilidad en pantallas pequeñas */
-  text-wrap: wrap;
+  -webkit-text-fill-color: transparent;
 }
 
-/* INPUTS con borde en gradiente y tipografía Orbitron */
+/* INPUTS con borde en gradiente y tipografía Orbitron (más compactos) */
 .hoyo-card input[type="number"] {
   width: 100%;
-  padding: 8px 10px;
-  border-radius: 10px;
-  border: 2px solid transparent; /* base para el borde con fondo doble */
-  margin-bottom: 10px;
+  padding: 6px 8px;           /* menos padding para que quepan en las columnas */
+  height: 36px;               /* altura controlada para consistencia */
+  border-radius: 8px;
+  border: 2px solid transparent;
+  margin-bottom: 6px;
   text-align: center;
   font-family: 'Orbitron', sans-serif;
   font-weight: 700;
-  font-size: 1rem;
-  /* truco: doble background -> uno blanco para interior y otro gradiente para el borde */
+  font-size: 0.95rem;
   background-image: linear-gradient(white, white), linear-gradient(90deg, #007f00, #00cc44);
   background-origin: padding-box, border-box;
   background-clip: padding-box, border-box;
   outline: none;
   transition: box-shadow .12s ease, transform .06s ease;
+  box-sizing: border-box;
+  max-width: 100%;
 }
 
 /* foco: resaltar con halo sutil */
 .hoyo-card input[type="number"]:focus {
-  box-shadow: 0 0 0 4px rgba(0,204,68,0.10);
+  box-shadow: 0 0 0 4px rgba(0,204,68,0.08);
   transform: translateY(-1px);
 }
 
-/* Para que el grid responsive también afecte al contenedor de hoyos */
+/* Grid de hoyos: usar minmax para evitar overflow */
 #hoyosContainer {
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 8px;
+  align-items: start;
 }
 @media (max-width:700px) {
   #hoyosContainer { grid-template-columns: 1fr; }
 }
 
-button.save { background:linear-gradient(90deg,#007f00,#00cc44); color:#fff; border:none; padding:10px 12px; border-radius:10px; cursor:pointer; font-weight:800; margin-top:8px; }
-#hoyosContainer {
-  display:grid; 
-  grid-template-columns: repeat(2, 1fr); 
-  gap:8px; 
-}
+/* cartas de hoyo: menos padding para que quepan en 2 columnas */
 .hoyo-card {
   background:#f7f7f7;
-  padding:8px;
+  padding:6px;
   border-radius:8px;
+  display:flex;
+  flex-direction:column;
+  align-items:stretch;
   text-align:center;
 }
+
+/* Botón guardar */
+button.save {
+  background: linear-gradient(90deg,#007f00,#00cc44);
+  color:#fff;
+  border:none;
+  padding:10px 12px;
+  border-radius:10px;
+  cursor:pointer;
+  font-weight:800;
+  margin-top:8px;
+  font-family:'Orbitron',sans-serif;
+}
+
+/* Nota pequeña */
 .small { font-size:0.85rem; color:#666; text-align:center; margin-bottom:8px; }
+
 </style>
 </head>
 <body>
 <div class="container">
   <div class="form-card" id="formCard">
-    <h2>Tu Tarjeta</h2>
-    <div id="meta" class="small">Cargando...</div>
+  <h2>Tu Tarjeta</h2>
+  <div id="meta" class="small">Cargando...</div>
 
-    <form id="tarjetaForm">
-      <div id="hoyosContainer"></div>
+  <form id="tarjetaForm">
+    <!-- Nota instructiva antes de los hoyos -->
+    <div class="small" style="margin-bottom:10px; text-align:center; font-weight:700;">
+      Nota: Debes hacer clic en "Guardar Cambios" para almacenar la información de tu tarjeta.
+    </div>
+
+    <!-- Botón extra que dispara el guardado (no es submit para evitar doble envío accidental) -->
+    <div style="text-align:center; margin-bottom:8px;">
+      <button type="button" id="guardarTop" class="save" style="padding:8px 14px;">Guardar Cambios</button>
+    </div>
+
+    <div id="hoyosContainer"></div>
+
+    <!-- submit original (queda como estaba) -->
+    <div style="text-align:center; margin-top:10px;">
       <button type="submit" class="save">Guardar Tarjeta</button>
-    </form>
-  </div>
+    </div>
+  </form>
+</div>
+
 </div>
 
 <script>
@@ -112,6 +146,20 @@ const tarjetaId = getQueryParam('tarjetaId');
 const metaEl = document.getElementById('meta');
 const hoyosContainer = document.getElementById('hoyosContainer');
 const tarjetaForm = document.getElementById('tarjetaForm');
+// botón superior que dispara el guardado del formulario
+const guardarTopBtn = document.getElementById('guardarTop');
+if (guardarTopBtn) {
+  guardarTopBtn.addEventListener('click', () => {
+    // requestSubmit() usa el handler del formulario; si no existe, fallback a dispatchEvent
+    if (typeof tarjetaForm.requestSubmit === 'function') {
+      tarjetaForm.requestSubmit();
+    } else {
+      // fallback para navegadores antiguos
+      tarjetaForm.dispatchEvent(new Event('submit', { cancelable: true, bubbles: true }));
+    }
+  });
+}
+
 
 if (!tarjetaId) {
   metaEl.textContent = 'Falta tarjetaId en la URL';
