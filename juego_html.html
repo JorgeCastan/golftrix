@@ -218,33 +218,27 @@
         });
         accionesDiv.appendChild(tarjetaBtn);
 
-        // botones de modos
+        // botones de modos (REEMPLAZADO: abrimos el modo en iframe para que sus scripts se ejecuten y reciba juegoId)
         const modos = Array.isArray(juego.modos) ? juego.modos : [];
         if (modos.length === 0) {
-        const noModes = document.createElement('div');
-        noModes.style.color = '#666';
-        noModes.textContent = 'No hay modos configurados en este juego.';
-        accionesDiv.appendChild(noModes);
+          const noModes = document.createElement('div');
+          noModes.style.color = '#666';
+          noModes.textContent = 'No hay modos configurados en este juego.';
+          accionesDiv.appendChild(noModes);
         } else {
-        modos.forEach(m => {
-            const label = m.replace(/^juego_/,'').replace(/_(grupo|individual)\.html$/,'').replace(/_/g,' ');
-            const btn = document.createElement('button');
-            btn.className = 'modo-btn';
-            btn.textContent = label;
-            btn.addEventListener('click', async () => {
-            try {
-                const resp = await fetch(m);
-                const html = await resp.text();
-                leftArea.innerHTML = html;
-                // aquí luego podemos inyectar scripts del modo si es necesario
-            } catch (err) {
-                leftArea.innerHTML = `<div style="color:#b00;">Error cargando modo ${label}</div>`;
-                console.error(err);
-            }
-            });
-            accionesDiv.appendChild(btn);
-        });
+          modos.forEach(m => {
+              const label = m.replace(/^juego_/,'').replace(/_(grupo|individual)\.html$/,'').replace(/_/g,' ');
+              const btn = document.createElement('button');
+              btn.className = 'modo-btn';
+              btn.textContent = label;
+              btn.addEventListener('click', () => {
+                // abrimos el modo en un iframe y le pasamos el juegoId en la URL
+                leftArea.innerHTML = `<iframe class="tarjeta-frame" src="${m}?juegoId=${encodeURIComponent(juegoId)}" loading="lazy"></iframe>`;
+              });
+              accionesDiv.appendChild(btn);
+          });
         }
+
 
         modosContainer.appendChild(accionesDiv);
 
