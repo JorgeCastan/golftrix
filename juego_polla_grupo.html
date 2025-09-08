@@ -133,12 +133,13 @@
 </script>
 
 <script type="module">
-  import { app, db } from './firebase-config.js';
-  import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.3/firebase-auth.js";
+  import { app, db, auth } from './firebase-config.js';
+  import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
   import {
-    doc, getDoc, setDoc, updateDoc, serverTimestamp,
-    collection, query, where, getDocs
-  } from "https://www.gstatic.com/firebasejs/10.12.3/firebase-firestore.js";
+      doc, getDoc, setDoc, updateDoc, serverTimestamp,
+      collection, query, where, getDocs
+  } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
 
   const juegoId = getQueryParam('juegoId') || getQueryParam('id');
   const metaStatus = document.getElementById('metaStatus');
@@ -156,7 +157,7 @@
     throw new Error('Falta juegoId');
   }
 
-  const authInst = getAuth(app);
+  const authInst = auth;
   let currentUser = null;
   const pollaRef = doc(db, 'juego_polla_grupo', juegoId);
 
