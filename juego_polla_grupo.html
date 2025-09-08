@@ -158,7 +158,7 @@
 
   const authInst = getAuth(app);
   let currentUser = null;
-  const pollaRef = doc(db, 'juego_polla', juegoId);
+  const pollaRef = doc(db, 'juego_polla_grupo', juegoId);
 
   async function obtenerParPorHoyo(campoId) {
     if (!campoId) return null;
