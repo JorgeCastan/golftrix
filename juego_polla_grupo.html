@@ -10,6 +10,12 @@
     --green-1: #007f00;
     --green-2: #00cc44;
   }
+  .grad-text {
+    background: linear-gradient(90deg, var(--green-1), var(--green-2));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+
   body { font-family: 'Orbitron',sans-serif; margin:0; padding:18px; background:#f6f6f6; color:#111; }
   .card { background:white; border-radius:12px; padding:12px; box-shadow:0 6px 18px rgba(0,0,0,0.08); margin-bottom:12px; }
   h1 { margin:0 0 8px 0; color:var(--green-1); }
@@ -28,29 +34,23 @@
   th, td { padding:6px 8px; border-bottom:1px solid #eee; text-align:center; vertical-align:middle; }
   th.left, td.left { text-align:left; }
   th.sticky { position: sticky; top:0; background:white; z-index:2; }
-  /* header de tabla verde gradiente */
-  .header-gradient {
-    background: linear-gradient(90deg,var(--green-1),var(--green-2));
-    color: #fff;
-    font-weight: 800;
-  }
-
 
   /* avatar iniciales */
   .avatar {
-    width:40px; height:40px; border-radius:50%;
-    background:#000; color:#fff; display:inline-flex; align-items:center; justify-content:center;
-    font-weight:800; border:4px solid transparent; box-sizing:content-box;
-    /* borde gradient */
-    background-clip: padding-box;
-    position:relative;
-  }
-  .avatar::before {
-    content: "";
-    position:absolute; inset:-4px; border-radius:50%;
-    background: linear-gradient(90deg,var(--green-1),var(--green-2));
-    z-index:-1;
-  }
+  width:40px; height:40px; border-radius:50%;
+  background:#000; color:#fff; display:inline-flex; align-items:center; justify-content:center;
+  font-weight:800; border:4px solid transparent; box-sizing:content-box;
+  position:relative;
+  overflow:hidden;
+}
+
+.avatar::before {
+  content: "";
+  position:absolute; inset:-4px; border-radius:50%;
+  background: linear-gradient(90deg,var(--green-1),var(--green-2));
+  z-index:-1;
+}
+
 
   /* cell colors: amarillo, verde, rojo */
   .hole-below { background: #fff7c2; } /* amarillo */
@@ -64,20 +64,15 @@
     .small-holes { display:none; } /* hide per-hole columns if small */
   }
 
-  @media (max-width:800px) {
+  @media (max-width:900px) {
     table { font-size:0.75rem; }
     th, td { padding:4px 6px; }
     .avatar { width:30px; height:30px; font-size:0.7rem; }
     #tableCard { overflow-x:auto; }
+    .small-holes { display:none; } /* ya existente */
   }
 
-  @media (max-width:500px) {
-    .row { flex-direction:column; }
-    .col { min-width:100%; }
-    .controls { flex-direction:column; align-items:flex-start; }
-    input[type="number"] { width:100%; }
-    button.primary, button.ghost { width:100%; text-align:center; }
-}
+
 
   .controls { display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
 
@@ -120,28 +115,28 @@
       <table id="resultsTable">
         <thead>
         <tr>
-          <th class="sticky left header-gradient">Pos</th>
-          <th class="sticky left header-gradient">Jugador</th>
-          <th class="sticky header-gradient">H1</th>
-          <th class="sticky header-gradient">H2</th>
-          <th class="sticky header-gradient">H3</th>
-          <th class="sticky header-gradient">H4</th>
-          <th class="sticky header-gradient">H5</th>
-          <th class="sticky header-gradient">H6</th>
-          <th class="sticky header-gradient">H7</th>
-          <th class="sticky header-gradient">H8</th>
-          <th class="sticky header-gradient">H9</th>
-          <th class="sticky header-gradient small-holes">H10</th>
-          <th class="sticky header-gradient small-holes">H11</th>
-          <th class="sticky header-gradient small-holes">H12</th>
-          <th class="sticky header-gradient small-holes">H13</th>
-          <th class="sticky header-gradient small-holes">H14</th>
-          <th class="sticky header-gradient small-holes">H15</th>
-          <th class="sticky header-gradient small-holes">H16</th>
-          <th class="sticky header-gradient small-holes">H17</th>
-          <th class="sticky header-gradient small-holes">H18</th>
-          <th class="sticky header-gradient">Total</th>
-          <th class="sticky header-gradient">Total c/ Handicap</th>
+          <th class="sticky left grad-text">Pos</th>
+          <th class="sticky left grad-text">Jugador</th>
+          <th class="sticky grad-text">Hoyo 1</th>
+          <th class="sticky grad-text">Hoyo 2</th>
+          <th class="sticky grad-text">Hoyo 3</th>
+          <th class="sticky grad-text">Hoyo 4</th>
+          <th class="sticky grad-text">Hoyo 5</th>
+          <th class="sticky grad-text">Hoyo 6</th>
+          <th class="sticky grad-text">Hoyo 7</th>
+          <th class="sticky grad-text">Hoyo 8</th>
+          <th class="sticky grad-text">Hoyo 9</th>
+          <th class="sticky small-holes grad-text">Hoyo 10</th>
+          <th class="sticky small-holes grad-text">Hoyo 11</th>
+          <th class="sticky small-holes grad-text">Hoyo 12</th>
+          <th class="sticky small-holes grad-text">Hoyo 13</th>
+          <th class="sticky small-holes grad-text">Hoyo 14</th>
+          <th class="sticky small-holes grad-text">Hoyo 15</th>
+          <th class="sticky small-holes grad-text">Hoyo 16</th>
+          <th class="sticky small-holes grad-text">Hoyo 17</th>
+          <th class="sticky small-holes grad-text">Hoyo 18</th>
+          <th class="sticky grad-text">Total</th>
+          <th class="sticky grad-text">Total c/ Handicap</th>
         </tr>
       </thead>
 
@@ -383,12 +378,8 @@
       avatar.textContent = s.initials;
       avatar.title = s.nombre;
       const nameSpan = document.createElement('span');
+      nameSpan.className = 'grad-text';
       nameSpan.style.marginLeft = '8px';
-      nameSpan.style.fontWeight = '800';
-      nameSpan.style.background = 'linear-gradient(90deg,var(--green-1),var(--green-2))';
-      nameSpan.style.color = 'transparent';
-      nameSpan.style.backgroundClip = 'text';
-      nameSpan.style.webkitBackgroundClip = 'text';
       nameSpan.textContent = s.nombre || s.userUid;
       tdUser.appendChild(avatar);
       tdUser.appendChild(nameSpan);
@@ -428,35 +419,28 @@
 
   function calcularYMostrarSaldo(standings, pricePerPlayer) {
     miSaldoEl.textContent = '';
+    miSaldoEl.style.color = '';
     if (!currentUser) return;
     const uid = currentUser.uid;
     const n = standings.length;
-    if (n === 0 || !pricePerPlayer) {
-      miSaldoEl.textContent = '';
-      return;
-    }
+    if (n === 0 || !pricePerPlayer) return;
 
     const winnerUid = standings[0].userUid;
     const userStanding = standings.find(s => s.userUid === uid);
     if (!userStanding) {
       miSaldoEl.textContent = `No estás participando en las tarjetas con hoyos. Saldo: -${pricePerPlayer} (no participas)`;
+      miSaldoEl.style.color = 'red';
+      miSaldoEl.style.fontWeight = '800';
       return;
     }
 
     const isWinner = (userStanding.userUid === winnerUid);
-    if (isWinner) {
-      const gain = pricePerPlayer * (n - 1);
-      if (isWinner) {
-  const gain = pricePerPlayer * (n - 1);
-  miSaldoEl.innerHTML = `Vas ganando → Ganancia neta actual: <span style="color:green;font-weight:800;">${gain}</span> (hay ${n} participantes, precio por persona ${pricePerPlayer})`;
-    } else {
-      miSaldoEl.innerHTML = `No vas ganando → Saldo actual: <span style="color:red;font-weight:800;">-${pricePerPlayer}</span>`;
-    }
-
-    } else {
-      miSaldoEl.textContent = `No vas ganando → Saldo actual: -${pricePerPlayer}`;
-    }
+    let saldo = isWinner ? pricePerPlayer * (n-1) : -pricePerPlayer;
+    miSaldoEl.textContent = `Saldo actual: ${saldo >= 0 ? '+' : ''}${saldo}`;
+    miSaldoEl.style.color = saldo >= 0 ? 'green' : 'red';
+    miSaldoEl.style.fontWeight = '800';
   }
+
 
   async function guardarPollaState(pricePerPlayer, standingsSummary) {
     try {
