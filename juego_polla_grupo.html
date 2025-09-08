@@ -3,293 +3,518 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Polla - Golftrix</title>
-  <link rel="icon" href="logo_golftrix.png" type="image/png" />
+  <title>Polla - Grupo — Golftrix</title>
   <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@700&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="menu.css" />
   <style>
-    * { box-sizing: border-box; }
-    body { font-family: 'Orbitron', sans-serif; margin:0; min-height:100vh; display:flex; flex-direction:column; background:#f6f6f6; color:#111; }
-    header { background: linear-gradient(90deg,#007f00,#00cc44); color:white; display:flex; align-items:center; justify-content:space-between; padding:14px 18px; }
-    header h1 { margin:0; font-size:1.2rem; text-align:center; flex:1; }
-    main { flex:1; padding:18px; max-width:1200px; margin:0 auto; width:100%; display:flex; flex-direction:column; gap:14px; }
-    .card { background: rgba(255,255,255,0.98); padding:14px; border-radius:12px; box-shadow:0 8px 24px rgba(0,0,0,0.08); }
-    .top-controls { display:flex; gap:12px; align-items:center; flex-wrap:wrap; }
-    input[type="number"] { padding:10px 12px; border-radius:10px; border:2px solid transparent; min-width:140px;
-      background-image: linear-gradient(white,white), linear-gradient(90deg,#007f00,#00cc44);
-      background-origin: padding-box, border-box; background-clip: padding-box, border-box;
-      font-family:'Orbitron'; font-weight:700; }
-    input[type="number"]::placeholder { font-weight:400; }
-    button.btn { background:linear-gradient(90deg,#007f00,#00cc44); color:white; border:0; padding:10px 14px; border-radius:10px; cursor:pointer; font-weight:800; }
-    button.ghost { background:transparent; border:2px solid rgba(0,0,0,0.06); color:#333; padding:8px 10px; border-radius:8px; }
-    .status { font-size:0.95rem; color:#333; }
-    .table-wrap { overflow:auto; margin-top:8px; border-radius:10px; }
-    table { border-collapse:collapse; width:100%; min-width:900px; font-family:'Orbitron'; }
-    th, td { padding:8px 10px; border-bottom:1px solid rgba(0,0,0,0.06); text-align:center; font-size:0.9rem; }
-    th { background: linear-gradient(90deg,#f3fff3,#eefef0); position:sticky; top:0; z-index:2; }
-    tr.player-row:hover { background: rgba(0,0,0,0.02); }
-    .player-name { display:flex; align-items:center; gap:8px; justify-content:flex-start; }
-    .avatar-icon { width:28px; height:28px; border-radius:50%; display:inline-flex; align-items:center; justify-content:center;
-      background: linear-gradient(90deg,#007f00,#00cc44); color:white; border:2px solid #000; font-size:0.75rem; font-weight:900; }
-    .par-eq { color: #000; }
-    .par-better { color: #0a7f0a; }
-    .par-worse { color: #b00000; }
-    .summary { display:flex; gap:12px; align-items:center; flex-wrap:wrap; margin-top:10px; }
-    .summary .box { padding:10px 12px; border-radius:10px; background:#fff; box-shadow:0 6px 18px rgba(0,0,0,0.04); }
-    @media(max-width:900px){
-      th, td { padding:8px 6px; font-size:0.85rem; }
-      table { min-width:700px; }
-      .top-controls { flex-direction:column; align-items:stretch; }
-      input[type="number"] { width:100%; min-width:unset; }
-      .summary { flex-direction:column; align-items:stretch; }
+    :root{
+      --green-start:#007f00;
+      --green-end:#00cc44;
     }
+    body{ font-family:'Orbitron',sans-serif; margin:0; padding:18px; background:#f6f7f8; color:#111; }
+    .card{ background:white; border-radius:12px; padding:12px; box-shadow:0 6px 20px rgba(0,0,0,0.08); margin-bottom:14px; }
+    header{ display:flex; align-items:center; justify-content:space-between; gap:12px; }
+    header h1{ margin:0; color:var(--green-start); font-size:1.2rem; }
+    .top-actions{ display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
+
+    .input-inline{ display:flex; gap:8px; align-items:center; }
+    input[type="number"]{ padding:8px 10px; border-radius:8px; border:2px solid transparent; background-image: linear-gradient(white, white), linear-gradient(90deg,var(--green-start),var(--green-end)); background-origin: padding-box, border-box; background-clip: padding-box, border-box; width:120px; text-align:center; font-weight:700; }
+    button.primary{ background: linear-gradient(90deg,var(--green-start),var(--green-end)); color:#fff; border:0; padding:8px 12px; border-radius:10px; cursor:pointer; font-weight:800; }
+    .small { font-size:0.9rem; color:#666; }
+
+    .saldo { font-weight:800; font-size:1.05rem; }
+
+    /* tabla */
+    table{ width:100%; border-collapse:collapse; font-size:0.92rem; }
+    th, td{ padding:6px 8px; border-bottom:1px solid rgba(0,0,0,0.06); text-align:center; vertical-align:middle; }
+    th.sticky{ position:sticky; top:0; background:white; z-index:2; }
+
+    /* avatar circular */
+    .avatar {
+      width:36px; height:36px; border-radius:50%; display:inline-flex; align-items:center; justify-content:center;
+      background:#000; color:#fff; font-weight:800; border:3px solid;
+      border-image: linear-gradient(90deg,var(--green-start),var(--green-end)) 1;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.12);
+    }
+    .user-cell { display:flex; gap:8px; align-items:center; justify-content:flex-start; }
+
+    /* colores por hoyo: amarillo = bajo par (mejor), verde = par, rojo = sobre par (peor) */
+    .hole-below { background: #fff7c2; } /* amarillo suave */
+    .hole-par { background: #e5f8e8; } /* verde suave */
+    .hole-above { background: #ffe6e6; } /* rojo suave */
+
+    .totals { font-weight:800; }
+
+    /* responsive: colapsa tabla horizontalmente con scroll */
+    .table-wrap { overflow:auto; }
+
+    /* mensaje pequeño */
+    .muted { color:#666; font-size:0.9rem; }
+
   </style>
 </head>
 <body>
-  <header>
-    <div id="menuContainer"></div>
-    <h1>Polla — Golftrix</h1>
-    <img src="logo_golftrix.png" alt="logo" style="height:44px;cursor:pointer" id="logo">
+
+  <header style="margin-bottom:12px;">
+    <h1>Polla — Grupo</h1>
+    <div class="top-actions">
+      <div class="input-inline card" style="padding:8px;">
+        <label for="priceInput" class="small" style="margin-right:6px;">Precio por jugador</label>
+        <input id="priceInput" type="number" min="0" step="1" />
+      </div>
+      <button id="createBtn" class="primary">Crear / Actualizar Polla</button>
+      <div id="statusMsg" class="muted"></div>
+    </div>
   </header>
 
-  <main>
-    <div class="card">
-      <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;">
-        <div class="top-controls">
-          <label style="font-weight:700;margin-right:6px;">Precio por jugador (MXN)</label>
-          <input id="precioInput" type="number" min="0" placeholder="Ej: 100" />
-          <button id="startBtn" class="btn" disabled>Comenzar Polla</button>
-          <button id="refreshBtn" class="ghost">Actualizar</button>
-        </div>
-        <div class="status" id="statusInfo">Estado: esperando iniciar</div>
+  <section id="saldoArea" class="card" style="display:none;">
+    <div style="display:flex;justify-content:space-between;align-items:center;">
+      <div>
+        <div class="small">Tu saldo actual (según estado de la polla)</div>
+        <div id="tuSaldo" class="saldo">Cargando...</div>
       </div>
-
-      <div id="tableArea" style="margin-top:14px;">
-        <div class="table-wrap card" id="tableWrap" style="display:none;"></div>
-      </div>
-
-      <div class="summary" id="summaryArea" style="display:none; margin-top:12px;">
-        <div class="box" id="miSaldoBox">Mi saldo: --</div>
-        <div class="box" id="poolBox">Pozo total: --</div>
-      </div>
+      <div class="small">Tarjetas totales: <span id="totalTarjetas">0</span></div>
     </div>
-  </main>
+  </section>
 
-  <footer style="background:#000;color:#fff;padding:10px;text-align:center;">&copy; 2025 Golftrix</footer>
+  <section id="tablaArea" class="card" style="display:none;">
+    <div style="font-weight:800;margin-bottom:8px;">Resultados parciales — ordenados por total (con handicap)</div>
+    <div class="table-wrap">
+      <table id="resultsTable">
+        <thead>
+          <tr>
+            <th class="sticky">#</th>
+            <th class="sticky">Jugador</th>
+            <!-- Hoyo 1..18 -->
+            <!-- se insertan dinámicamente -->
+            <th class="sticky">Total</th>
+            <th class="sticky">Total c/ Hcp</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </section>
+
+  <section id="debug" style="margin-top:10px; font-size:0.85rem; color:#666;"></section>
 
   <script>
     function getQueryParam(n){ const u=new URL(location.href); return u.searchParams.get(n); }
+    function initialsFromName(nameOrEmail){
+      if(!nameOrEmail) return '';
+      const parts = nameOrEmail.split(/\s+/).filter(Boolean);
+      if(parts.length === 0) return '';
+      if(parts.length === 1){
+        const p = parts[0];
+        // if it's an email, take first letter before @
+        const idx = p.indexOf('@');
+        return (idx >= 0 ? p[0] : p[0]).toUpperCase();
+      }
+      return (parts[0][0] + parts[parts.length-1][0]).toUpperCase();
+    }
   </script>
 
-<script type="module">
-import { app, db } from './firebase-config.js';
-import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.3/firebase-auth.js";
-import { doc, getDoc, collection, query, where, getDocs, addDoc, serverTimestamp, updateDoc, orderBy } from "https://www.gstatic.com/firebasejs/10.12.3/firebase-firestore.js";
+  <script type="module">
+    import { app, db } from './firebase-config.js';
+    import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+    import {
+      doc, getDoc, setDoc, updateDoc, collection, query, where, getDocs, serverTimestamp
+    } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
-console.log('[polla] module loaded');
-if (!db) console.error('[polla] ERROR: variable "db" indefinida');
+    const juegoId = getQueryParam('juegoId') || getQueryParam('id');
+    const priceInput = document.getElementById('priceInput');
+    const createBtn = document.getElementById('createBtn');
+    const statusMsg = document.getElementById('statusMsg');
+    const saldoArea = document.getElementById('saldoArea');
+    const tuSaldoEl = document.getElementById('tuSaldo');
+    const totalTarjetasEl = document.getElementById('totalTarjetas');
+    const tablaArea = document.getElementById('tablaArea');
+    const resultsTableBody = document.querySelector('#resultsTable tbody');
+    const debugEl = document.getElementById('debug');
 
-const juegoId = getQueryParam('juegoId') || getQueryParam('id');
-if (!juegoId) { alert('Falta parámetro juegoId en la URL'); throw new Error('Falta juegoId'); }
-
-const precioInput = document.getElementById('precioInput');
-const startBtn = document.getElementById('startBtn');
-const refreshBtn = document.getElementById('refreshBtn');
-const statusInfo = document.getElementById('statusInfo');
-const tableWrap = document.getElementById('tableWrap');
-const summaryArea = document.getElementById('summaryArea');
-const miSaldoBox = document.getElementById('miSaldoBox');
-const poolBox = document.getElementById('poolBox');
-const logo = document.getElementById('logo');
-logo.addEventListener('click', () => window.location.href = 'dashboard.html');
-
-precioInput.addEventListener('input', () => {
-  const hasPrice = Number(precioInput.value) > 0;
-  startBtn.disabled = !hasPrice || !currentUser;
-});
-
-const authInst = getAuth(app);
-let currentUser = null;
-let juegoDoc = null;
-let campoPar = null;
-let tarjetas = [];
-let usersMap = {};
-let pollaCol = null;
-
-function getPollaCol() { if(!pollaCol) pollaCol = collection(db,'polla_juegos'); return pollaCol; }
-
-function getPar(hoyoIndex) { 
-  if(Array.isArray(campoPar) && campoPar.length>=hoyoIndex) return Number(campoPar[hoyoIndex-1])||4;
-  if(campoPar && typeof campoPar==='object') return Number(campoPar[hoyoIndex])||4;
-  return 4;
-}
-
-function makePlayerCellLabel(name){ return `<div class="player-name"><div class="avatar-icon">${(name||'U').slice(0,1).toUpperCase()}</div><div>${name||'Sin nombre'}</div></div>`; }
-
-async function cargarJuegoYCampo(){
-  console.log('Cargando juego y campo...');
-  const jref=doc(db,'juegos',juegoId);
-  const jsnap=await getDoc(jref);
-  if(!jsnap.exists()) throw new Error('Juego no encontrado');
-  juegoDoc=jsnap.data();
-  const campoId=juegoDoc.campoId;
-  if(campoId){
-    try{
-      const cref=doc(db,'camposGolf',campoId);
-      const csnap=await getDoc(cref);
-      if(csnap.exists()){
-        const cdata=csnap.data();
-        if(Array.isArray(cdata.paresHoyo)) campoPar=cdata.paresHoyo;
-        else if(Array.isArray(cdata.parPorHoyo)) campoPar=cdata.parPorHoyo;
-        else if(Array.isArray(cdata.pars)) campoPar=cdata.pars;
-        else if(typeof cdata.parCampo==='number') campoPar=new Array(18).fill(cdata.parCampo);
-        else campoPar=new Array(18).fill(4);
-      }else campoPar=new Array(18).fill(4);
-    }catch(e){ console.error('Error cargando campo:',e); campoPar=new Array(18).fill(4); }
-  } else campoPar=new Array(18).fill(4);
-}
-
-async function cargarTarjetas(){
-  console.log('Cargando tarjetas...');
-  tarjetas=[]; usersMap={};
-  const tarjetasRef=collection(db,'tarjetas');
-  const q=query(tarjetasRef,where('juegoId','==',juegoId));
-  const snap=await getDocs(q);
-  for(const d of snap.docs){ const data=d.data(); tarjetas.push({id:d.id,...data}); }
-  const uids=Array.from(new Set(tarjetas.map(t=>t.userUid).filter(Boolean)));
-  for(const uid of uids){
-    try{
-      const uref=doc(db,'users',uid);
-      const usnap=await getDoc(uref);
-      if(usnap.exists()){
-        const ud=usnap.data();
-        usersMap[uid]={ name:`${ud.name||''} ${ud.lastname||''}`.trim()||ud.email||'Usuario', handicap:Number(ud.handicap||0) };
-      }else usersMap[uid]={ name:'Usuario desconocido', handicap:0 };
-    }catch(e){ console.error(`Error cargando usuario ${uid}:`,e); usersMap[uid]={name:'Error usuario',handicap:0}; }
-  }
-  console.log('👉 cargarTarjetas terminó:',{tarjetas,usersMap});
-}
-
-function renderTabla(){
-  console.log('Renderizando tabla con',tarjetas.length,'tarjetas');
-  if(!tarjetas.length){ tableWrap.innerHTML='<div style="padding:14px;">No hay tarjetas registradas para este juego.</div>'; tableWrap.style.display='block'; summaryArea.style.display='none'; return null; }
-  const rows=tarjetas.map(t=>{
-    const user=usersMap[t.userUid]||{name:'Usuario',handicap:0};
-    const scoresMap={}; (Array.isArray(t.scores)?t.scores:[]).forEach(s=>{ if(s&&s.hoyo) scoresMap[Number(s.hoyo)]=Number(s.golpes); });
-    let sum=0; for(let i=1;i<=18;i++) sum+=Number(scoresMap[i]||0);
-    const adjusted=sum-user.handicap;
-    return {uid:t.userUid,name:user.name,handicap:user.handicap,scoresMap,sum,adjusted};
-  });
-  rows.sort((a,b)=>a.adjusted-b.adjusted);
-  const minAdj=rows[0].adjusted;
-  const winners=rows.filter(r=>r.adjusted===minAdj);
-
-  let html='<table><thead><tr><th>Jugador</th>';
-  for(let h=1;h<=18;h++) html+=`<th>H${h}</th>`;
-  html+='<th>Total</th><th>Aj. (Hcp)</th></tr></thead><tbody>';
-  for(const r of rows){
-    html+=`<tr><td>${makePlayerCellLabel(r.name)}</td>`;
-    for(let h=1;h<=18;h++){
-      const v=r.scoresMap[h]; const par=getPar(h);
-      let cls='par-eq', text='-';
-      if(v){ text=v; if(v>par) cls='par-worse'; else if(v<par) cls='par-better'; }
-      html+=`<td class="${cls}">${text}</td>`;
+    if (!juegoId) {
+      document.body.innerHTML = '<div style="color:#b33;padding:18px;">Falta parámetro juegoId en la URL</div>';
+      throw new Error('Falta juegoId');
     }
-    html+=`<td><b>${r.sum}</b></td><td><b>${r.adjusted}</b></td></tr>`;
-  }
-  html+='</tbody></table>';
-  tableWrap.innerHTML=html; tableWrap.style.display='block';
 
-  const numPlayers=rows.length;
-  const price=Number(precioInput.value)||0;
-  const totalPool=price*numPlayers;
-  let saldo='--';
-  if(currentUser?.uid){
-    const mine=rows.find(r=>r.uid===currentUser.uid);
-    if(mine){
-      if(winners.some(w=>w.uid===currentUser.uid)){
-        if(winners.length===1) saldo=`+${price*(numPlayers-1)} MXN`;
-        else saldo=`+${(totalPool/winners.length).toFixed(2)} MXN (empate)`;
-      }else saldo=`-${price} MXN`;
-    }else saldo='No estás en la tabla';
-  }
-  miSaldoBox.textContent=`Mi saldo: ${saldo}`;
-  poolBox.textContent=`Pozo total: ${totalPool} MXN`;
-  summaryArea.style.display='flex';
+    const authInst = getAuth(app);
+    let currentUser = null;
 
-  statusInfo.textContent=`Jugadores: ${numPlayers}, Ganador(es): ${winners.map(w=>w.name).join(', ')}`;
-  return {rows,winners,totalPool,price};
-}
+    // referencia al doc de la polla: colección 'juego_polla', id = juegoId
+    const pollaRef = (id) => doc(db, 'juego_polla', id);
 
-async function updatePollaResultSummary(summary){
-  try{
-    const q=query(getPollaCol(),where('juegoId','==',juegoId),where('modo','==','polla_grupo'),orderBy('createdAt','desc'));
-    const snap=await getDocs(q);
-    let ref;
-    if(snap.size>0) ref=snap.docs[0].ref;
-    else{
-      const added=await addDoc(getPollaCol(),{juegoId, precio:Number(precioInput.value)||0, ownerUid:currentUser?.uid||null, modo:'polla_grupo', createdAt:serverTimestamp()});
-      ref=doc(db,'polla_juegos',added.id);
+    // crea o actualiza el documento de polla con pricePerPlayer
+    async function crearOActualizarPolla(price) {
+      try {
+        const pref = pollaRef(juegoId);
+        const snap = await getDoc(pref);
+        if (!snap.exists()) {
+          await setDoc(pref, {
+            juegoId,
+            pricePerPlayer: price,
+            createdAt: serverTimestamp(),
+            updatedAt: serverTimestamp()
+          });
+          statusMsg.textContent = 'Polla creada.';
+        } else {
+          await updateDoc(pref, {
+            pricePerPlayer: price,
+            updatedAt: serverTimestamp()
+          });
+          statusMsg.textContent = 'Polla actualizada.';
+        }
+        await recalcAndRender(); // recalcula inmediatamente
+      } catch (err) {
+        console.error('Error creando/actualizando polla', err);
+        statusMsg.textContent = 'Error al crear/actualizar polla. Revisa consola.';
+      }
     }
-    await updateDoc(ref,{
-      lastCalculated:serverTimestamp(),
-      winners:summary.winners.map(w=>({uid:w.uid,name:w.name,adjusted:w.adjusted})),
-      playerCount:summary.rows.length,
-      totalPool:summary.totalPool
+
+    // cargar valor existente de polla (si existe) y mostrar en input
+    async function loadPollaIfExists() {
+      try {
+        const pref = pollaRef(juegoId);
+        const snap = await getDoc(pref);
+        if (snap.exists()) {
+          const data = snap.data();
+          if (typeof data.pricePerPlayer === 'number') {
+            priceInput.value = data.pricePerPlayer;
+            statusMsg.textContent = 'Polla cargada.';
+          }
+        } else {
+          statusMsg.textContent = 'No existe polla para este juego. Define un precio y haz Crear.';
+        }
+      } catch (err) {
+        console.error('Error cargando polla', err);
+      }
+    }
+
+    // función para obtener tarjetas del juego con al menos un score registrado
+    async function fetchTarjetasConScores() {
+      const tarjetas = [];
+      try {
+        const tarjetasCol = collection(db, 'tarjetas');
+        const q = query(tarjetasCol, where('juegoId', '==', juegoId));
+        const snap = await getDocs(q);
+        for (const d of snap.docs) {
+          const t = { id: d.id, ...d.data() };
+          // consideramos "tiene hoyos" si scores existe y hay al menos un objeto con 'golpes' numérico
+          if (Array.isArray(t.scores) && t.scores.some(s => typeof s.golpes === 'number')) {
+            tarjetas.push(t);
+          }
+        }
+      } catch (err) {
+        console.error('Error trayendo tarjetas', err);
+      }
+      return tarjetas;
+    }
+
+    // obtiene datos de usuario por uid (handicap + nombre)
+    const userCache = new Map();
+    async function getUser(uid) {
+      if (!uid) return null;
+      if (userCache.has(uid)) return userCache.get(uid);
+      try {
+        const uref = doc(db, 'users', uid);
+        const usnap = await getDoc(uref);
+        if (usnap.exists()) {
+          const udata = usnap.data();
+          userCache.set(uid, { uid, ...udata });
+          return userCache.get(uid);
+        } else {
+          userCache.set(uid, { uid });
+          return userCache.get(uid);
+        }
+      } catch (err) {
+        console.error('Error fetching user', uid, err);
+        userCache.set(uid, { uid });
+        return userCache.get(uid);
+      }
+    }
+
+    // obtiene campo de golf (pares por hoyo)
+    const campoCache = new Map();
+    async function getCampo(campoId) {
+      if (!campoId) return null;
+      if (campoCache.has(campoId)) return campoCache.get(campoId);
+      try {
+        const cref = doc(db, 'camposGolf', campoId);
+        const csnap = await getDoc(cref);
+        if (csnap.exists()) {
+          const cdata = csnap.data();
+          campoCache.set(campoId, cdata);
+          return cdata;
+        } else {
+          campoCache.set(campoId, null);
+          return null;
+        }
+      } catch (err) {
+        console.error('Error fetching campo', campoId, err);
+        campoCache.set(campoId, null);
+        return null;
+      }
+    }
+
+    // convierte array scores a map por hoyo (1..18)
+    function scoresToMap(scoresArray) {
+      const m = new Map();
+      if (!Array.isArray(scoresArray)) return m;
+      for (const s of scoresArray) {
+        if (s && typeof s.hoyo === 'number' && typeof s.golpes === 'number') {
+          m.set(s.hoyo, s.golpes);
+        }
+      }
+      return m;
+    }
+
+    // calcula totales y construye standings
+    async function buildStandings(tarjetas, pricePerPlayer) {
+      const standings = [];
+      for (const t of tarjetas) {
+        const userUid = t.userUid;
+        const user = await getUser(userUid);
+        const nombre = user?.name || user?.nombre || user?.firstName || user?.email || userUid || 'Jugador';
+        const handicap = Number(user?.handicap ?? user?.hcp ?? 0) || 0;
+
+        // campo para colores
+        const campo = await getCampo(t.campoId);
+
+        const scoreMap = scoresToMap(t.scores || []);
+        // total sin handicap: suma de golpes en los hoyos que existan
+        let total = 0;
+        for (const [h, g] of scoreMap.entries()) total += g;
+        const totalConHcp = total - handicap;
+
+        // construir arreglo de 18 valores (null si no hay)
+        const holes = [];
+        for (let i = 1; i <= 18; i++) {
+          const g = scoreMap.has(i) ? scoreMap.get(i) : null;
+          // par correspondiente si existe
+          const par = Array.isArray(campo?.paresHoyo) ? Number(campo.paresHoyo[i-1]) : null;
+          holes.push({ golpe: g, par });
+        }
+
+        standings.push({
+          tarjetaId: t.id,
+          userUid,
+          nombre,
+          handicap,
+          total,
+          totalConHcp,
+          holes
+        });
+      }
+
+      // ordenar por totalConHcp asc (el menor gana)
+      standings.sort((a,b) => {
+        // if tie, fallback to total
+        if (a.totalConHcp === b.totalConHcp) return a.total - b.total;
+        return a.totalConHcp - b.totalConHcp;
+      });
+
+      // asignar posiciones consecutivas (1,2,3...)
+      for (let i = 0; i < standings.length; i++) {
+        standings[i].pos = i+1;
+      }
+
+      return standings;
+    }
+
+    // render tabla y saldo del usuario actual
+    async function render(standings, pricePerPlayer) {
+      // mostrar contenedores
+      tablaArea.style.display = 'block';
+      saldoArea.style.display = 'block';
+
+      resultsTableBody.innerHTML = '';
+
+      // encabezados de hoyos (insertar despues del header existente)
+      const theadRow = document.querySelector('#resultsTable thead tr');
+      // limpiar posibles encabezados de hoyos previos
+      // dejamos los primeros 2 (pos y jugador) y los últimos 2 (Total, Total c/ Hcp)
+      // así que eliminamos lo que haya en medio antes de reinsertar
+      while (theadRow.children.length > 4) theadRow.removeChild(theadRow.children[2]);
+
+      for (let i = 1; i <= 18; i++) {
+        const th = document.createElement('th');
+        th.textContent = 'H' + i;
+        theadRow.insertBefore(th, theadRow.children[theadRow.children.length - 2]);
+      }
+
+      // totals
+      totalTarjetasEl.textContent = standings.length;
+
+      // identificar lider actual (posición 1 si existe)
+      const lider = standings[0] || null;
+
+      // calcular saldo para el usuario actual
+      let tuSaldo = 0;
+      if (currentUser) {
+        const tuTarjeta = standings.find(s => s.userUid === currentUser.uid);
+        const n = standings.length;
+        if (tuTarjeta) {
+          // si eres lider => te llevas (n * price) - price = price*(n-1)
+          if (tuTarjeta.pos === 1) {
+            tuSaldo = (n * pricePerPlayer) - pricePerPlayer;
+          } else {
+            // no eres lider: pagaste tu cuota (negativo)
+            tuSaldo = -pricePerPlayer;
+          }
+        } else {
+          // si no tienes tarjeta incluida: tu saldo es -price (si quieres participar pero no has cargado tarjeta)
+          tuSaldo = -pricePerPlayer;
+        }
+      } else {
+        tuSaldo = 0;
+      }
+
+      tuSaldoEl.textContent = (tuSaldo >= 0 ? '+ ' : '') + tuSaldo + ' MXN';
+
+      // construir filas
+      for (const s of standings) {
+        const tr = document.createElement('tr');
+
+        // posición
+        const tdPos = document.createElement('td');
+        tdPos.textContent = s.pos;
+        tr.appendChild(tdPos);
+
+        // jugador - avatar + nombre
+        const tdUser = document.createElement('td');
+        tdUser.className = 'user-cell';
+        const av = document.createElement('div');
+        av.className = 'avatar';
+        av.textContent = initialsFromName(s.nombre);
+        const nameDiv = document.createElement('div');
+        nameDiv.style.textAlign = 'left';
+        nameDiv.innerHTML = `<div style="font-weight:700;">${s.nombre}</div><div class="small">Hcp: ${s.handicap}</div>`;
+        tdUser.appendChild(av);
+        tdUser.appendChild(nameDiv);
+        tr.appendChild(tdUser);
+
+        // hoyos 1..18
+        for (let i = 0; i < 18; i++) {
+          const hole = s.holes[i];
+          const td = document.createElement('td');
+          const g = hole.golpe;
+          const par = hole.par;
+          if (g === null || typeof g === 'undefined') {
+            td.textContent = '-';
+          } else {
+            td.textContent = g;
+            // colorear según comparación con par si par existe (par es número)
+            if (typeof par === 'number' && !isNaN(par)) {
+              if (g < par) td.classList.add('hole-below');
+              else if (g === par) td.classList.add('hole-par');
+              else td.classList.add('hole-above');
+            }
+          }
+          tr.appendChild(td);
+        }
+
+        // total sin handicap
+        const tdTotal = document.createElement('td');
+        tdTotal.className = 'totals';
+        tdTotal.textContent = s.total;
+        tr.appendChild(tdTotal);
+
+        // total con handicap
+        const tdTotalH = document.createElement('td');
+        tdTotalH.className = 'totals';
+        tdTotalH.textContent = s.totalConHcp;
+        tr.appendChild(tdTotalH);
+
+        resultsTableBody.appendChild(tr);
+      }
+    }
+
+    // recalcula standings, renderiza y guarda snapshot en juego_polla
+    async function recalcAndRender() {
+      try {
+        statusMsg.textContent = 'Calculando...';
+        // obtener price de doc polla
+        const pref = pollaRef(juegoId);
+        const psnap = await getDoc(pref);
+        let price = Number(priceInput.value || 0);
+        if (psnap.exists()) {
+          const pdata = psnap.data();
+          if (typeof pdata.pricePerPlayer === 'number' && !isNaN(pdata.pricePerPlayer)) {
+            // si el input está vacío usamos el guardado
+            if (!price) price = pdata.pricePerPlayer;
+            priceInput.value = pdata.pricePerPlayer;
+          }
+        }
+
+        // si no hay price definido no seguimos (pero permitimos ver tarjetas)
+        const tarjetas = await fetchTarjetasConScores();
+        if (tarjetas.length === 0) {
+          tablaArea.style.display = 'none';
+          saldoArea.style.display = 'block';
+          totalTarjetasEl.textContent = '0';
+          tuSaldoEl.textContent = '0 MXN';
+          statusMsg.textContent = 'No hay tarjetas con hoyos registrados aún.';
+          // actualizar polla doc con empty snapshot
+          await setDoc(pref, {
+            juegoId,
+            pricePerPlayer: price || 0,
+            updatedAt: serverTimestamp(),
+            standings: [],
+            snapshotCount: 0
+          }, { merge: true });
+          return;
+        }
+
+        const standings = await buildStandings(tarjetas, price || 0);
+        await render(standings, price || 0);
+
+        // guardar snapshot en juego_polla/{juegoId}
+        const toSave = {
+          juegoId,
+          pricePerPlayer: price || 0,
+          updatedAt: serverTimestamp(),
+          snapshotCount: standings.length,
+          standings: standings.map(s => ({
+            tarjetaId: s.tarjetaId,
+            userUid: s.userUid,
+            nombre: s.nombre,
+            handicap: s.handicap,
+            total: s.total,
+            totalConHcp: s.totalConHcp,
+            pos: s.pos
+            // no guardamos todos los hoyos para ahorrar espacio; si quieres guardarlos, descomenta abajo:
+            // holes: s.holes
+          }))
+        };
+        await setDoc(pref, toSave, { merge: true });
+
+        statusMsg.textContent = 'Actualizado.';
+      } catch (err) {
+        console.error('Error en recalcAndRender', err);
+        statusMsg.textContent = 'Error calculando resultados. Revisa consola.';
+      }
+    }
+
+    // eventos UI
+    createBtn.addEventListener('click', async () => {
+      const price = Number(priceInput.value || 0);
+      if (!price || price <= 0) {
+        alert('Ingresa un precio válido mayor que 0');
+        return;
+      }
+      await crearOActualizarPolla(price);
     });
-  }catch(e){ console.warn('updatePollaResultSummary error',e); }
-}
 
-async function recalcAndRender(){
-  try{ if(!campoPar) await cargarJuegoYCampo(); await cargarTarjetas(); const summary=renderTabla(); if(summary) await updatePollaResultSummary(summary); }
-  catch(e){ console.error('Error en recalcAndRender',e); statusInfo.textContent='Error cargando'; }
-}
+    // init
+    onAuthStateChanged(authInst, async (user) => {
+      currentUser = user;
+      // cargar polla si existe
+      await loadPollaIfExists();
+      // siempre recalcular y renderizar al entrar
+      await recalcAndRender();
+      // opcional: refrescar cada X segundos para mantener datos actualizados
+      // Comentado por defecto; descomenta si quieres auto-refresh:
+      // setInterval(recalcAndRender, 30_000);
+    });
 
-startBtn.addEventListener('click', async ()=>{
-  console.log('[polla] startBtn clicked');
-  const precio=Number(precioInput.value);
-  if(!Number.isFinite(precio)||precio<=0){ alert('Ingresa un precio válido'); return; }
-  if(!currentUser||!currentUser.uid){ alert('Debes iniciar sesión'); return; }
-  try{
-    statusInfo.textContent='Creando/actualizando polla...';
-    const pollaCollection=getPollaCol();
-    const q=query(pollaCollection,where('juegoId','==',juegoId),where('modo','==','polla_grupo'));
-    const snap=await getDocs(q);
-    let pollaRef;
-    if(!snap||snap.empty){
-      const added=await addDoc(pollaCollection,{juegoId, precio, ownerUid:currentUser.uid, modo:'polla_grupo', createdAt:serverTimestamp(), lastCalculated:null});
-      pollaRef=doc(db,'polla_juegos',added.id);
-    }else{
-      pollaRef=snap.docs[0].ref;
-      await updateDoc(pollaRef,{precio, lastUpdated:serverTimestamp()});
-    }
-    await recalcAndRender();
-    statusInfo.textContent=`Polla iniciada (id: ${pollaRef.id})`;
-  }catch(err){ console.error('[polla] Error en startBtn handler:',err); alert('Error iniciando polla — revisa la consola'); statusInfo.textContent='Error iniciando polla'; }
-});
-
-refreshBtn.addEventListener('click', recalcAndRender);
-
-onAuthStateChanged(authInst, async (user)=>{
-  console.log('[polla] onAuthStateChanged ->',user?.uid||null);
-  currentUser=user||null;
-  startBtn.disabled=!currentUser||!(Number(precioInput.value)>0);
-  try{ await cargarJuegoYCampo(); await recalcAndRender(); }catch(err){ console.error('[polla] Error inicializando en onAuthStateChanged:',err); statusInfo.textContent='Error inicializando'; }
-});
-
-</script>
-
-<script>
-  fetch('menu.html')
-    .then(res=>res.text())
-    .then(html=>{
-      const temp=document.createElement('div'); temp.innerHTML=html;
-      const hamburgerBtn=temp.querySelector('.hamburger')||temp.querySelector('#hamburger');
-      const sidebarMenu=temp.querySelector('.sidebar-mobile')||temp.querySelector('#sidebarMenu');
-      if(hamburgerBtn) document.getElementById('menuContainer').appendChild(hamburgerBtn);
-      if(sidebarMenu) document.body.appendChild(sidebarMenu);
-      import('./menu.js').catch(e=>console.error(e));
-    }).catch(e=>console.error('menu.html:',e));
-</script>
+  </script>
 </body>
 </html>
