@@ -477,18 +477,24 @@
 
   // EVENTOS: añadir logs para debugging
   createBtn.addEventListener('click', async () => {
+    if (!currentUser) {
+      alert('Debes iniciar sesión antes de crear la polla.');
+      return;
+    }
+
     const price = Number(priceInput.value);
     if (!price || price <= 0) {
       alert('Ingresa un precio válido (mayor que 0).');
       return;
     }
+
     try {
       console.log('Crear polla: comprobando existencia...');
       const snap = await getDoc(pollaRef);
       if (snap.exists()) {
         if (!confirm('Ya existe una polla para este juego. ¿Deseas reescribir el precio?')) return;
         await updateDoc(pollaRef, { pricePerPlayer: price, updatedAt: serverTimestamp() });
-        console.log('Precio actualizado en juego_polla');
+        console.log('Precio actualizado en juego_polla_grupo');
         await refreshAll();
         return;
       }
@@ -499,6 +505,7 @@
       alert('Error creando/actualizando polla. Revisa consola.');
     }
   });
+
 
   refreshBtn.addEventListener('click', () => refreshAll());
 
