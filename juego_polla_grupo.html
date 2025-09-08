@@ -1,520 +1,566 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Polla - Grupo — Golftrix</title>
-  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@700&display=swap" rel="stylesheet" />
-  <style>
-    :root{
-      --green-start:#007f00;
-      --green-end:#00cc44;
-    }
-    body{ font-family:'Orbitron',sans-serif; margin:0; padding:18px; background:#f6f7f8; color:#111; }
-    .card{ background:white; border-radius:12px; padding:12px; box-shadow:0 6px 20px rgba(0,0,0,0.08); margin-bottom:14px; }
-    header{ display:flex; align-items:center; justify-content:space-between; gap:12px; }
-    header h1{ margin:0; color:var(--green-start); font-size:1.2rem; }
-    .top-actions{ display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Polla Grupo — Golftrix</title>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@700&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --green-1: #007f00;
+    --green-2: #00cc44;
+  }
+  body { font-family: 'Orbitron',sans-serif; margin:0; padding:18px; background:#f6f6f6; color:#111; }
+  .card { background:white; border-radius:12px; padding:12px; box-shadow:0 6px 18px rgba(0,0,0,0.08); margin-bottom:12px; }
+  h1 { margin:0 0 8px 0; color:var(--green-1); }
+  .row { display:flex; gap:12px; align-items:center; flex-wrap:wrap; }
+  .col { flex:1; min-width:220px; }
+  label { display:block; font-weight:700; margin-bottom:6px; color:#333; }
+  input[type="number"] { width:150px; padding:8px; border-radius:8px; border:1px solid #ddd; font-weight:700; }
+  button.primary { background: linear-gradient(90deg,var(--green-1),var(--green-2)); color:#fff; border:0; padding:8px 12px; border-radius:10px; cursor:pointer; font-weight:800; }
+  button.ghost { background:transparent; border:1px solid #ddd; padding:8px 10px; border-radius:8px; cursor:pointer; }
 
-    .input-inline{ display:flex; gap:8px; align-items:center; }
-    input[type="number"]{ padding:8px 10px; border-radius:8px; border:2px solid transparent; background-image: linear-gradient(white, white), linear-gradient(90deg,var(--green-start),var(--green-end)); background-origin: padding-box, border-box; background-clip: padding-box, border-box; width:120px; text-align:center; font-weight:700; }
-    button.primary{ background: linear-gradient(90deg,var(--green-start),var(--green-end)); color:#fff; border:0; padding:8px 12px; border-radius:10px; cursor:pointer; font-weight:800; }
-    .small { font-size:0.9rem; color:#666; }
+  .status { font-size:0.95rem; color:#333; }
+  .small { font-size:0.9rem; color:#666; }
 
-    .saldo { font-weight:800; font-size:1.05rem; }
+  /* tabla */
+  table { width:100%; border-collapse:collapse; font-size:0.9rem; }
+  th, td { padding:6px 8px; border-bottom:1px solid #eee; text-align:center; vertical-align:middle; }
+  th.left, td.left { text-align:left; }
+  th.sticky { position: sticky; top:0; background:white; z-index:2; }
 
-    /* tabla */
-    table{ width:100%; border-collapse:collapse; font-size:0.92rem; }
-    th, td{ padding:6px 8px; border-bottom:1px solid rgba(0,0,0,0.06); text-align:center; vertical-align:middle; }
-    th.sticky{ position:sticky; top:0; background:white; z-index:2; }
+  /* avatar iniciales */
+  .avatar {
+    width:40px; height:40px; border-radius:50%;
+    background:#000; color:#fff; display:inline-flex; align-items:center; justify-content:center;
+    font-weight:800; border:4px solid transparent; box-sizing:content-box;
+    /* borde gradient */
+    background-clip: padding-box;
+    position:relative;
+  }
+  .avatar::before {
+    content: "";
+    position:absolute; inset:-4px; border-radius:50%;
+    background: linear-gradient(90deg,var(--green-1),var(--green-2));
+    z-index:-1;
+  }
 
-    /* avatar circular */
-    .avatar {
-      width:36px; height:36px; border-radius:50%; display:inline-flex; align-items:center; justify-content:center;
-      background:#000; color:#fff; font-weight:800; border:3px solid;
-      border-image: linear-gradient(90deg,var(--green-start),var(--green-end)) 1;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.12);
-    }
-    .user-cell { display:flex; gap:8px; align-items:center; justify-content:flex-start; }
+  /* cell colors: amarillo, verde, rojo */
+  .hole-below { background: #fff7c2; } /* amarillo */
+  .hole-par { background: #dff9d6; } /* verde claro */
+  .hole-over { background: #ffdede; } /* rojo claro */
 
-    /* colores por hoyo: amarillo = bajo par (mejor), verde = par, rojo = sobre par (peor) */
-    .hole-below { background: #fff7c2; } /* amarillo suave */
-    .hole-par { background: #e5f8e8; } /* verde suave */
-    .hole-above { background: #ffe6e6; } /* rojo suave */
+  .hole-empty { background: #fafafa; color:#999; }
 
-    .totals { font-weight:800; }
+  /* responsive */
+  @media (max-width:1000px) {
+    .small-holes { display:none; } /* hide per-hole columns if small */
+  }
+  .controls { display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
 
-    /* responsive: colapsa tabla horizontalmente con scroll */
-    .table-wrap { overflow:auto; }
-
-    /* mensaje pequeño */
-    .muted { color:#666; font-size:0.9rem; }
-
-  </style>
+  .totals { font-weight:800; }
+</style>
 </head>
 <body>
-
-  <header style="margin-bottom:12px;">
-    <h1>Polla — Grupo</h1>
-    <div class="top-actions">
-      <div class="input-inline card" style="padding:8px;">
-        <label for="priceInput" class="small" style="margin-right:6px;">Precio por jugador</label>
-        <input id="priceInput" type="number" min="0" step="1" />
+  <div class="card">
+    <h1>Polla - Modo Grupo</h1>
+    <div class="row" style="align-items:center;">
+      <div class="col">
+        <div id="metaStatus" class="status">Cargando...</div>
+        <div id="pollaInfo" class="small" style="margin-top:6px;"></div>
       </div>
-      <button id="createBtn" class="primary">Crear / Actualizar Polla</button>
-      <div id="statusMsg" class="muted"></div>
-    </div>
-  </header>
 
-  <section id="saldoArea" class="card" style="display:none;">
-    <div style="display:flex;justify-content:space-between;align-items:center;">
-      <div>
-        <div class="small">Tu saldo actual (según estado de la polla)</div>
-        <div id="tuSaldo" class="saldo">Cargando...</div>
+      <div style="min-width:320px; text-align:right;">
+        <div class="controls">
+          <div>
+            <label for="priceInput" style="margin-bottom:4px;">Precio por jugador (MXN)</label>
+            <input type="number" id="priceInput" min="1" step="1" />
+          </div>
+          <div style="display:flex; gap:8px; align-items:center;">
+            <button id="createBtn" class="primary">Crear Polla</button>
+            <button id="refreshBtn" class="ghost">Refrescar</button>
+          </div>
+        </div>
+        <div style="margin-top:8px;">
+          <div id="miSaldo" class="small" style="font-weight:800;"></div>
+        </div>
       </div>
-      <div class="small">Tarjetas totales: <span id="totalTarjetas">0</span></div>
     </div>
-  </section>
+  </div>
 
-  <section id="tablaArea" class="card" style="display:none;">
-    <div style="font-weight:800;margin-bottom:8px;">Resultados parciales — ordenados por total (con handicap)</div>
-    <div class="table-wrap">
+  <div id="tableCard" class="card" style="overflow:auto;">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+      <div style="font-weight:800;">Participantes / Resultados</div>
+      <div class="small" id="lastUpdated"></div>
+    </div>
+    <div style="overflow:auto;">
       <table id="resultsTable">
         <thead>
           <tr>
-            <th class="sticky">#</th>
-            <th class="sticky">Jugador</th>
-            <!-- Hoyo 1..18 -->
-            <!-- se insertan dinámicamente -->
+            <th class="sticky left">Pos</th>
+            <th class="sticky left">Jugador</th>
+            <th class="sticky">Hoyo 1</th>
+            <th class="sticky">Hoyo 2</th>
+            <th class="sticky">Hoyo 3</th>
+            <th class="sticky">Hoyo 4</th>
+            <th class="sticky">Hoyo 5</th>
+            <th class="sticky">Hoyo 6</th>
+            <th class="sticky">Hoyo 7</th>
+            <th class="sticky">Hoyo 8</th>
+            <th class="sticky">Hoyo 9</th>
+            <th class="sticky small-holes">Hoyo 10</th>
+            <th class="sticky small-holes">Hoyo 11</th>
+            <th class="sticky small-holes">Hoyo 12</th>
+            <th class="sticky small-holes">Hoyo 13</th>
+            <th class="sticky small-holes">Hoyo 14</th>
+            <th class="sticky small-holes">Hoyo 15</th>
+            <th class="sticky small-holes">Hoyo 16</th>
+            <th class="sticky small-holes">Hoyo 17</th>
+            <th class="sticky small-holes">Hoyo 18</th>
             <th class="sticky">Total</th>
-            <th class="sticky">Total c/ Hcp</th>
+            <th class="sticky">Total c/ Handicap</th>
           </tr>
         </thead>
-        <tbody></tbody>
+        <tbody id="resultsBody">
+          <!-- filas generadas dinámicamente -->
+        </tbody>
       </table>
     </div>
-  </section>
+  </div>
 
-  <section id="debug" style="margin-top:10px; font-size:0.85rem; color:#666;"></section>
+<script>
+  function getQueryParam(n){ const u=new URL(location.href); return u.searchParams.get(n); }
+</script>
 
-  <script>
-    function getQueryParam(n){ const u=new URL(location.href); return u.searchParams.get(n); }
-    function initialsFromName(nameOrEmail){
-      if(!nameOrEmail) return '';
-      const parts = nameOrEmail.split(/\s+/).filter(Boolean);
-      if(parts.length === 0) return '';
-      if(parts.length === 1){
-        const p = parts[0];
-        // if it's an email, take first letter before @
-        const idx = p.indexOf('@');
-        return (idx >= 0 ? p[0] : p[0]).toUpperCase();
-      }
-      return (parts[0][0] + parts[parts.length-1][0]).toUpperCase();
+<script type="module">
+  import { app, db } from './firebase-config.js';
+  import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.3/firebase-auth.js";
+  import {
+    doc, getDoc, setDoc, updateDoc, serverTimestamp,
+    collection, query, where, getDocs, orderBy
+  } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+  const juegoId = getQueryParam('juegoId') || getQueryParam('id');
+  const metaStatus = document.getElementById('metaStatus');
+  const pollaInfo = document.getElementById('pollaInfo');
+  const priceInput = document.getElementById('priceInput');
+  const createBtn = document.getElementById('createBtn');
+  const refreshBtn = document.getElementById('refreshBtn');
+  const miSaldoEl = document.getElementById('miSaldo');
+  const resultsBody = document.getElementById('resultsBody');
+  const lastUpdatedEl = document.getElementById('lastUpdated');
+
+  if (!juegoId) {
+    metaStatus.textContent = 'Falta el parámetro juegoId en la URL';
+    throw new Error('Falta juegoId');
+  }
+
+  const authInst = getAuth(app);
+  let currentUser = null;
+
+  // Nombres de colecciones: juego_polla, tarjetas, users, camposGolf (como dijiste)
+  const pollaRef = doc(db, 'juego_polla', juegoId);
+
+  // helper: obtener par por hoyo del campo (si existe)
+  async function obtenerParPorHoyo(campoId) {
+    if (!campoId) return null;
+    try {
+      const cref = doc(db, 'camposGolf', campoId);
+      const csnap = await getDoc(cref);
+      if (!csnap.exists()) return null;
+      const cdata = csnap.data();
+      // esperar un array paresHoyo con 18 elementos (índices 0..17)
+      return Array.isArray(cdata.paresHoyo) ? cdata.paresHoyo : null;
+    } catch (e) {
+      console.error('Error leyendo campo', e);
+      return null;
     }
-  </script>
+  }
 
-  <script type="module">
-    import { app, db } from './firebase-config.js';
-    import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
-    import {
-      doc, getDoc, setDoc, updateDoc, collection, query, where, getDocs, serverTimestamp
-    } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
-
-    const juegoId = getQueryParam('juegoId') || getQueryParam('id');
-    const priceInput = document.getElementById('priceInput');
-    const createBtn = document.getElementById('createBtn');
-    const statusMsg = document.getElementById('statusMsg');
-    const saldoArea = document.getElementById('saldoArea');
-    const tuSaldoEl = document.getElementById('tuSaldo');
-    const totalTarjetasEl = document.getElementById('totalTarjetas');
-    const tablaArea = document.getElementById('tablaArea');
-    const resultsTableBody = document.querySelector('#resultsTable tbody');
-    const debugEl = document.getElementById('debug');
-
-    if (!juegoId) {
-      document.body.innerHTML = '<div style="color:#b33;padding:18px;">Falta parámetro juegoId en la URL</div>';
-      throw new Error('Falta juegoId');
-    }
-
-    const authInst = getAuth(app);
-    let currentUser = null;
-
-    // referencia al doc de la polla: colección 'juego_polla', id = juegoId
-    const pollaRef = (id) => doc(db, 'juego_polla', id);
-
-    // crea o actualiza el documento de polla con pricePerPlayer
-    async function crearOActualizarPolla(price) {
-      try {
-        const pref = pollaRef(juegoId);
-        const snap = await getDoc(pref);
-        if (!snap.exists()) {
-          await setDoc(pref, {
-            juegoId,
-            pricePerPlayer: price,
-            createdAt: serverTimestamp(),
-            updatedAt: serverTimestamp()
-          });
-          statusMsg.textContent = 'Polla creada.';
-        } else {
-          await updateDoc(pref, {
-            pricePerPlayer: price,
-            updatedAt: serverTimestamp()
-          });
-          statusMsg.textContent = 'Polla actualizada.';
-        }
-        await recalcAndRender(); // recalcula inmediatamente
-      } catch (err) {
-        console.error('Error creando/actualizando polla', err);
-        statusMsg.textContent = 'Error al crear/actualizar polla. Revisa consola.';
-      }
-    }
-
-    // cargar valor existente de polla (si existe) y mostrar en input
-    async function loadPollaIfExists() {
-      try {
-        const pref = pollaRef(juegoId);
-        const snap = await getDoc(pref);
-        if (snap.exists()) {
-          const data = snap.data();
-          if (typeof data.pricePerPlayer === 'number') {
-            priceInput.value = data.pricePerPlayer;
-            statusMsg.textContent = 'Polla cargada.';
-          }
-        } else {
-          statusMsg.textContent = 'No existe polla para este juego. Define un precio y haz Crear.';
-        }
-      } catch (err) {
-        console.error('Error cargando polla', err);
-      }
-    }
-
-    // función para obtener tarjetas del juego con al menos un score registrado
-    async function fetchTarjetasConScores() {
-      const tarjetas = [];
-      try {
-        const tarjetasCol = collection(db, 'tarjetas');
-        const q = query(tarjetasCol, where('juegoId', '==', juegoId));
-        const snap = await getDocs(q);
-        for (const d of snap.docs) {
-          const t = { id: d.id, ...d.data() };
-          // consideramos "tiene hoyos" si scores existe y hay al menos un objeto con 'golpes' numérico
-          if (Array.isArray(t.scores) && t.scores.some(s => typeof s.golpes === 'number')) {
-            tarjetas.push(t);
-          }
-        }
-      } catch (err) {
-        console.error('Error trayendo tarjetas', err);
-      }
-      return tarjetas;
-    }
-
-    // obtiene datos de usuario por uid (handicap + nombre)
-    const userCache = new Map();
-    async function getUser(uid) {
-      if (!uid) return null;
-      if (userCache.has(uid)) return userCache.get(uid);
-      try {
-        const uref = doc(db, 'users', uid);
-        const usnap = await getDoc(uref);
-        if (usnap.exists()) {
-          const udata = usnap.data();
-          userCache.set(uid, { uid, ...udata });
-          return userCache.get(uid);
-        } else {
-          userCache.set(uid, { uid });
-          return userCache.get(uid);
-        }
-      } catch (err) {
-        console.error('Error fetching user', uid, err);
-        userCache.set(uid, { uid });
-        return userCache.get(uid);
-      }
-    }
-
-    // obtiene campo de golf (pares por hoyo)
-    const campoCache = new Map();
-    async function getCampo(campoId) {
-      if (!campoId) return null;
-      if (campoCache.has(campoId)) return campoCache.get(campoId);
-      try {
-        const cref = doc(db, 'camposGolf', campoId);
-        const csnap = await getDoc(cref);
-        if (csnap.exists()) {
-          const cdata = csnap.data();
-          campoCache.set(campoId, cdata);
-          return cdata;
-        } else {
-          campoCache.set(campoId, null);
-          return null;
-        }
-      } catch (err) {
-        console.error('Error fetching campo', campoId, err);
-        campoCache.set(campoId, null);
+  // carga o crea polla (solo crea si no existe)
+  async function ensurePolla() {
+    try {
+      const snap = await getDoc(pollaRef);
+      if (!snap.exists()) {
+        // no existe: habilitar creación manual
+        metaStatus.textContent = 'Polla no creada. Define precio y haz clic Crear Polla.';
+        pollaInfo.textContent = '';
+        resultsBody.innerHTML = '';
+        lastUpdatedEl.textContent = '';
         return null;
+      } else {
+        const data = snap.data();
+        metaStatus.textContent = `Polla cargada para juego ${juegoId}`;
+        priceInput.value = data.pricePerPlayer || '';
+        pollaInfo.textContent = `Precio: ${data.pricePerPlayer || '-'} — Jugadores actuales: ${data.numPlayers || 0}`;
+        lastUpdatedEl.textContent = data.updatedAt ? (new Date(data.updatedAt.seconds * 1000)).toLocaleString('es-MX') : '';
+        return data;
       }
+    } catch (err) {
+      console.error('Error en ensurePolla', err);
+      metaStatus.textContent = 'Error verificando polla';
+      return null;
     }
+  }
 
-    // convierte array scores a map por hoyo (1..18)
-    function scoresToMap(scoresArray) {
-      const m = new Map();
-      if (!Array.isArray(scoresArray)) return m;
-      for (const s of scoresArray) {
-        if (s && typeof s.hoyo === 'number' && typeof s.golpes === 'number') {
-          m.set(s.hoyo, s.golpes);
-        }
-      }
-      return m;
+  // crea el documento de polla si no existe (doc id = juegoId)
+  async function createPolla(price) {
+    try {
+      const payload = {
+        juegoId,
+        pricePerPlayer: Number(price),
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
+        numPlayers: 0,
+        standings: []
+      };
+      await setDoc(pollaRef, payload);
+      metaStatus.textContent = 'Polla creada';
+      return payload;
+    } catch (err) {
+      console.error('Error creando polla', err);
+      alert('Error creando polla. Revisa consola.');
+      throw err;
     }
+  }
 
-    // calcula totales y construye standings
-    async function buildStandings(tarjetas, pricePerPlayer) {
-      const standings = [];
-      for (const t of tarjetas) {
-        const userUid = t.userUid;
-        const user = await getUser(userUid);
-        const nombre = user?.name || user?.nombre || user?.firstName || user?.email || userUid || 'Jugador';
-        const handicap = Number(user?.handicap ?? user?.hcp ?? 0) || 0;
-
-        // campo para colores
-        const campo = await getCampo(t.campoId);
-
-        const scoreMap = scoresToMap(t.scores || []);
-        // total sin handicap: suma de golpes en los hoyos que existan
-        let total = 0;
-        for (const [h, g] of scoreMap.entries()) total += g;
-        const totalConHcp = total - handicap;
-
-        // construir arreglo de 18 valores (null si no hay)
-        const holes = [];
-        for (let i = 1; i <= 18; i++) {
-          const g = scoreMap.has(i) ? scoreMap.get(i) : null;
-          // par correspondiente si existe
-          const par = Array.isArray(campo?.paresHoyo) ? Number(campo.paresHoyo[i-1]) : null;
-          holes.push({ golpe: g, par });
+  // obtener tarjetas del juego (excluir tarjetas sin scores o con scores vacios)
+  async function obtenerTarjetasConScores() {
+    try {
+      const tarjetasCol = collection(db, 'tarjetas');
+      const q = query(tarjetasCol, where('juegoId','==', juegoId));
+      const snap = await getDocs(q);
+      const tarjetas = [];
+      snap.forEach(d => {
+        const data = d.data();
+        // consideramos tarjeta válida solo si tiene scores con al menos una entrada numérica
+        const scores = Array.isArray(data.scores) ? data.scores : [];
+        const hasAny = scores.some(s => typeof s.golpes === 'number' && !isNaN(s.golpes));
+        if (hasAny) {
+          tarjetas.push({ id: d.id, ...data });
         }
+      });
+      return tarjetas;
+    } catch (err) {
+      console.error('Error obteniendo tarjetas', err);
+      return [];
+    }
+  }
 
-        standings.push({
-          tarjetaId: t.id,
-          userUid,
-          nombre,
-          handicap,
-          total,
-          totalConHcp,
-          holes
-        });
+  // calcula totales y devuelve standings ordenados
+  async function calcularStandings(tarjetas, pricePerPlayer) {
+    // necesitamos par por hoyo para cada tarjeta si tiene campoId
+    // cache por campoId
+    const campoCache = {};
+    // map de usuarioUID -> userData
+    const userCache = {};
+
+    const standings = await Promise.all(tarjetas.map(async (t) => {
+      // obtener user info
+      let userInfo = { nombre: t.userUid || 'desconocido', handicap: 0 };
+      try {
+        if (!userCache[t.userUid]) {
+          const uref = doc(db, 'users', t.userUid);
+          const usnap = await getDoc(uref);
+          if (usnap.exists()) {
+            userCache[t.userUid] = usnap.data();
+          } else {
+            userCache[t.userUid] = null;
+          }
+        }
+        if (userCache[t.userUid]) {
+          const ud = userCache[t.userUid];
+          // elegir campos para mostrar nombre
+          const first = ud.name ?? ud.nombre ?? ud.firstName ?? ud.firstname ?? '';
+          const last  = ud.lastName ?? ud.apellido ?? ud.lastname ?? ud.apellidoPaterno ?? '';
+          const fullName = [first, last].filter(Boolean).join(' ').trim();
+          userInfo.nombre = fullName || t.userUid;
+          userInfo.handicap = typeof ud.handicap === 'number' ? ud.handicap : (Number(ud.handicap) || 0);
+        }
+      } catch (e) {
+        console.warn('No se pudo cargar usuario', t.userUid, e);
       }
 
-      // ordenar por totalConHcp asc (el menor gana)
-      standings.sort((a,b) => {
-        // if tie, fallback to total
-        if (a.totalConHcp === b.totalConHcp) return a.total - b.total;
-        return a.totalConHcp - b.totalConHcp;
+      // obtener par por hoyo si aplicable
+      let pares = null;
+      try {
+        const campoId = t.campoId || t.campoId === 0 ? t.campoId : null;
+        if (campoId) {
+          if (!campoCache[campoId]) {
+            campoCache[campoId] = await obtenerParPorHoyo(campoId);
+          }
+          pares = campoCache[campoId];
+        }
+      } catch (e){
+        console.warn('Error cargando par por hoyo', e);
+      }
+
+      // construir array de 18 con golpes (null si falta)
+      const golpesArr = new Array(18).fill(null);
+      const scoresArr = Array.isArray(t.scores) ? t.scores : [];
+      scoresArr.forEach(s => {
+        if (typeof s.hoyo === 'number' && s.hoyo >= 1 && s.hoyo <= 18 && typeof s.golpes === 'number') {
+          golpesArr[s.hoyo - 1] = s.golpes;
+        }
       });
 
-      // asignar posiciones consecutivas (1,2,3...)
-      for (let i = 0; i < standings.length; i++) {
-        standings[i].pos = i+1;
-      }
+      // calcular total (sumar solo los hoyos que tienen número)
+      const total = golpesArr.reduce((acc,g) => (typeof g === 'number' ? acc + g : acc), 0);
+      const adjusted = total - (userInfo.handicap || 0);
 
-      return standings;
+      // crear iniciales para avatar
+      const nombreParts = (userInfo.nombre || '').split(' ').filter(Boolean);
+      let initials = nombreParts.length ? (nombreParts[0][0] + (nombreParts[1]?.[0] || '')).toUpperCase() : (t.userUid || '').slice(0,2).toUpperCase();
+
+      return {
+        tarjetaId: t.id,
+        userUid: t.userUid,
+        nombre: userInfo.nombre,
+        initials,
+        handicap: userInfo.handicap || 0,
+        golpesArr,
+        paresArr: pares, // puede ser null
+        total,
+        adjusted
+      };
+    }));
+
+    // ordenar por adjusted asc (menos es mejor). Si empate usar total sin handicap
+    standings.sort((a,b) => {
+      if (a.adjusted !== b.adjusted) return a.adjusted - b.adjusted;
+      return a.total - b.total;
+    });
+
+    // añadir posición (1..)
+    for (let i=0;i<standings.length;i++){
+      standings[i].pos = i+1;
     }
 
-    // render tabla y saldo del usuario actual
-    async function render(standings, pricePerPlayer) {
-      // mostrar contenedores
-      tablaArea.style.display = 'block';
-      saldoArea.style.display = 'block';
+    // preparar resumen para guardar en doc
+    const summaryForSave = standings.map(s => ({
+      tarjetaId: s.tarjetaId,
+      userUid: s.userUid,
+      nombre: s.nombre,
+      initials: s.initials,
+      handicap: s.handicap,
+      total: s.total,
+      adjusted: s.adjusted,
+      golpesArr: s.golpesArr
+    }));
 
-      resultsTableBody.innerHTML = '';
+    return { standings, summaryForSave };
+  }
 
-      // encabezados de hoyos (insertar despues del header existente)
-      const theadRow = document.querySelector('#resultsTable thead tr');
-      // limpiar posibles encabezados de hoyos previos
-      // dejamos los primeros 2 (pos y jugador) y los últimos 2 (Total, Total c/ Hcp)
-      // así que eliminamos lo que haya en medio antes de reinsertar
-      while (theadRow.children.length > 4) theadRow.removeChild(theadRow.children[2]);
+  // render tabla en DOM
+  function renderTable(standings) {
+    resultsBody.innerHTML = '';
+    if (!standings || standings.length === 0) {
+      resultsBody.innerHTML = `<tr><td colspan="23" class="small">No hay tarjetas con hoyos registradas aún.</td></tr>`;
+      return;
+    }
 
-      for (let i = 1; i <= 18; i++) {
-        const th = document.createElement('th');
-        th.textContent = 'H' + i;
-        theadRow.insertBefore(th, theadRow.children[theadRow.children.length - 2]);
-      }
+    standings.forEach(s => {
+      const tr = document.createElement('tr');
 
-      // totals
-      totalTarjetasEl.textContent = standings.length;
+      // pos
+      const tdPos = document.createElement('td');
+      tdPos.textContent = s.pos;
+      tdPos.className = 'left';
+      tr.appendChild(tdPos);
 
-      // identificar lider actual (posición 1 si existe)
-      const lider = standings[0] || null;
+      // jugador (avatar + nombre)
+      const tdUser = document.createElement('td');
+      tdUser.className = 'left';
+      const avatar = document.createElement('span');
+      avatar.className = 'avatar';
+      avatar.textContent = s.initials;
+      avatar.title = s.nombre;
+      const nameSpan = document.createElement('span');
+      nameSpan.style.marginLeft = '8px';
+      nameSpan.textContent = s.nombre || s.userUid;
+      tdUser.appendChild(avatar);
+      tdUser.appendChild(nameSpan);
+      tr.appendChild(tdUser);
 
-      // calcular saldo para el usuario actual
-      let tuSaldo = 0;
-      if (currentUser) {
-        const tuTarjeta = standings.find(s => s.userUid === currentUser.uid);
-        const n = standings.length;
-        if (tuTarjeta) {
-          // si eres lider => te llevas (n * price) - price = price*(n-1)
-          if (tuTarjeta.pos === 1) {
-            tuSaldo = (n * pricePerPlayer) - pricePerPlayer;
+      // hoyos 1..18
+      for (let i=0;i<18;i++){
+        const td = document.createElement('td');
+        const golpes = s.golpesArr[i];
+        const par = Array.isArray(s.paresArr) ? s.paresArr[i] : null;
+        if (typeof golpes === 'number') {
+          // determinar clase con relación a par (si par existe)
+          if (typeof par === 'number') {
+            if (golpes < par) td.className = 'hole-below';
+            else if (golpes === par) td.className = 'hole-par';
+            else td.className = 'hole-over';
           } else {
-            // no eres lider: pagaste tu cuota (negativo)
-            tuSaldo = -pricePerPlayer;
+            // sin info de par
+            td.className = '';
           }
+          td.textContent = golpes;
         } else {
-          // si no tienes tarjeta incluida: tu saldo es -price (si quieres participar pero no has cargado tarjeta)
-          tuSaldo = -pricePerPlayer;
+          td.className = 'hole-empty';
+          td.textContent = '-';
         }
-      } else {
-        tuSaldo = 0;
+        tr.appendChild(td);
       }
 
-      tuSaldoEl.textContent = (tuSaldo >= 0 ? '+ ' : '') + tuSaldo + ' MXN';
+      // total y total con handicap
+      const tdTotal = document.createElement('td');
+      tdTotal.className = 'totals';
+      tdTotal.textContent = s.total;
+      tr.appendChild(tdTotal);
 
-      // construir filas
-      for (const s of standings) {
-        const tr = document.createElement('tr');
+      const tdAdj = document.createElement('td');
+      tdAdj.className = 'totals';
+      tdAdj.textContent = s.adjusted;
+      tr.appendChild(tdAdj);
 
-        // posición
-        const tdPos = document.createElement('td');
-        tdPos.textContent = s.pos;
-        tr.appendChild(tdPos);
+      resultsBody.appendChild(tr);
+    });
+  }
 
-        // jugador - avatar + nombre
-        const tdUser = document.createElement('td');
-        tdUser.className = 'user-cell';
-        const av = document.createElement('div');
-        av.className = 'avatar';
-        av.textContent = initialsFromName(s.nombre);
-        const nameDiv = document.createElement('div');
-        nameDiv.style.textAlign = 'left';
-        nameDiv.innerHTML = `<div style="font-weight:700;">${s.nombre}</div><div class="small">Hcp: ${s.handicap}</div>`;
-        tdUser.appendChild(av);
-        tdUser.appendChild(nameDiv);
-        tr.appendChild(tdUser);
-
-        // hoyos 1..18
-        for (let i = 0; i < 18; i++) {
-          const hole = s.holes[i];
-          const td = document.createElement('td');
-          const g = hole.golpe;
-          const par = hole.par;
-          if (g === null || typeof g === 'undefined') {
-            td.textContent = '-';
-          } else {
-            td.textContent = g;
-            // colorear según comparación con par si par existe (par es número)
-            if (typeof par === 'number' && !isNaN(par)) {
-              if (g < par) td.classList.add('hole-below');
-              else if (g === par) td.classList.add('hole-par');
-              else td.classList.add('hole-above');
-            }
-          }
-          tr.appendChild(td);
-        }
-
-        // total sin handicap
-        const tdTotal = document.createElement('td');
-        tdTotal.className = 'totals';
-        tdTotal.textContent = s.total;
-        tr.appendChild(tdTotal);
-
-        // total con handicap
-        const tdTotalH = document.createElement('td');
-        tdTotalH.className = 'totals';
-        tdTotalH.textContent = s.totalConHcp;
-        tr.appendChild(tdTotalH);
-
-        resultsTableBody.appendChild(tr);
-      }
+  // calcula y muestra saldo del usuario actual
+  function calcularYMostrarSaldo(standings, pricePerPlayer) {
+    miSaldoEl.textContent = '';
+    if (!currentUser) return;
+    const uid = currentUser.uid;
+    const n = standings.length;
+    if (n === 0 || !pricePerPlayer) {
+      miSaldoEl.textContent = '';
+      return;
     }
 
-    // recalcula standings, renderiza y guarda snapshot en juego_polla
-    async function recalcAndRender() {
+    // determinar si user es primero
+    let winnerUid = standings[0].userUid;
+    // si hay más de uno con mismo adjusted? se considera el primero de la lista
+    const userStanding = standings.find(s => s.userUid === uid);
+    if (!userStanding) {
+      // usuario no aparece entre tarjetas con scores -> no participa, saldo vacío o -price? El usuario pidió mostrar su saldo: asumimos -price si no participa
+      miSaldoEl.textContent = `No estás participando en las tarjetas con hoyos. Saldo: -${pricePerPlayer} (no participas)`;
+      return;
+    }
+
+    const isWinner = (userStanding.userUid === winnerUid);
+    if (isWinner) {
+      const gain = pricePerPlayer * (n - 1);
+      miSaldoEl.textContent = `Vas ganando → Ganancia neta actual: ${gain} (hay ${n} participantes, precio por persona ${pricePerPlayer})`;
+    } else {
+      miSaldoEl.textContent = `No vas ganando → Saldo actual: -${pricePerPlayer}`;
+    }
+  }
+
+  // guarda resumen en juego_polla doc
+  async function guardarPollaState(pricePerPlayer, standingsSummary) {
+    try {
+      await updateDoc(pollaRef, {
+        pricePerPlayer: Number(pricePerPlayer),
+        numPlayers: standingsSummary.length,
+        standings: standingsSummary,
+        updatedAt: serverTimestamp()
+      });
+    } catch (err) {
+      // si update falla (por ejemplo doc no existe) intentar set (merge)
       try {
-        statusMsg.textContent = 'Calculando...';
-        // obtener price de doc polla
-        const pref = pollaRef(juegoId);
-        const psnap = await getDoc(pref);
-        let price = Number(priceInput.value || 0);
-        if (psnap.exists()) {
-          const pdata = psnap.data();
-          if (typeof pdata.pricePerPlayer === 'number' && !isNaN(pdata.pricePerPlayer)) {
-            // si el input está vacío usamos el guardado
-            if (!price) price = pdata.pricePerPlayer;
-            priceInput.value = pdata.pricePerPlayer;
-          }
-        }
-
-        // si no hay price definido no seguimos (pero permitimos ver tarjetas)
-        const tarjetas = await fetchTarjetasConScores();
-        if (tarjetas.length === 0) {
-          tablaArea.style.display = 'none';
-          saldoArea.style.display = 'block';
-          totalTarjetasEl.textContent = '0';
-          tuSaldoEl.textContent = '0 MXN';
-          statusMsg.textContent = 'No hay tarjetas con hoyos registrados aún.';
-          // actualizar polla doc con empty snapshot
-          await setDoc(pref, {
-            juegoId,
-            pricePerPlayer: price || 0,
-            updatedAt: serverTimestamp(),
-            standings: [],
-            snapshotCount: 0
-          }, { merge: true });
-          return;
-        }
-
-        const standings = await buildStandings(tarjetas, price || 0);
-        await render(standings, price || 0);
-
-        // guardar snapshot en juego_polla/{juegoId}
-        const toSave = {
+        await setDoc(pollaRef, {
           juegoId,
-          pricePerPlayer: price || 0,
-          updatedAt: serverTimestamp(),
-          snapshotCount: standings.length,
-          standings: standings.map(s => ({
-            tarjetaId: s.tarjetaId,
-            userUid: s.userUid,
-            nombre: s.nombre,
-            handicap: s.handicap,
-            total: s.total,
-            totalConHcp: s.totalConHcp,
-            pos: s.pos
-            // no guardamos todos los hoyos para ahorrar espacio; si quieres guardarlos, descomenta abajo:
-            // holes: s.holes
-          }))
-        };
-        await setDoc(pref, toSave, { merge: true });
-
-        statusMsg.textContent = 'Actualizado.';
-      } catch (err) {
-        console.error('Error en recalcAndRender', err);
-        statusMsg.textContent = 'Error calculando resultados. Revisa consola.';
+          pricePerPlayer: Number(pricePerPlayer),
+          numPlayers: standingsSummary.length,
+          standings: standingsSummary,
+          updatedAt: serverTimestamp()
+        }, { merge: true });
+      } catch (e) {
+        console.error('Error guardando juego_polla', e);
       }
     }
+  }
 
-    // eventos UI
-    createBtn.addEventListener('click', async () => {
-      const price = Number(priceInput.value || 0);
-      if (!price || price <= 0) {
-        alert('Ingresa un precio válido mayor que 0');
+  // flujo principal: refrescar vista y estado
+  async function refreshAll() {
+    try {
+      const pollaData = await ensurePolla();
+      const price = pollaData?.pricePerPlayer ? Number(pollaData.pricePerPlayer) : (Number(priceInput.value) || null);
+
+      // obtener tarjetas con scores
+      const tarjetas = await obtenerTarjetasConScores();
+      // si no hay tarjetas, limpiar tabla
+      if (!tarjetas || tarjetas.length === 0) {
+        renderTable([]);
+        calcularYMostrarSaldo([], price);
+        // actualizar polla con numPlayers 0
+        if (pollaData) {
+          await guardarPollaState(price, []);
+        }
         return;
       }
-      await crearOActualizarPolla(price);
-    });
 
-    // init
-    onAuthStateChanged(authInst, async (user) => {
-      currentUser = user;
-      // cargar polla si existe
-      await loadPollaIfExists();
-      // siempre recalcular y renderizar al entrar
-      await recalcAndRender();
-      // opcional: refrescar cada X segundos para mantener datos actualizados
-      // Comentado por defecto; descomenta si quieres auto-refresh:
-      // setInterval(recalcAndRender, 30_000);
-    });
+      // calcular standings
+      const { standings, summaryForSave } = await calcularStandings(tarjetas, price);
 
-  </script>
+      // render
+      renderTable(standings);
+      calcularYMostrarSaldo(standings, price);
+
+      // guardar estado en colección juego_polla
+      await guardarPollaState(price, summaryForSave);
+
+      // actualizar UI info
+      pollaInfo.textContent = `Precio: ${price || '-'} — Jugadores actuales: ${standings.length}`;
+      lastUpdatedEl.textContent = (new Date()).toLocaleString('es-MX');
+      metaStatus.textContent = `Polla cargada y actualizada (Juego ${juegoId})`;
+
+    } catch (err) {
+      console.error('Error en refreshAll', err);
+      metaStatus.textContent = 'Error actualizando datos';
+    }
+  }
+
+  // eventos UI
+  createBtn.addEventListener('click', async () => {
+    const price = Number(priceInput.value);
+    if (!price || price <= 0) {
+      alert('Ingresa un precio válido (mayor que 0).');
+      return;
+    }
+    try {
+      // si ya existe, avisar
+      const snap = await getDoc(pollaRef);
+      if (snap.exists()) {
+        if (!confirm('Ya existe una polla para este juego. ¿Deseas reescribir el precio?')) return;
+        // si acepta, actualizamos price y refrescamos
+        await updateDoc(pollaRef, { pricePerPlayer: price, updatedAt: serverTimestamp() });
+        await refreshAll();
+        return;
+      }
+      await createPolla(price);
+      await refreshAll();
+    } catch (err) {
+      console.error(err);
+      alert('Error creando/actualizando polla. Revisa consola.');
+    }
+  });
+
+  refreshBtn.addEventListener('click', () => {
+    refreshAll();
+  });
+
+  // iniciar con auth
+  onAuthStateChanged(authInst, async (user) => {
+    currentUser = user;
+    if (!user) {
+      metaStatus.textContent = 'Debes iniciar sesión para ver/participar en la polla.';
+      // aún así intentar mostrar polla (no mostrar saldo)
+      await ensurePolla();
+      await refreshAll();
+      return;
+    }
+    // cargar estado inicial
+    await ensurePolla();
+    await refreshAll();
+  });
+
+  // carga inicial (por si already logged)
+  // no llamar aquí since onAuthStateChanged will handle initial state
+</script>
 </body>
 </html>
