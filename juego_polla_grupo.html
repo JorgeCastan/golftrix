@@ -12,7 +12,9 @@
   }
   .grad-text {
     background: linear-gradient(90deg, var(--green-1), var(--green-2));
+    background-clip: text;
     -webkit-background-clip: text;
+    color: transparent;
     -webkit-text-fill-color: transparent;
   }
 
@@ -33,8 +35,12 @@
   table { width:100%; border-collapse:collapse; font-size:0.9rem; }
   th, td { padding:6px 8px; border-bottom:1px solid #eee; text-align:center; vertical-align:middle; }
   th.left, td.left { text-align:left; }
-  th.sticky { position: sticky; top:0; background:white; z-index:2; }
-
+  th.sticky { 
+    position: sticky; 
+    top:0; 
+    background:white; 
+    z-index:2; 
+  }
   /* avatar iniciales */
   .avatar {
   width:40px; height:40px; border-radius:50%;
@@ -114,32 +120,31 @@
     <div style="overflow:auto;">
       <table id="resultsTable">
         <thead>
-        <tr>
-          <th class="sticky left grad-text">Pos</th>
-          <th class="sticky left grad-text">Jugador</th>
-          <th class="sticky grad-text">Hoyo 1</th>
-          <th class="sticky grad-text">Hoyo 2</th>
-          <th class="sticky grad-text">Hoyo 3</th>
-          <th class="sticky grad-text">Hoyo 4</th>
-          <th class="sticky grad-text">Hoyo 5</th>
-          <th class="sticky grad-text">Hoyo 6</th>
-          <th class="sticky grad-text">Hoyo 7</th>
-          <th class="sticky grad-text">Hoyo 8</th>
-          <th class="sticky grad-text">Hoyo 9</th>
-          <th class="sticky grad-text">Hoyo 10</th>
-          <th class="sticky grad-text">Hoyo 11</th>
-          <th class="sticky grad-text">Hoyo 12</th>
-          <th class="sticky grad-text">Hoyo 13</th>
-          <th class="sticky grad-text">Hoyo 14</th>
-          <th class="sticky grad-text">Hoyo 15</th>
-          <th class="sticky grad-text">Hoyo 16</th>
-          <th class="sticky grad-text">Hoyo 17</th>
-          <th class="sticky grad-text">Hoyo 18</th>
-          <th class="sticky grad-text">Total</th>
-          <th class="sticky grad-text">Total c/ Handicap</th>
-        </tr>
-      </thead>
-
+          <tr>
+            <th class="sticky left"><span class="grad-text">Pos</span></th>
+            <th class="sticky left"><span class="grad-text">Jugador</span></th>
+            <th class="sticky"><span class="grad-text">Hoyo 1</span></th>
+            <th class="sticky"><span class="grad-text">Hoyo 2</span></th>
+            <th class="sticky"><span class="grad-text">Hoyo 3</span></th>
+            <th class="sticky"><span class="grad-text">Hoyo 4</span></th>
+            <th class="sticky"><span class="grad-text">Hoyo 5</span></th>
+            <th class="sticky"><span class="grad-text">Hoyo 6</span></th>
+            <th class="sticky"><span class="grad-text">Hoyo 7</span></th>
+            <th class="sticky"><span class="grad-text">Hoyo 8</span></th>
+            <th class="sticky"><span class="grad-text">Hoyo 9</span></th>
+            <th class="sticky"><span class="grad-text">Hoyo 10</span></th>
+            <th class="sticky"><span class="grad-text">Hoyo 11</span></th>
+            <th class="sticky"><span class="grad-text">Hoyo 12</span></th>
+            <th class="sticky"><span class="grad-text">Hoyo 13</span></th>
+            <th class="sticky"><span class="grad-text">Hoyo 14</span></th>
+            <th class="sticky"><span class="grad-text">Hoyo 15</span></th>
+            <th class="sticky"><span class="grad-text">Hoyo 16</span></th>
+            <th class="sticky"><span class="grad-text">Hoyo 17</span></th>
+            <th class="sticky"><span class="grad-text">Hoyo 18</span></th>
+            <th class="sticky"><span class="grad-text">Total</span></th>
+            <th class="sticky"><span class="grad-text">Total c/ Handicap</span></th>
+          </tr>
+        </thead>
         <tbody id="resultsBody">
           <!-- filas generadas dinámicamente -->
         </tbody>
