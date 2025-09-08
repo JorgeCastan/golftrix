@@ -48,15 +48,57 @@
             flex-direction: column;
             align-items: center;
         }
+        .top-row { flex-direction:column; }
+        .right { width:100%; max-width:none; }
+        iframe.tarjeta-frame { height:420px; }
+        header {
+          flex-direction: column;
+          justify-content: center;
+          text-align: center;
+        }
+        header h1 {
+          font-size: 1.3rem;
+          margin-top: 6px;
+        }
+        header img {
+          height: 60px !important;
+          margin: 0 auto;
+        }
+        .top-row {
+          flex-direction: column-reverse; /* primero right, luego left */
+        }
+        .meta-row {
+          justify-content: center;
+          text-align: center;
+        }
+        .meta {
+          font-size: 0.8rem;
+        }
+        #ownerNote {
+          text-align: center;
+        }
+        .modos-grid {
+          display: grid;
+          grid-template-columns: repeat(auto-fill, minmax(90px, 1fr));
+          gap: 8px;
+          justify-items: center;
+        }
+        .left, .right {
+          width: 100% !important;
+          max-width: 100% !important;
+          margin: 0 auto;
+        }
+        main {
+          padding: 10px;
+        }
+        body {
+          zoom: 0.9;
         }
 
+      }
 
-    /* responsive: en móviles mostramos columna unica */
-    @media(max-width: 900px) {
-      .top-row { flex-direction:column; }
-      .right { width:100%; max-width:none; }
-      iframe.tarjeta-frame { height:420px; }
-    }
+
+    
   </style>
 </head>
 <body>
@@ -82,7 +124,6 @@
           <div class="game-title" id="campoNombre">Cargando...</div>
           <div class="meta-row">
             <div class="meta" id="tipoBadge"></div>
-            <div class="meta" id="estadoBadge"></div>
             <div class="meta" id="fechaBadge"></div>
           </div>
           <div class="small-note" id="ownerNote" style="margin-top:8px;"></div>
@@ -125,7 +166,6 @@
     const modosContainer = document.getElementById('modosContainer');
     const campoNombreEl = document.getElementById('campoNombre');
     const tipoBadge = document.getElementById('tipoBadge');
-    const estadoBadge = document.getElementById('estadoBadge');
     const fechaBadge = document.getElementById('fechaBadge');
     const ownerNote = document.getElementById('ownerNote');
 
@@ -155,7 +195,6 @@
         // llenar info del panel derecho
         campoNombreEl.textContent = juego.campoNombre || 'Juego sin nombre';
         tipoBadge.textContent = (juego.tipo || '').toUpperCase();
-        estadoBadge.textContent = (juego.estado || '');
         fechaBadge.textContent = juego.createdAt?.toDate ? juego.createdAt.toDate().toLocaleDateString('es-MX', { day:'2-digit', month:'short', year:'2-digit' }) : '';
         // Mostrar nombre del creador usando su documento en "users" (fallback al UID)
         let ownerLabel = juego.ownerUid || 'desconocido';
