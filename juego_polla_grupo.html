@@ -80,12 +80,13 @@
 
   /* Ajustes específicos SOLO para celular */
   @media (max-width: 768px) {
-    body { padding: 4px; }
+    body { padding: 4px; overflow-x: hidden; } /* <--- evita scroll global */
 
     .card {
-      border-radius: 0;
-      margin-bottom: 6px;
-      padding: 8px;
+        border-radius: 0;
+        margin-bottom: 6px;
+        padding: 8px;
+        overflow-x: hidden; /* <--- evita scroll horizontal en el card */
     }
 
     h1 {
@@ -156,7 +157,7 @@
         <div id="pollaInfo" class="small" style="margin-top:6px;"></div>
       </div>
 
-      <div style="min-width:320px; text-align:right;">
+      <div style="width:100%; text-align:center;">
       <div id="priceSection">
         <label for="priceInput">Precio por jugador (MXN)</label>
         <input type="number" id="priceInput" min="1" step="1" />
@@ -170,7 +171,7 @@
     </div>
   </div>
 
-  <div id="tableCard" class="card" style="overflow:auto;">
+  <div id="tableCard" class="card" style="overflow:auto; padding-left:0; padding-right:0;">
     <div id="tableHeader" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
       <div style="font-weight:800;">Participantes / Resultados</div>
       <div class="small" id="lastUpdated"></div>
