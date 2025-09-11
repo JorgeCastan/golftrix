@@ -45,8 +45,18 @@
         /* en móvil se muestran en columna centrada */
         @media(max-width: 900px) {
         .botones-acciones {
-            flex-direction: column;
-            align-items: center;
+          flex-direction: row;       /* todos en una fila */
+          justify-content: center;   /* centrados horizontalmente */
+          flex-wrap: wrap;           /* si no caben, que bajen en otra línea */
+          gap: 10px;
+          width: 100%;
+        }
+
+        .modo-btn {
+          flex: 1 1 100px;           /* todos ocupan mismo ancho mínimo */
+          text-align: center;
+          min-width: 100px;          /* ancho mínimo para uniformidad */
+          max-width: 140px;          /* ancho máximo para que no se estiren demasiado */
         }
         .top-row { flex-direction:column; }
         .right { width:100%; max-width:none; }
