@@ -44,20 +44,32 @@
 
         /* en móvil se muestran en columna centrada */
         @media(max-width: 900px) {
+        /* contenedor de los botones: centrado y ocupa ancho completo */
         .botones-acciones {
-          flex-direction: row;       /* todos en una fila */
-          justify-content: center;   /* centrados horizontalmente */
-          flex-wrap: wrap;           /* si no caben, que bajen en otra línea */
+          display: flex;
+          flex-direction: row;
+          justify-content: center;   /* centra los botones dentro del contenedor */
+          align-items: center;
+          flex-wrap: wrap;
           gap: 10px;
           width: 100%;
+          max-width: 720px;          /* límite para evitar estirado en pantallas grandes */
+          margin: 0 auto;            /* centra el bloque dentro de .modos-grid */
+          box-sizing: border-box;
+          padding: 0 6px;
         }
 
+        /* botones tienen ancho uniforme en móvil */
         .modo-btn {
-          flex: 1 1 100px;           /* todos ocupan mismo ancho mínimo */
+          flex: 0 1 120px;           /* ancho base igual para todos */
+          min-width: 110px;
+          max-width: 160px;
           text-align: center;
-          min-width: 100px;          /* ancho mínimo para uniformidad */
-          max-width: 140px;          /* ancho máximo para que no se estiren demasiado */
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
         }
+
         .top-row { flex-direction:column; }
         .right { width:100%; max-width:none; }
         iframe.tarjeta-frame { height:420px; }
@@ -87,12 +99,18 @@
         #ownerNote {
           text-align: center;
         }
+
+        /* la cuadricula de modos la volvemos flex para centrar el bloque hijos */
         .modos-grid {
-          display: grid;
-          grid-template-columns: repeat(auto-fill, minmax(90px, 1fr));
+          display: flex;
+          justify-content: center; /* centro horizontal */
+          align-items: center;
+          width: 100%;
           gap: 8px;
-          justify-items: center;
+          padding: 0 6px;
+          box-sizing: border-box;
         }
+
         .left, .right {
           width: 100% !important;
           max-width: 100% !important;
