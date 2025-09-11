@@ -78,6 +78,68 @@
     .small-holes { display:none; } /* ya existente */
   }
 
+  /* Ajustes específicos SOLO para celular */
+  @media (max-width: 768px) {
+    body { padding: 4px; }
+
+    .card {
+      border-radius: 0;
+      margin-bottom: 6px;
+      padding: 8px;
+    }
+
+    h1 {
+      font-size: 1.2rem; /* más pequeño */
+      text-align: center;
+      margin-bottom: 6px;
+    }
+
+    #metaStatus, #pollaInfo {
+      display: none !important; /* ocultar estos campos en móvil */
+    }
+
+    /* Centrar precio y jugadores */
+    #priceSection {
+      text-align: center;
+      width: 100%;
+    }
+    #priceSection label { font-size: 0.9rem; }
+    #priceSection input { width: 100%; max-width: 180px; }
+
+    /* Botones en la misma fila centrados */
+    #buttonsSection {
+      display: flex;
+      justify-content: center;
+      gap: 8px;
+      margin-top: 8px;
+    }
+
+    /* Saldo debajo centrado */
+    #miSaldo {
+      text-align: center;
+      margin-top: 8px;
+      font-size: 0.95rem;
+    }
+
+    /* Encabezado de tabla en celular */
+    #tableHeader {
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+    }
+    #tableHeader div {
+      font-size: 0.9rem;
+      margin-bottom: 2px;
+    }
+
+    /* Tabla más compacta */
+    table { font-size: 0.65rem; transform: scale(0.9); transform-origin: top center; }
+    th, td { padding: 2px 3px; }
+    .avatar { width: 22px; height: 22px; font-size: 0.55rem; margin-right: 3px; }
+    #resultsTable span.grad-text { font-size: 0.7rem; }
+  }
+
+
 
 
   .controls { display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
@@ -95,25 +157,21 @@
       </div>
 
       <div style="min-width:320px; text-align:right;">
-        <div class="controls">
-          <div>
-            <label for="priceInput" style="margin-bottom:4px;">Precio por jugador (MXN)</label>
-            <input type="number" id="priceInput" min="1" step="1" />
-          </div>
-          <div style="display:flex; gap:8px; align-items:center;">
-            <button id="createBtn" class="primary">Crear Polla</button>
-            <button id="refreshBtn" class="ghost">Refrescar</button>
-          </div>
-        </div>
-        <div style="margin-top:8px;">
-          <div id="miSaldo" class="small" style="font-weight:800;"></div>
-        </div>
+      <div id="priceSection">
+        <label for="priceInput">Precio por jugador (MXN)</label>
+        <input type="number" id="priceInput" min="1" step="1" />
       </div>
+      <div id="buttonsSection">
+        <button id="createBtn" class="primary">Crear Polla</button>
+        <button id="refreshBtn" class="ghost">Refrescar</button>
+      </div>
+      <div id="miSaldo" class="small" style="font-weight:800;"></div>
+    </div>
     </div>
   </div>
 
   <div id="tableCard" class="card" style="overflow:auto;">
-    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+    <div id="tableHeader" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
       <div style="font-weight:800;">Participantes / Resultados</div>
       <div class="small" id="lastUpdated"></div>
     </div>
@@ -288,6 +346,17 @@
           userInfo.nombre = fullName || t.userUid;
           // important: handicap puede ser string en tu ejemplo -> parsearlo
           userInfo.handicap = (typeof ud.handicap === 'number') ? ud.handicap : (Number(ud.handicap) || 0);
+          // Compactar nombre solo si estamos en móvil
+          if (window.innerWidth <= 768) {
+            const parts = (userInfo.nombre || '').split(' ');
+            if (parts.length >= 3) {
+              // Ej: Jorge Castan Soto -> Jorge C. S.
+              userInfo.nombre = `${parts[0]} ${parts[1][0]}. ${parts[2][0]}.`;
+            } else if (parts.length === 2) {
+              userInfo.nombre = `${parts[0]} ${parts[1][0]}.`;
+            }
+          }
+
         }
       } catch (e) {
         console.warn('No se pudo cargar usuario', t.userUid, e);
