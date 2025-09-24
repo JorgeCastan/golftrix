@@ -131,6 +131,24 @@
     return (parts[0][0]+ (parts[1]?.[0]||'')).toUpperCase();
   }
 
+
+async function ensureGrupoId() {
+  if (grupoId) return grupoId;
+  try {
+    const jSnap = await getDoc(doc(db, 'juegos', juegoId));
+    if (jSnap.exists()) {
+      grupoId = jSnap.data()?.grupoId || null;
+    }
+    return grupoId;
+  } catch (e) {
+    console.error("Error obteniendo grupoId", e);
+    return null;
+  }
+}
+await ensureGrupoId();
+await loadUsers();
+
+
 // ---------------------- FIRESTORE: obtener usuarios disponibles (solo del grupo si existe) ----------------------
 async function loadUsers() {
   allUsers = [];
@@ -321,53 +339,23 @@ async function loadUsers() {
 
   refreshBtn.addEventListener('click', async ()=>{ await initAll(); });
 
-  // ---------------------- START GAME ----------------------
-  startGameBtn.addEventListener('click', async ()=> {
-    if(pairs.length < 2){ alert('Necesitas al menos 2 parejas para comenzar.'); return; }
-    const price = Number(priceInput.value);
-    if(!price || price<=0){ alert('Define un precio válido'); return; }
+startGameBtn.addEventListener('click', async () => {
+  grupoId = await ensureGrupoId();
 
-    // Guardar juego en colección 'juegos' (doc con id juegoId)
-    try {
-  // 1️⃣ Obtener grupoId desde colección 'juegos'
-  const juegoDocRef = doc(db, 'juegos', juegoId);
-  const juegoSnap = await getDoc(juegoDocRef);
-  if (!juegoSnap.exists()) {
-    alert('No se encontró el documento del juego en la colección "juegos".');
+  if (!grupoId) {
+    alert('Este juego no tiene grupo asignado.');
     return;
   }
-  grupoId = juegoSnap.data()?.grupoId || null;
-  if (!grupoId) {
-    const juegoSnap = await getDoc(doc(db, 'juegos', juegoId));
-    if(juegoSnap.exists()){
-        grupoId = juegoSnap.data()?.grupoId || null;
-    }
-}
 
+  // 👇 tu lógica sigue igual
+  const selectedPlayers = getSelectedPlayers();
+  if (selectedPlayers.length < 4) {
+    alert('Selecciona al menos 4 jugadores para empezar el juego.');
+    return;
+  }
+  saveFoursomes(selectedPlayers);
+});
 
-  // 2️⃣ Guardar documento en 'juego_foursomes' usando grupoId
-  const jFoursomesRef = doc(db, 'juego_foursomes', juegoId);
-  const payload = {
-    juegoId,
-    grupoId,
-    price,
-    pairs,
-    createdAt: serverTimestamp(),
-    updatedAt: serverTimestamp()
-  };
-  await setDoc(jFoursomesRef, payload, { merge: true });
-
-  // 3️⃣ Continuar con cálculo de tarjetas y renderizado
-  await obtenerTarjetasConScores();
-  await computeAndRenderAllMatchups(price);
-  gameArea.style.display = 'block';
-  gameMeta.innerText = `Juego ${juegoId} — Precio por pareja ${price} — Parejas: ${pairs.length}`;
-} catch (e) {
-  console.error('Error startGame', e); 
-  alert('Error iniciando juego. Revisa consola.');
-}
-
-  });
 
   // ---------------------- Lógica de cálculo de matchups ----------------------
   function findTarjetaForUser(uid) {
