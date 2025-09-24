@@ -134,38 +134,41 @@
 // ---------------------- FIRESTORE: obtener usuarios disponibles (solo del grupo si existe) ----------------------
 async function loadUsers() {
   allUsers = [];
-  const uRef = collection(db, 'usuarios');
-  const gRef = doc(db, 'grupos', grupoId);
-  const gSnap = await getDoc(gRef);
+  try {
+    const uRef = collection(db, 'usuarios');
+    let memberUids = null;
 
-  let memberUids = null;
-
-  if (gSnap.exists()) {
-    const gData = gSnap.data();
-    if (Array.isArray(gData.miembros)) {
-      // 🔑 Extraer solo los UID de cada objeto
-      memberUids = gData.miembros.map(m => m.uid);
+    if(grupoId){
+      const gSnap = await getDoc(doc(db, 'grupos', grupoId));
+      if (gSnap.exists()) {
+        const gData = gSnap.data();
+        if (Array.isArray(gData.miembros)) memberUids = gData.miembros.map(m=>m.uid);
+      }
     }
-  }
 
-  if (memberUids && memberUids.length > 0) {
-    const q = query(uRef, where('__name__', 'in', memberUids));
-    const snap = await getDocs(q);
-    snap.forEach(d => {
+    let usersSnap;
+    if (memberUids && memberUids.length > 0) {
+      // Firestore 'in' solo permite 10; si son más, fallback a cargar todos
+      if(memberUids.length <= 10){
+        const q = query(uRef, where('__name__','in',memberUids));
+        usersSnap = await getDocs(q);
+      } else {
+        usersSnap = await getDocs(uRef); // cargar todos y filtrar después
+      }
+    } else {
+      usersSnap = await getDocs(uRef);
+    }
+
+    usersSnap.forEach(d => {
       allUsers.push({ id: d.id, ...d.data() });
     });
-  } else {
-    // fallback: cargar todos los usuarios
-    const snap = await getDocs(uRef);
-    snap.forEach(d => {
-      allUsers.push({ id: d.id, ...d.data() });
-    });
-  }
 
-  console.log("Usuarios cargados:", allUsers);
-  populateUserSelects();
+    console.log("Usuarios cargados:", allUsers);
+    populateUserSelects();
+  } catch(e) {
+    console.error("Error loadUsers", e);
+  }
 }
-
 
   function populateUserSelects(){
     [player1Select, player2Select].forEach(sel=>{
@@ -665,7 +668,6 @@ async function loadUsers() {
 
   // ---------------------- INIT ----------------------
   async function initAll(){
-  // fuerza lectura previa de juego para obtener grupoId (mejora robustez)
   try {
     const jRef = doc(db, 'juegos', juegoId);
     const jSnap = await getDoc(jRef);
@@ -673,7 +675,7 @@ async function loadUsers() {
       const jData = jSnap.data();
       grupoId = jData?.grupoId || jData?.grupo || grupoId;
     }
-  } catch (e) {
+  } catch(e){
     console.warn('initAll: no pude leer juego para grupoId', e);
   }
 
@@ -681,6 +683,7 @@ async function loadUsers() {
   await obtenerTarjetasConScores();
   renderPairsList();
 }
+
 
 
   onAuthStateChanged(authInst, async (user)=>{
