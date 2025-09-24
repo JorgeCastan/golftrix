@@ -311,7 +311,7 @@ const userGrupoId = userDocSnap.exists() ? userDocSnap.data().grupoId : null;
 
       // Mostrar si es individual y es owner, o es grupo y pertenece al grupo del usuario
       // Para simplificar asumimos que tu usuario tiene grupoId = "xXPOfcuLs5DSMnUlGsbn"
-      const userGrupoId = "xXPOfcuLs5DSMnUlGsbn"; // reemplaza con la lógica real si la tienes
+    
       if (
               (tipo === "individual" && ownerUid === uid) || 
               (tipo === "grupo" && grupoId && grupoId === userGrupoId)
