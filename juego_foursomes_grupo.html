@@ -281,15 +281,17 @@ async function loadUsers() {
 
     // Guardar juego en colección 'juegos' (doc con id juegoId)
     try {
-      const jRef = doc(db, 'juegos', juegoId);
+      const jRef = doc(db, 'juego_foursomes', juegoId);
       const payload = {
         juegoId,
+        grupoId,
         price,
         pairs,
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp()
-      };
+        };
       await setDoc(jRef, payload, { merge: true });
+
       // cargar tarjetas y ejecutar cálculo
       await obtenerTarjetasConScores();
       await computeAndRenderAllMatchups(price);
@@ -657,22 +659,34 @@ async function loadUsers() {
   }
 
   // ---------------------- INIT ----------------------
-  async function initAll(){
+async function initAll() {
   try {
-    const jRef = doc(db, 'juegos', juegoId);
+    const jRef = doc(db, 'juego_foursomes', juegoId);
     const jSnap = await getDoc(jRef);
     if (jSnap.exists()) {
       const jData = jSnap.data();
       grupoId = jData?.grupoId || jData?.grupo || grupoId;
+      pairs = Array.isArray(jData?.pairs) ? jData.pairs : [];
+      priceInput.value = jData?.price || '';
+      
+      if(pairs.length > 0) {
+        gameArea.style.display = 'block';
+        gameMeta.innerText = `Juego ${juegoId} — Precio por pareja ${priceInput.value} — Parejas: ${pairs.length}`;
+      }
     }
   } catch(e){
-    console.warn('initAll: no pude leer juego para grupoId', e);
+    console.warn('initAll: no pude leer juego_foursomes', e);
   }
 
   await loadUsers();
   await obtenerTarjetasConScores();
+
+  if(pairs.length > 0 && priceInput.value) {
+    await computeAndRenderAllMatchups(Number(priceInput.value));
+  }
   renderPairsList();
 }
+
 
 
 
