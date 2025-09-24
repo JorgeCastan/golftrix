@@ -340,21 +340,40 @@ async function loadUsers() {
 
   refreshBtn.addEventListener('click', async ()=>{ await initAll(); });
 
-startGameBtn.addEventListener('click', async () => {
-  grupoId = await ensureGrupoId();
+startGameBtn.addEventListener("click", async () => {
+  try {
+    if (!juegoId || !grupoId) {
+      console.error("Faltan datos: juegoId o grupoId");
+      return;
+    }
 
-  if (!grupoId) {
-    alert('Este juego no tiene grupo asignado.');
-    return;
-  }
+    const foursomeRef = doc(db, "juego_foursomes", juegoId);
+    const foursomeSnap = await getDoc(foursomeRef);
 
-  // 👇 tu lógica sigue igual
-  const selectedPlayers = getSelectedPlayers();
-  if (selectedPlayers.length < 4) {
-    alert('Selecciona al menos 4 jugadores para empezar el juego.');
-    return;
+    if (foursomeSnap.exists()) {
+      console.log("El juego ya existe en juego_foursomes → solo mostrar");
+      const jfData = foursomeSnap.data();
+      pairs = jfData?.pairs || [];
+      priceInput.value = jfData?.price || '';
+    } else {
+      console.log("Creando nuevo juego en juego_foursomes...");
+
+      await setDoc(foursomeRef, {
+        juegoId,
+        grupoId,
+        price: priceInput.value || '',
+        pairs: pairs || [],
+        createdAt: serverTimestamp(),
+      });
+    }
+
+    // Mostrar el área de juego
+    gameArea.style.display = 'block';
+    gameMeta.innerText = `Juego ${juegoId} — Precio por pareja ${priceInput.value} — Parejas: ${pairs.length}`;
+
+  } catch (err) {
+    console.error("Error al iniciar juego:", err);
   }
-  saveFoursomes(selectedPlayers);
 });
 
 
@@ -721,21 +740,29 @@ async function initAll() {
     const jSnap = await getDoc(jRef);
     if (jSnap.exists()) {
   const jData = jSnap.data();
-
-  // ✅ Tomamos grupoId (si no existe, conserva el que ya había en memoria)
   grupoId = jData?.grupoId || jData?.grupo || grupoId;
   console.log("initAll: grupoId =", grupoId);
 
-  // ✅ Recuperamos pairs y price
-  pairs = Array.isArray(jData?.pairs) ? jData.pairs : [];
-  priceInput.value = jData?.price || '';
-
-  // ✅ Mostrar área de juego si hay parejas
-  if (pairs.length > 0) {
+  // Verificamos si ya existe un juego_foursomes con este juegoId
+  const jfDoc = await getDoc(doc(db, "juego_foursomes", juegoId));
+  if (jfDoc.exists()) {
+    // ⚡ Ya existe un juego guardado en foursomes → mostrar directo el área de juego
+    const jfData = jfDoc.data();
+    pairs = Array.isArray(jfData?.pairs) ? jfData.pairs : [];
+    priceInput.value = jfData?.price || '';
     gameArea.style.display = 'block';
     gameMeta.innerText = `Juego ${juegoId} — Precio por pareja ${priceInput.value} — Parejas: ${pairs.length}`;
+  } else {
+    // 🟢 No hay aún un juego guardado → usar la lógica normal de "juegos"
+    pairs = Array.isArray(jData?.pairs) ? jData.pairs : [];
+    priceInput.value = jData?.price || '';
+    if (pairs.length > 0) {
+      gameArea.style.display = 'block';
+      gameMeta.innerText = `Juego ${juegoId} — Precio por pareja ${priceInput.value} — Parejas: ${pairs.length}`;
+    }
   }
 }
+
 
   } catch(e){
     console.warn('initAll: no pude leer juego_foursomes', e);
