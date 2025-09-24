@@ -172,7 +172,7 @@ async function loadUsers() {
       sel.innerHTML = '<option value="">-- elegir --</option>';
       allUsers.forEach(u=>{
         const opt = document.createElement('option');
-        opt.value = u.uid;
+        opt.value = u.id;
         opt.textContent = u.nombre;
         sel.appendChild(opt);
       });
@@ -258,7 +258,7 @@ async function loadUsers() {
   }
 
   function getUserName(uid){
-    const u = allUsers.find(x=>x.uid===uid);
+   const u = allUsers.find(x=>x.id===uid);
     return u ? u.nombre : uid;
   }
 
@@ -268,7 +268,13 @@ async function loadUsers() {
     if(!p1 || !p2){ alert('Selecciona ambos jugadores'); return; }
     if(p1===p2){ if(!confirm('Has escogido el mismo usuario dos veces. Confirmar pareja igual?')) return; }
     const color = randColor();
-    pairs.push({ id: 'pair_'+Date.now()+'_'+Math.floor(Math.random()*9999), p1Uid:p1, p2Uid:p2, color });
+    pairs.push({
+        id: 'pair_'+Date.now()+'_'+Math.floor(Math.random()*9999),
+        p1Uid: p1,
+        p2Uid: p2,
+        color
+    });
+
     renderPairsList();
   });
 
@@ -363,10 +369,10 @@ async function loadUsers() {
     const b2Arr = pB2 ? buildGolpesArrFromTarjeta(pB2) : new Array(18).fill(null);
 
     // obtener user objects (nombre, handicap, gender)
-    const uA1 = allUsers.find(u=>u.uid===pairA.p1Uid) || { uid: pairA.p1Uid, nombre:getUserName(pairA.p1Uid), handicap:0, gender:'M' };
-    const uA2 = allUsers.find(u=>u.uid===pairA.p2Uid) || { uid: pairA.p2Uid, nombre:getUserName(pairA.p2Uid), handicap:0, gender:'M' };
-    const uB1 = allUsers.find(u=>u.uid===pairB.p1Uid) || { uid: pairB.p1Uid, nombre:getUserName(pairB.p1Uid), handicap:0, gender:'M' };
-    const uB2 = allUsers.find(u=>u.uid===pairB.p2Uid) || { uid: pairB.p2Uid, nombre:getUserName(pairB.p2Uid), handicap:0, gender:'M' };
+    const uA1 = allUsers.find(u=>u.id===pairA.p1Uid) || { id: pairA.p1Uid, nombre:getUserName(pairA.p1Uid), handicap:0, gender:'M' };
+    const uA2 = allUsers.find(u=>u.id===pairA.p2Uid) || { id: pairA.p2Uid, nombre:getUserName(pairA.p2Uid), handicap:0, gender:'M' };
+    const uB1 = allUsers.find(u=>u.id===pairB.p1Uid) || { id: pairB.p1Uid, nombre:getUserName(pairB.p1Uid), handicap:0, gender:'M' };
+    const uB2 = allUsers.find(u=>u.id===pairB.p2Uid) || { id: pairB.p2Uid, nombre:getUserName(pairB.p2Uid), handicap:0, gender:'M' };
 
     // aplicar ventajas por hoyo (si existen)
     const aa1 = applyAdvantageToGolpesArray(a1Arr, uA1, fieldInfo);
