@@ -8,7 +8,16 @@
 <style>
   :root { --green-1:#007f00; --green-2:#00cc44; }
   body { font-family:'Orbitron',sans-serif; padding:12px; background:#f6f6f6; color:#111; }
-  .card { background:#fff; border-radius:12px; padding:12px; box-shadow:0 6px 18px rgba(0,0,0,0.06); margin-bottom:12px; }
+  .card {
+        background:#fff;
+        border-radius:12px;
+        padding:12px;
+        box-shadow:0 6px 18px rgba(0,0,0,0.06);
+        margin-bottom:12px;
+        width:100%;
+        box-sizing:border-box;
+    }
+
   h1 { margin:0 0 8px 0; color:var(--green-1); }
   label{ font-weight:700; display:block; margin-bottom:6px; }
   select,input[type=number]{ padding:8px; border-radius:8px; border:1px solid #ddd; width:100%; box-sizing:border-box; }
@@ -86,6 +95,8 @@
 
   // --- Estado y elementos DOM ---
   const juegoId = getQueryParam('juegoId') || getQueryParam('id') || ('foursomes_' + Date.now());
+  // --- Grupo relacionado al juego (se cargará desde doc 'juegos/<juegoId>')
+  let grupoId = null;
   const player1Select = document.getElementById('player1Select');
   const player2Select = document.getElementById('player2Select');
   const addPairBtn = document.getElementById('addPairBtn');
@@ -120,25 +131,106 @@
     return (parts[0][0]+ (parts[1]?.[0]||'')).toUpperCase();
   }
 
-  // ---------------------- FIRESTORE: obtener usuarios disponibles ----------------------
-  async function loadUsers() {
-    try {
+// ---------------------- FIRESTORE: obtener usuarios disponibles (solo del grupo si existe) ----------------------
+async function loadUsers() {
+  try {
+    // 1) Intentar leer juego para obtener grupoId (si no se ha leído aún)
+    if (!grupoId) {
+      try {
+        const jRef = doc(db, 'juegos', juegoId);
+        const jSnap = await getDoc(jRef);
+        if (jSnap.exists()) {
+          const jData = jSnap.data();
+          grupoId = jData?.grupoId || jData?.grupo || null;
+        } else {
+          grupoId = null;
+        }
+      } catch (e) {
+        console.warn('No se pudo leer juego para grupoId', e);
+        grupoId = null;
+      }
+    }
+
+    // 2) Si tenemos grupoId, intentar cargar miembros de la colección 'grupos/<grupoId>'
+    let memberUids = null;
+    if (grupoId) {
+      try {
+        const gRef = doc(db, 'grupos', grupoId);
+        const gSnap = await getDoc(gRef);
+        if (gSnap.exists()) {
+          const gData = gSnap.data();
+          // posibles keys comunes: members, miembros, usuarios
+          memberUids = Array.isArray(gData.members) ? gData.members
+                      : Array.isArray(gData.miembros) ? gData.miembros
+                      : Array.isArray(gData.usuarios) ? gData.usuarios
+                      : null;
+        }
+      } catch (e) {
+        console.warn('Error leyendo doc grupos', e);
+      }
+    }
+
+    // 3) Si no hay doc de 'grupos' o no tiene members, intentar buscar users con campo grupoId
+    allUsers = [];
+    if (memberUids && Array.isArray(memberUids) && memberUids.length > 0) {
+      // Firestore 'in' admite hasta 10 elementos; si hay más, hacemos batches
+      const batches = [];
+      for (let i = 0; i < memberUids.length; i += 10) {
+        batches.push(memberUids.slice(i, i + 10));
+      }
+      for (const batch of batches) {
+        const usersCol = collection(db, 'users');
+        const q = query(usersCol, where('__name__', 'in', batch));
+        const snap = await getDocs(q);
+        snap.forEach(d => {
+          const dd = d.data();
+          const nombre = dd.name ?? dd.nombre ?? dd.firstName ?? dd.displayName ?? '';
+          const uid = d.id;
+          const handicap = (typeof dd.handicap === 'number') ? dd.handicap : (Number(dd.handicap) || 0);
+          const gender = (dd.gender || dd.sexo || dd.genero || 'M').toString();
+          allUsers.push({ uid, nombre: nombre || uid, handicap, gender, raw: dd });
+        });
+      }
+    } else if (grupoId) {
+      // fallback: buscar usuarios que tengan campo 'grupoId' igual
+      try {
+        const usersCol = collection(db, 'users');
+        const q = query(usersCol, where('grupoId', '==', grupoId));
+        const snap = await getDocs(q);
+        snap.forEach(d => {
+          const dd = d.data();
+          const nombre = dd.name ?? dd.nombre ?? dd.firstName ?? dd.displayName ?? '';
+          const uid = d.id;
+          const handicap = (typeof dd.handicap === 'number') ? dd.handicap : (Number(dd.handicap) || 0);
+          const gender = (dd.gender || dd.sexo || dd.genero || 'M').toString();
+          allUsers.push({ uid, nombre: nombre || uid, handicap, gender, raw: dd });
+        });
+      } catch (e) {
+        console.warn('No se encontraron users con campo grupoId; caeremos a carga completa', e);
+      }
+    }
+
+    // 4) Si después de todo allUsers sigue vacío -> cargar todos (comportamiento antiguo)
+    if (!allUsers || allUsers.length === 0) {
       const col = collection(db, 'users');
       const snap = await getDocs(col);
-      allUsers = [];
       snap.forEach(d => {
         const dd = d.data();
-        const nombre = dd.name ?? dd.nombre ?? dd.firstName ?? dd.firstName ?? (dd.displayName||'');
+        const nombre = dd.name ?? dd.nombre ?? dd.firstName ?? dd.displayName ?? '';
         const uid = d.id;
         const handicap = (typeof dd.handicap==='number')?dd.handicap:(Number(dd.handicap)||0);
         const gender = (dd.gender||dd.sexo||dd.genero||'M').toString();
         allUsers.push({ uid, nombre: nombre || uid, handicap, gender, raw: dd });
       });
-      populateUserSelects();
-    } catch (e) {
-      console.error('Error loadUsers', e);
     }
+
+    // 5) Finalmente poblar los selects
+    populateUserSelects();
+  } catch (e) {
+    console.error('Error loadUsers', e);
   }
+}
+
 
   function populateUserSelects(){
     [player1Select, player2Select].forEach(sel=>{
@@ -632,10 +724,23 @@
 
   // ---------------------- INIT ----------------------
   async function initAll(){
-    await loadUsers();
-    await obtenerTarjetasConScores();
-    renderPairsList();
+  // fuerza lectura previa de juego para obtener grupoId (mejora robustez)
+  try {
+    const jRef = doc(db, 'juegos', juegoId);
+    const jSnap = await getDoc(jRef);
+    if (jSnap.exists()) {
+      const jData = jSnap.data();
+      grupoId = jData?.grupoId || jData?.grupo || grupoId;
+    }
+  } catch (e) {
+    console.warn('initAll: no pude leer juego para grupoId', e);
   }
+
+  await loadUsers();
+  await obtenerTarjetasConScores();
+  renderPairsList();
+}
+
 
   onAuthStateChanged(authInst, async (user)=>{
     currentUser = user;
