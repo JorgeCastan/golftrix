@@ -135,18 +135,28 @@
 async function loadUsers() {
   allUsers = [];
   try {
-    if(!grupoId) return;
+    if(!grupoId) {
+      console.warn("grupoId no definido en loadUsers");
+      populateUserSelects(); // vaciar selects por seguridad
+      return;
+    }
 
     const gSnap = await getDoc(doc(db, 'grupos', grupoId));
-    if (!gSnap.exists()) return;
+    if (!gSnap.exists()) {
+      console.warn("Documento de grupo no existe");
+      populateUserSelects(); // vaciar selects
+      return;
+    }
 
     const gData = gSnap.data();
-    if(!Array.isArray(gData.miembros)) return;
+    if(!Array.isArray(gData.miembros)) {
+      populateUserSelects(); // vaciar selects
+      return;
+    }
 
-    // Usar miembros directamente
     allUsers = gData.miembros.map(m => ({
       id: m.uid,
-      nombre: m.nombre || m.iniciales,
+      nombre: m.nombre || m.iniciales || 'Sin Nombre',
       initials: m.iniciales || initialsFromName(m.nombre),
       handicap: m.handicap || 0,
       gender: m.gender || 'M'
@@ -154,10 +164,13 @@ async function loadUsers() {
 
     console.log("Usuarios cargados del grupo:", allUsers);
     populateUserSelects();
+
   } catch(e) {
     console.error("Error loadUsers", e);
+    populateUserSelects(); // vaciar selects
   }
 }
+
 
 
   function populateUserSelects(){
@@ -666,6 +679,7 @@ async function initAll() {
     if (jSnap.exists()) {
       const jData = jSnap.data();
       grupoId = jData?.grupoId || jData?.grupo || grupoId;
+      console.log("initAll: grupoId =", grupoId);
       pairs = Array.isArray(jData?.pairs) ? jData.pairs : [];
       priceInput.value = jData?.price || '';
       
@@ -678,8 +692,14 @@ async function initAll() {
     console.warn('initAll: no pude leer juego_foursomes', e);
   }
 
-  await loadUsers();
-  await obtenerTarjetasConScores();
+  // esperar a tener grupoId antes de cargar usuarios
+    if(grupoId) {
+    await loadUsers();
+    } else {
+    console.warn("No hay grupoId definido, los selects de jugadores estarán vacíos");
+    }
+    await obtenerTarjetasConScores();
+
 
   if(pairs.length > 0 && priceInput.value) {
     await computeAndRenderAllMatchups(Number(priceInput.value));
