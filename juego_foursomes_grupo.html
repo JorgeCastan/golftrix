@@ -149,18 +149,24 @@ async function loadUsers() {
     }
 
     const gData = gSnap.data();
-    if(!Array.isArray(gData.miembros)) {
-      populateUserSelects(); // vaciar selects
-      return;
+    const membersArray = Array.isArray(gData.miembros) ? gData.miembros 
+                  : Array.isArray(gData.grupo) ? gData.grupo 
+                  : [];
+
+    if(membersArray.length === 0){
+    console.warn("No hay miembros en el grupo");
+    populateUserSelects();
+    return;
     }
 
-    allUsers = gData.miembros.map(m => ({
-      id: m.uid,
-      nombre: m.nombre || m.iniciales || 'Sin Nombre',
-      initials: m.iniciales || initialsFromName(m.nombre),
-      handicap: m.handicap || 0,
-      gender: m.gender || 'M'
+    allUsers = membersArray.map(m => ({
+    id: m.uid || m.id, // si en tu DB el campo es uid o id
+    nombre: m.nombre || m.iniciales || 'Sin Nombre',
+    initials: m.iniciales || initialsFromName(m.nombre),
+    handicap: m.handicap || 0,
+    gender: m.gender || 'M'
     }));
+
 
     console.log("Usuarios cargados del grupo:", allUsers);
     populateUserSelects();
