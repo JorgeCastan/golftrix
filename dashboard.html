@@ -293,7 +293,8 @@ onAuthStateChanged(auth, async (user) => {
   // Obtener el grupo real del usuario desde Firestore
 const userDocRef = doc(db, "usuarios", uid);
 const userDocSnap = await getDoc(userDocRef);
-const userGrupoId = userDocSnap.exists() ? userDocSnap.data().grupoId : null;
+const userGrupoId = userDocSnap.exists() ? userDocSnap.data().grupo : null;
+
 
 
   // Contenedor
