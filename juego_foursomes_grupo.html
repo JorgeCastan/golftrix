@@ -184,10 +184,11 @@ async function loadUsers() {
         const userSnap = await getDoc(doc(db, 'users', uid));
         if (userSnap.exists()) {
             const uData = userSnap.data();
+            const fullName = `${uData.name || ''} ${uData.lastname || ''}`.trim();
             return {
             id: uid,
-            nombre: uData.nombre || 'Sin Nombre',
-            initials: initialsFromName(uData.nombre),
+            nombre: fullName || 'Sin Nombre',
+            initials: initialsFromName(fullName),
             handicap: uData.handicap || 0,
             gender: uData.gender || 'M'
             };
