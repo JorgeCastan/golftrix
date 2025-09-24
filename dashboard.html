@@ -277,7 +277,7 @@
 
 <script type="module">
 import { app } from './firebase-config.js';
-import { getFirestore, collection, getDocs, query, orderBy, limit } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+import { getFirestore, collection, getDocs, doc, getDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 
 const db = getFirestore(app);
@@ -290,6 +290,11 @@ onAuthStateChanged(auth, async (user) => {
   }
 
   const uid = user.uid;
+  // Obtener el grupo real del usuario desde Firestore
+const userDocRef = doc(db, "usuarios", uid);
+const userDocSnap = await getDoc(userDocRef);
+const userGrupoId = userDocSnap.exists() ? userDocSnap.data().grupoId : null;
+
 
   // Contenedor
   const container = document.getElementById('juegosContainer');
@@ -307,9 +312,12 @@ onAuthStateChanged(auth, async (user) => {
       // Mostrar si es individual y es owner, o es grupo y pertenece al grupo del usuario
       // Para simplificar asumimos que tu usuario tiene grupoId = "xXPOfcuLs5DSMnUlGsbn"
       const userGrupoId = "xXPOfcuLs5DSMnUlGsbn"; // reemplaza con la lógica real si la tienes
-      if ((tipo === "individual" && ownerUid === uid) || (tipo === "grupo" && grupoId === userGrupoId)) {
-        juegosArray.push({id: docSnap.id, ...data});
-      }
+      if (
+              (tipo === "individual" && ownerUid === uid) || 
+              (tipo === "grupo" && grupoId && grupoId === userGrupoId)
+          ) {
+              juegosArray.push({id: docSnap.id, ...data});
+          }
     });
 
     // Ordenar por fecha (createdAt) descendente
