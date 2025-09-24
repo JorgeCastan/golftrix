@@ -300,25 +300,41 @@ async function loadUsers() {
 
     // Guardar juego en colección 'juegos' (doc con id juegoId)
     try {
-      const jRef = doc(db, 'juego_foursomes', juegoId);
-      const payload = {
-        juegoId,
-        grupoId,
-        price,
-        pairs,
-        createdAt: serverTimestamp(),
-        updatedAt: serverTimestamp()
-        };
-      await setDoc(jRef, payload, { merge: true });
+  // 1️⃣ Obtener grupoId desde colección 'juegos'
+  const juegoDocRef = doc(db, 'juegos', juegoId);
+  const juegoSnap = await getDoc(juegoDocRef);
+  if (!juegoSnap.exists()) {
+    alert('No se encontró el documento del juego en la colección "juegos".');
+    return;
+  }
+  grupoId = juegoSnap.data()?.grupoId || null;
+  if (!grupoId) {
+    alert('El juego no tiene grupoId definido.');
+    return;
+  }
 
-      // cargar tarjetas y ejecutar cálculo
-      await obtenerTarjetasConScores();
-      await computeAndRenderAllMatchups(price);
-      gameArea.style.display = 'block';
-      gameMeta.innerText = `Juego ${juegoId} — Precio por pareja ${price} — Parejas: ${pairs.length}`;
-    } catch (e) {
-      console.error('Error startGame', e); alert('Error iniciando juego. Revisa consola.');
-    }
+  // 2️⃣ Guardar documento en 'juego_foursomes' usando grupoId
+  const jFoursomesRef = doc(db, 'juego_foursomes', juegoId);
+  const payload = {
+    juegoId,
+    grupoId,
+    price,
+    pairs,
+    createdAt: serverTimestamp(),
+    updatedAt: serverTimestamp()
+  };
+  await setDoc(jFoursomesRef, payload, { merge: true });
+
+  // 3️⃣ Continuar con cálculo de tarjetas y renderizado
+  await obtenerTarjetasConScores();
+  await computeAndRenderAllMatchups(price);
+  gameArea.style.display = 'block';
+  gameMeta.innerText = `Juego ${juegoId} — Precio por pareja ${price} — Parejas: ${pairs.length}`;
+} catch (e) {
+  console.error('Error startGame', e); 
+  alert('Error iniciando juego. Revisa consola.');
+}
+
   });
 
   // ---------------------- Lógica de cálculo de matchups ----------------------
