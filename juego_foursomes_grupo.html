@@ -419,127 +419,82 @@ startGameBtn.addEventListener("click", async () => {
     }
     return result;
   }
+function getUserObj(uid) {
+  return allUsers.find(u=>u.id===uid) || { handicap:0, gender:'M' };
+}
 
   // compara 2 parejas: devuelve objeto con tabla por hoyo y suma de puntos por pareja (array [pointsA, pointsB])
-  async function computeMatchup(pairA, pairB, price) {
-    // prepare: for each player fetch tarjeta y golpes (aplicando ventajas del campo si sabemos campoId)
-    // asumimos que tarjetas tienen campoId; si no, podremos no tener ventajas
-    const pA1 = findTarjetaForUser(pairA.p1Uid);
-    const pA2 = findTarjetaForUser(pairA.p2Uid);
-    const pB1 = findTarjetaForUser(pairB.p1Uid);
-    const pB2 = findTarjetaForUser(pairB.p2Uid);
+async function computeMatchup(pairA, pairB, price) {
+  const pA1 = findTarjetaForUser(pairA.p1Uid);
+  const pA2 = findTarjetaForUser(pairA.p2Uid);
+  const pB1 = findTarjetaForUser(pairB.p1Uid);
+  const pB2 = findTarjetaForUser(pairB.p2Uid);
 
-    const campoId = (pA1?.campoId || pA2?.campoId || pB1?.campoId || pB2?.campoId) || null;
-    const fieldInfo = await obtenerParYVentajas(campoId);
+  const campoId = (pA1?.campoId || pA2?.campoId || pB1?.campoId || pB2?.campoId) || null;
+  const fieldInfo = await obtenerParYVentajas(campoId);
 
-    // build golpesArr raw
-    const a1Arr = pA1 ? buildGolpesArrFromTarjeta(pA1) : new Array(18).fill(null);
-    const a2Arr = pA2 ? buildGolpesArrFromTarjeta(pA2) : new Array(18).fill(null);
-    const b1Arr = pB1 ? buildGolpesArrFromTarjeta(pB1) : new Array(18).fill(null);
-    const b2Arr = pB2 ? buildGolpesArrFromTarjeta(pB2) : new Array(18).fill(null);
+  // construir golpes ajustados
+  const a1Arr = pA1 ? applyAdvantageToGolpesArray(buildGolpesArrFromTarjeta(pA1), getUserObj(pairA.p1Uid), fieldInfo) : new Array(18).fill(null);
+  const a2Arr = pA2 ? applyAdvantageToGolpesArray(buildGolpesArrFromTarjeta(pA2), getUserObj(pairA.p2Uid), fieldInfo) : new Array(18).fill(null);
+  const b1Arr = pB1 ? applyAdvantageToGolpesArray(buildGolpesArrFromTarjeta(pB1), getUserObj(pairB.p1Uid), fieldInfo) : new Array(18).fill(null);
+  const b2Arr = pB2 ? applyAdvantageToGolpesArray(buildGolpesArrFromTarjeta(pB2), getUserObj(pairB.p2Uid), fieldInfo) : new Array(18).fill(null);
 
-    // obtener user objects (nombre, handicap, gender)
-    const uA1 = allUsers.find(u=>u.id===pairA.p1Uid) || { id: pairA.p1Uid, nombre:getUserName(pairA.p1Uid), handicap:0, gender:'M' };
-    const uA2 = allUsers.find(u=>u.id===pairA.p2Uid) || { id: pairA.p2Uid, nombre:getUserName(pairA.p2Uid), handicap:0, gender:'M' };
-    const uB1 = allUsers.find(u=>u.id===pairB.p1Uid) || { id: pairB.p1Uid, nombre:getUserName(pairB.p1Uid), handicap:0, gender:'M' };
-    const uB2 = allUsers.find(u=>u.id===pairB.p2Uid) || { id: pairB.p2Uid, nombre:getUserName(pairB.p2Uid), handicap:0, gender:'M' };
+  const results = [];
+  let totalA = 0, totalB = 0;
 
-    // aplicar ventajas por hoyo (si existen)
-    const aa1 = applyAdvantageToGolpesArray(a1Arr, uA1, fieldInfo);
-    const aa2 = applyAdvantageToGolpesArray(a2Arr, uA2, fieldInfo);
-    const bb1 = applyAdvantageToGolpesArray(b1Arr, uB1, fieldInfo);
-    const bb2 = applyAdvantageToGolpesArray(b2Arr, uB2, fieldInfo);
+  for (let h = 0; h < 18; h++) {
+    const scoresA = [a1Arr[h], a2Arr[h]].filter(x=>typeof x==='number');
+    const scoresB = [b1Arr[h], b2Arr[h]].filter(x=>typeof x==='number');
 
-    // preparar estructura por hoyo
-    const holes = [];
-    let totalPointsA = 0;
-    let totalPointsB = 0;
-
-    for(let h=0;h<18;h++){
-      const vals = {
-        holeIndex: h+1,
-        players: [
-          { uid: uA1.uid, name: uA1.nombre, raw: a1Arr[h], adj: aa1[h], initials: initialsFromName(uA1.nombre), teamColor: pairA.color },
-          { uid: uA2.uid, name: uA2.nombre, raw: a2Arr[h], adj: aa2[h], initials: initialsFromName(uA2.nombre), teamColor: pairA.color },
-          { uid: uB1.uid, name: uB1.nombre, raw: b1Arr[h], adj: bb1[h], initials: initialsFromName(uB1.nombre), teamColor: pairB.color },
-          { uid: uB2.uid, name: uB2.nombre, raw: b2Arr[h], adj: bb2[h], initials: initialsFromName(uB2.nombre), teamColor: pairB.color }
-        ],
-        pointsA:0,
-        pointsB:0
-      };
-
-      // determinar alto y bajo dentro de cada pareja (usar adj; null = no jugó)
-      // Si ambos null -> no hay enfrentamiento -> puntaje 0
-      const aAdj = [vals.players[0].adj, vals.players[1].adj];
-      const bAdj = [vals.players[2].adj, vals.players[3].adj];
-
-      const validA = aAdj.filter(x=>typeof x==='number');
-      const validB = bAdj.filter(x=>typeof x==='number');
-
-      if(validA.length===0 || validB.length===0){
-        // no se puede comparar
-        holes.push(vals);
-        continue;
-      }
-
-      // identificar alto y bajo: alto = max (mayor golpes), bajo = min (menor golpes)
-      const aHigh = Math.max(...validA);
-      const aLow = Math.min(...validA);
-      const bHigh = Math.max(...validB);
-      const bLow = Math.min(...validB);
-
-      // get which player index is high/low within pair A and B (choose first occurrence)
-      function findIndexOfValueInPair(arrAdj, value, offset){ // offset = 0 for A, 2 for B
-        for(let i=0;i<2;i++){
-          if(typeof arrAdj[i] === 'number' && arrAdj[i] === value) return offset + i;
-        }
-        return offset; // fallback
-      }
-      const aHighIdx = findIndexOfValueInPair([vals.players[0].adj, vals.players[1].adj], aHigh, 0);
-      const aLowIdx  = findIndexOfValueInPair([vals.players[0].adj, vals.players[1].adj], aLow, 0);
-      const bHighIdx = findIndexOfValueInPair([vals.players[2].adj, vals.players[3].adj], bHigh, 2);
-      const bLowIdx  = findIndexOfValueInPair([vals.players[2].adj, vals.players[3].adj], bLow, 2);
-
-      // Compare high vs high
-      const ah = vals.players[aHighIdx].adj;
-      const bh = vals.players[bHighIdx].adj;
-      let ph = 0;
-      if(typeof ah === 'number' && typeof bh === 'number'){
-        if(ah < bh){ ph = +1; } else if (ah > bh){ ph = -1; } else ph = 0;
-      }
-      // Compare low vs low
-      const al = vals.players[aLowIdx].adj;
-      const bl = vals.players[bLowIdx].adj;
-      let pl = 0;
-      if(typeof al === 'number' && typeof bl === 'number'){
-        if(al < bl){ pl = +1; } else if (al > bl){ pl = -1; } else pl = 0;
-      }
-
-      // Nota: ph/pl están dados desde perspectiva de A vs B:
-      // ph = +1 => A gana ese enfrentamiento (alto vs alto). -1 => A pierde.
-      // Sumamos para puntos por hoyo
-      const sum = ph + pl;
-      vals.pointsA = sum;
-      vals.pointsB = -sum;
-      totalPointsA += vals.pointsA;
-      totalPointsB += vals.pointsB;
-      // guardar índices relevantes para render
-      vals.meta = { aHighIdx, aLowIdx, bHighIdx, bLowIdx, ph, pl };
-      holes.push(vals);
+    if (scoresA.length === 0 && scoresB.length === 0) {
+      results.push({hoyo:h+1, empty:true});
+      continue;
     }
 
-    // calculo de saldos por usuario: based on totalPoints * price (por miembro)
-    const perUserDelta = {};
-    const gainA = totalPointsA * price;
-    const gainB = totalPointsB * price;
-    // each member of pair receives gainA ; members of B receive gainB (can be negative)
-    perUserDelta[pairA.p1Uid] = (perUserDelta[pairA.p1Uid]||0) + gainA;
-    perUserDelta[pairA.p2Uid] = (perUserDelta[pairA.p2Uid]||0) + gainA;
-    perUserDelta[pairB.p1Uid] = (perUserDelta[pairB.p1Uid]||0) + gainB;
-    perUserDelta[pairB.p2Uid] = (perUserDelta[pairB.p2Uid]||0) + gainB;
+    // ordenar para identificar mayor y menor
+    const sortedA = scoresA.sort((x,y)=>x-y);
+    const sortedB = scoresB.sort((x,y)=>x-y);
 
-    return { holes, totalPointsA, totalPointsB, perUserDelta, pairA, pairB };
+    const lowA = sortedA[0] ?? null;
+    const highA = sortedA[sortedA.length-1] ?? null;
+    const lowB = sortedB[0] ?? null;
+    const highB = sortedB[sortedB.length-1] ?? null;
+
+    // comparar enfrentamientos: bajo vs bajo, alto vs alto
+    let ptsA = 0, ptsB = 0;
+    let colorLowA='black', colorLowB='black', colorHighA='black', colorHighB='black';
+
+    if (lowA!=null && lowB!=null) {
+      if (lowA < lowB) { ptsA++; colorLowA='green'; colorLowB='red'; }
+      else if (lowB < lowA) { ptsB++; colorLowB='green'; colorLowA='red'; }
+    }
+
+    if (highA!=null && highB!=null) {
+      if (highA < highB) { ptsA++; colorHighA='green'; colorHighB='red'; }
+      else if (highB < highA) { ptsB++; colorHighB='green'; colorHighA='red'; }
+    }
+
+    totalA += ptsA;
+    totalB += ptsB;
+
+    results.push({
+      hoyo: h+1,
+      lowA, lowB, highA, highB,
+      colorLowA, colorLowB, colorHighA, colorHighB,
+      ptsA, ptsB
+    });
   }
+
+  // saldo final por hoyo → acumulado
+  const saldo = totalA - totalB;
+
+  return {
+    pairA, pairB, results,
+    totalA, totalB, saldo,
+    price
+  };
+}
+
 
   async function computeAndRenderAllMatchups(price){
     matchupsContainer.innerHTML = '';
