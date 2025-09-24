@@ -135,40 +135,30 @@
 async function loadUsers() {
   allUsers = [];
   try {
-    const uRef = collection(db, 'usuarios');
-    let memberUids = null;
+    if(!grupoId) return;
 
-    if(grupoId){
-      const gSnap = await getDoc(doc(db, 'grupos', grupoId));
-      if (gSnap.exists()) {
-        const gData = gSnap.data();
-        if (Array.isArray(gData.miembros)) memberUids = gData.miembros.map(m=>m.uid);
-      }
-    }
+    const gSnap = await getDoc(doc(db, 'grupos', grupoId));
+    if (!gSnap.exists()) return;
 
-    let usersSnap;
-    if (memberUids && memberUids.length > 0) {
-      // Firestore 'in' solo permite 10; si son más, fallback a cargar todos
-      if(memberUids.length <= 10){
-        const q = query(uRef, where('__name__','in',memberUids));
-        usersSnap = await getDocs(q);
-      } else {
-        usersSnap = await getDocs(uRef); // cargar todos y filtrar después
-      }
-    } else {
-      usersSnap = await getDocs(uRef);
-    }
+    const gData = gSnap.data();
+    if(!Array.isArray(gData.miembros)) return;
 
-    usersSnap.forEach(d => {
-      allUsers.push({ id: d.id, ...d.data() });
-    });
+    // Usar miembros directamente
+    allUsers = gData.miembros.map(m => ({
+      id: m.uid,
+      nombre: m.nombre || m.iniciales,
+      initials: m.iniciales || initialsFromName(m.nombre),
+      handicap: m.handicap || 0,
+      gender: m.gender || 'M'
+    }));
 
-    console.log("Usuarios cargados:", allUsers);
+    console.log("Usuarios cargados del grupo:", allUsers);
     populateUserSelects();
   } catch(e) {
     console.error("Error loadUsers", e);
   }
 }
+
 
   function populateUserSelects(){
     [player1Select, player2Select].forEach(sel=>{
