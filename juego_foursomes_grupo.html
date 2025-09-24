@@ -159,13 +159,42 @@ async function loadUsers() {
     return;
     }
 
-    allUsers = membersArray.map(m => ({
-    id: m.uid || m.id, // si en tu DB el campo es uid o id
-    nombre: m.nombre || m.iniciales || 'Sin Nombre',
-    initials: m.iniciales || initialsFromName(m.nombre),
-    handicap: m.handicap || 0,
-    gender: m.gender || 'M'
-    }));
+    allUsers = await Promise.all(
+    membersArray.map(async m => {
+        const uid = m.uid || m.id;
+        try {
+        const userSnap = await getDoc(doc(db, 'users', uid));
+        if (userSnap.exists()) {
+            const uData = userSnap.data();
+            return {
+            id: uid,
+            nombre: uData.nombre || 'Sin Nombre',
+            initials: initialsFromName(uData.nombre),
+            handicap: uData.handicap || 0,
+            gender: uData.gender || 'M'
+            };
+        } else {
+            return {
+            id: uid,
+            nombre: 'Sin Nombre',
+            initials: 'SN',
+            handicap: 0,
+            gender: 'M'
+            };
+        }
+        } catch(e){
+        console.error('Error leyendo user', uid, e);
+        return {
+            id: uid,
+            nombre: 'Sin Nombre',
+            initials: 'SN',
+            handicap: 0,
+            gender: 'M'
+        };
+        }
+    })
+    );
+
 
 
     console.log("Usuarios cargados del grupo:", allUsers);
@@ -309,9 +338,12 @@ async function loadUsers() {
   }
   grupoId = juegoSnap.data()?.grupoId || null;
   if (!grupoId) {
-    alert('El juego no tiene grupoId definido.');
-    return;
-  }
+    const juegoSnap = await getDoc(doc(db, 'juegos', juegoId));
+    if(juegoSnap.exists()){
+        grupoId = juegoSnap.data()?.grupoId || null;
+    }
+}
+
 
   // 2️⃣ Guardar documento en 'juego_foursomes' usando grupoId
   const jFoursomesRef = doc(db, 'juego_foursomes', juegoId);
@@ -699,17 +731,23 @@ async function initAll() {
     const jRef = doc(db, 'juego_foursomes', juegoId);
     const jSnap = await getDoc(jRef);
     if (jSnap.exists()) {
-      const jData = jSnap.data();
-      grupoId = jData?.grupoId || jData?.grupo || grupoId;
-      console.log("initAll: grupoId =", grupoId);
-      pairs = Array.isArray(jData?.pairs) ? jData.pairs : [];
-      priceInput.value = jData?.price || '';
-      
-      if(pairs.length > 0) {
-        gameArea.style.display = 'block';
-        gameMeta.innerText = `Juego ${juegoId} — Precio por pareja ${priceInput.value} — Parejas: ${pairs.length}`;
-      }
-    }
+  const jData = jSnap.data();
+
+  // ✅ Tomamos grupoId (si no existe, conserva el que ya había en memoria)
+  grupoId = jData?.grupoId || jData?.grupo || grupoId;
+  console.log("initAll: grupoId =", grupoId);
+
+  // ✅ Recuperamos pairs y price
+  pairs = Array.isArray(jData?.pairs) ? jData.pairs : [];
+  priceInput.value = jData?.price || '';
+
+  // ✅ Mostrar área de juego si hay parejas
+  if (pairs.length > 0) {
+    gameArea.style.display = 'block';
+    gameMeta.innerText = `Juego ${juegoId} — Precio por pareja ${priceInput.value} — Parejas: ${pairs.length}`;
+  }
+}
+
   } catch(e){
     console.warn('initAll: no pude leer juego_foursomes', e);
   }
