@@ -1,0 +1,655 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Foursomes — Golftrix</title>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@700&display=swap" rel="stylesheet" />
+<style>
+  :root { --green-1:#007f00; --green-2:#00cc44; }
+  body { font-family:'Orbitron',sans-serif; padding:12px; background:#f6f6f6; color:#111; }
+  .card { background:#fff; border-radius:12px; padding:12px; box-shadow:0 6px 18px rgba(0,0,0,0.06); margin-bottom:12px; }
+  h1 { margin:0 0 8px 0; color:var(--green-1); }
+  label{ font-weight:700; display:block; margin-bottom:6px; }
+  select,input[type=number]{ padding:8px; border-radius:8px; border:1px solid #ddd; width:100%; box-sizing:border-box; }
+  .row { display:flex; gap:12px; align-items:center; flex-wrap:wrap; }
+  .col { flex:1; min-width:200px; }
+  button.primary{ background:linear-gradient(90deg,var(--green-1),var(--green-2)); color:#fff; border:0; padding:8px 12px; border-radius:10px; cursor:pointer; font-weight:800; }
+  button.ghost{ background:transparent; border:1px solid #ddd; padding:8px 10px; border-radius:8px; cursor:pointer; }
+  .pairs-list{ display:flex; gap:8px; flex-wrap:wrap; margin-top:8px; }
+  .pair-pill{ padding:8px 10px; border-radius:10px; display:flex; gap:8px; align-items:center; color:#fff; font-weight:800; }
+  .badge { width:36px; height:36px; border-radius:50%; display:inline-flex; align-items:center; justify-content:center; background:#000; color:#fff; font-weight:800; border:3px solid transparent; }
+  table { width:100%; border-collapse:collapse; margin-top:8px; }
+  th,td { padding:6px; border:1px solid #eee; text-align:center; font-size:0.9rem; }
+  th.nameCol, td.nameCol { text-align:left; padding-left:10px; }
+  .hole-empty { background:#fafafa; color:#999; }
+  .score-less { color:green; font-weight:800; }
+  .score-more { color:red; font-weight:800; }
+  .neutral-bg { background:#f5f5f5; }
+  .result-pill { font-weight:900; padding:6px 8px; border-radius:8px; display:inline-block; min-width:56px; text-align:center; }
+  .saldo { font-weight:900; font-size:1.1rem; padding:8px; border-radius:8px; display:inline-block; }
+  .team-header { display:flex; gap:8px; align-items:center; font-weight:900; }
+  .tables-wrap { display:flex; gap:12px; flex-direction:column; }
+  @media (min-width:1000px){ .tables-grid{ display:grid; grid-template-columns:1fr 1fr; gap:12px; } }
+</style>
+</head>
+<body>
+  <div class="card">
+    <h1>Foursomes - Modo Grupo</h1>
+    <div class="row">
+      <div class="col">
+        <label for="priceInput">Precio por pareja (MXN)</label>
+        <input type="number" id="priceInput" min="1" step="1" />
+      </div>
+      <div class="col">
+        <label>Seleccionar Jugadores para Pareja</label>
+        <div style="display:flex;gap:8px">
+          <select id="player1Select"></select>
+          <select id="player2Select"></select>
+          <button id="addPairBtn" class="primary">Agregar Pareja</button>
+        </div>
+      </div>
+    </div>
+
+    <div style="margin-top:12px;">
+      <div style="display:flex; justify-content:space-between; align-items:center;">
+        <div><strong>Parejas creadas</strong></div>
+        <div>
+          <button id="startGameBtn" class="primary">Comenzar Juego</button>
+          <button id="refreshBtn" class="ghost">Refrescar</button>
+        </div>
+      </div>
+      <div id="pairsList" class="pairs-list"></div>
+    </div>
+  </div>
+
+  <div id="gameArea" class="card" style="display:none;">
+    <div id="gameHeader" style="display:flex; justify-content:space-between; align-items:center;">
+      <div id="gameMeta"></div>
+      <div id="miSaldo" class="saldo neutral-bg"></div>
+    </div>
+
+    <div id="matchupsContainer" class="tables-wrap"></div>
+  </div>
+
+<script>
+  function getQueryParam(n){ const u=new URL(location.href); return u.searchParams.get(n); }
+</script>
+
+<script type="module">
+  import { app, db, auth } from './firebase-config.js';
+  import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+  import {
+    doc, getDoc, setDoc, updateDoc, serverTimestamp,
+    collection, query, where, getDocs, addDoc
+  } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+  // --- Estado y elementos DOM ---
+  const juegoId = getQueryParam('juegoId') || getQueryParam('id') || ('foursomes_' + Date.now());
+  const player1Select = document.getElementById('player1Select');
+  const player2Select = document.getElementById('player2Select');
+  const addPairBtn = document.getElementById('addPairBtn');
+  const pairsList = document.getElementById('pairsList');
+  const priceInput = document.getElementById('priceInput');
+  const startGameBtn = document.getElementById('startGameBtn');
+  const refreshBtn = document.getElementById('refreshBtn');
+  const gameArea = document.getElementById('gameArea');
+  const gameMeta = document.getElementById('gameMeta');
+  const matchupsContainer = document.getElementById('matchupsContainer');
+  const miSaldoEl = document.getElementById('miSaldo');
+
+  const authInst = auth;
+  let currentUser = null;
+
+  // Data caches
+  let allUsers = []; // { uid, nombre, initials, handicap, gender }
+  let tarjetasCache = []; // tarjetas para este juego
+  let camposCache = {}; // campoId -> campoData
+  let pairs = []; // { id, p1Uid, p2Uid, color }
+
+  // utils
+  function randColor() {
+    // palette saturada
+    const palette = ['#e63946','#ff6b6b','#f97316','#f59e0b','#ffd166','#06d6a0','#118ab2','#3a86ff','#7c4dff','#9d4edd'];
+    return palette[Math.floor(Math.random()*palette.length)];
+  }
+  function initialsFromName(name){
+    if(!name) return '';
+    const parts = name.split(' ').filter(Boolean);
+    if(parts.length===1) return parts[0].slice(0,2).toUpperCase();
+    return (parts[0][0]+ (parts[1]?.[0]||'')).toUpperCase();
+  }
+
+  // ---------------------- FIRESTORE: obtener usuarios disponibles ----------------------
+  async function loadUsers() {
+    try {
+      const col = collection(db, 'users');
+      const snap = await getDocs(col);
+      allUsers = [];
+      snap.forEach(d => {
+        const dd = d.data();
+        const nombre = dd.name ?? dd.nombre ?? dd.firstName ?? dd.firstName ?? (dd.displayName||'');
+        const uid = d.id;
+        const handicap = (typeof dd.handicap==='number')?dd.handicap:(Number(dd.handicap)||0);
+        const gender = (dd.gender||dd.sexo||dd.genero||'M').toString();
+        allUsers.push({ uid, nombre: nombre || uid, handicap, gender, raw: dd });
+      });
+      populateUserSelects();
+    } catch (e) {
+      console.error('Error loadUsers', e);
+    }
+  }
+
+  function populateUserSelects(){
+    [player1Select, player2Select].forEach(sel=>{
+      sel.innerHTML = '<option value="">-- elegir --</option>';
+      allUsers.forEach(u=>{
+        const opt = document.createElement('option');
+        opt.value = u.uid;
+        opt.textContent = u.nombre;
+        sel.appendChild(opt);
+      });
+    });
+  }
+
+  // ---------------------- Obtener tarjetas (reusa lógica) ----------------------
+  async function obtenerTarjetasConScores() {
+    try {
+      const tarjetasCol = collection(db, 'tarjetas');
+      const q = query(tarjetasCol, where('juegoId','==', juegoId));
+      const snap = await getDocs(q);
+      const tarjetas = [];
+      snap.forEach(d => {
+        const data = d.data();
+        const scores = Array.isArray(data.scores) ? data.scores : [];
+        const hasAny = scores.some(s => {
+          const g = s.golpes;
+          return (typeof g === 'number' && !isNaN(g)) || (typeof g === 'string' && !isNaN(Number(g)));
+        });
+        if (hasAny) { tarjetas.push({ id: d.id, ...data }); }
+      });
+      tarjetasCache = tarjetas;
+      return tarjetas;
+    } catch (err) {
+      console.error('Error obteniendo tarjetas', err);
+      tarjetasCache = [];
+      return [];
+    }
+  }
+
+  // ---------------------- Obtener pares por hoyo y ventajas (camposGolf) ----------------------
+  async function obtenerParYVentajas(campoId) {
+    if (!campoId) return { pares:null, vantM:null, vantF:null };
+    if (camposCache[campoId]) return camposCache[campoId];
+    try {
+      const cref = doc(db, 'camposGolf', campoId);
+      const csnap = await getDoc(cref);
+      if (!csnap.exists()) { camposCache[campoId] = { pares:null, vantM:null, vantF:null }; return camposCache[campoId]; }
+      const cdata = csnap.data();
+      const pares = Array.isArray(cdata.paresHoyo) ? cdata.paresHoyo : (Array.isArray(cdata.pares_hoyo)?cdata.pares_hoyo:null);
+      // detect possible keys for ventajas por genero (tolerante)
+      const vantM = Array.isArray(cdata.ventajasM) ? cdata.ventajasM
+                    : Array.isArray(cdata.ventajas_m) ? cdata.ventajas_m
+                    : Array.isArray(cdata.ventajasMale) ? cdata.ventajasMale
+                    : Array.isArray(cdata.advantagesMale) ? cdata.advantagesMale
+                    : Array.isArray(cdata.ventajasHombre) ? cdata.ventajasHombre
+                    : null;
+      const vantF = Array.isArray(cdata.ventajasF) ? cdata.ventajasF
+                    : Array.isArray(cdata.ventajas_f) ? cdata.ventajas_f
+                    : Array.isArray(cdata.ventajasFemale) ? cdata.ventajasFemale
+                    : Array.isArray(cdata.advantagesFemale) ? cdata.advantagesFemale
+                    : Array.isArray(cdata.ventajasMujer) ? cdata.ventajasMujer
+                    : null;
+      camposCache[campoId] = { pares, vantM, vantF };
+      return camposCache[campoId];
+    } catch (e) {
+      console.error('Error obtenerParYVentajas', e);
+      camposCache[campoId] = { pares:null, vantM:null, vantF:null };
+      return camposCache[campoId];
+    }
+  }
+
+  // ---------------------- PARES: manejo UI ----------------------
+  function renderPairsList(){
+    pairsList.innerHTML = '';
+    pairs.forEach((p, idx) => {
+      const pill = document.createElement('div');
+      pill.className = 'pair-pill';
+      pill.style.background = p.color;
+      pill.innerHTML = `
+        <div style="display:flex;gap:8px;align-items:center;">
+          <div style="display:flex;flex-direction:column; margin-right:6px;">
+            <div style="font-size:0.75rem; opacity:0.95">Pareja ${idx+1}</div>
+            <div style="font-size:0.8rem;opacity:0.9">${getUserName(p.p1Uid)} & ${getUserName(p.p2Uid)}</div>
+          </div>
+        </div>
+        <button data-idx="${idx}" style="margin-left:8px;background:transparent;border:0;color:#fff;cursor:pointer;font-weight:900">X</button>
+      `;
+      pairsList.appendChild(pill);
+      pill.querySelector('button').addEventListener('click', ()=> { pairs.splice(idx,1); renderPairsList(); });
+    });
+  }
+
+  function getUserName(uid){
+    const u = allUsers.find(x=>x.uid===uid);
+    return u ? u.nombre : uid;
+  }
+
+  addPairBtn.addEventListener('click', ()=>{
+    const p1 = player1Select.value;
+    const p2 = player2Select.value;
+    if(!p1 || !p2){ alert('Selecciona ambos jugadores'); return; }
+    if(p1===p2){ if(!confirm('Has escogido el mismo usuario dos veces. Confirmar pareja igual?')) return; }
+    const color = randColor();
+    pairs.push({ id: 'pair_'+Date.now()+'_'+Math.floor(Math.random()*9999), p1Uid:p1, p2Uid:p2, color });
+    renderPairsList();
+  });
+
+  refreshBtn.addEventListener('click', async ()=>{ await initAll(); });
+
+  // ---------------------- START GAME ----------------------
+  startGameBtn.addEventListener('click', async ()=> {
+    if(pairs.length < 2){ alert('Necesitas al menos 2 parejas para comenzar.'); return; }
+    const price = Number(priceInput.value);
+    if(!price || price<=0){ alert('Define un precio válido'); return; }
+
+    // Guardar juego en colección 'juegos' (doc con id juegoId)
+    try {
+      const jRef = doc(db, 'juegos', juegoId);
+      const payload = {
+        juegoId,
+        price,
+        pairs,
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp()
+      };
+      await setDoc(jRef, payload, { merge: true });
+      // cargar tarjetas y ejecutar cálculo
+      await obtenerTarjetasConScores();
+      await computeAndRenderAllMatchups(price);
+      gameArea.style.display = 'block';
+      gameMeta.innerText = `Juego ${juegoId} — Precio por pareja ${price} — Parejas: ${pairs.length}`;
+    } catch (e) {
+      console.error('Error startGame', e); alert('Error iniciando juego. Revisa consola.');
+    }
+  });
+
+  // ---------------------- Lógica de cálculo de matchups ----------------------
+  function findTarjetaForUser(uid) {
+    // Busca por userUid en tarjetasCache
+    return tarjetasCache.find(t => t.userUid === uid) || null;
+  }
+
+  function buildGolpesArrFromTarjeta(t) {
+    const arr = new Array(18).fill(null);
+    const scores = Array.isArray(t.scores) ? t.scores : [];
+    scores.forEach(s=>{
+      const hoyo = Number(s.hoyo);
+      const golpesRaw = s.golpes;
+      const golpes = (typeof golpesRaw === 'number') ? golpesRaw : (typeof golpesRaw === 'string' ? (isNaN(Number(golpesRaw))?null:Number(golpesRaw)) : null);
+      if(!isNaN(hoyo) && hoyo>=1 && hoyo<=18 && typeof golpes === 'number') arr[hoyo-1] = golpes;
+    });
+    return arr;
+  }
+
+  function genderOfUser(userObj) {
+    const g = (userObj?.gender||'M').toString().toLowerCase();
+    if(g.startsWith('f')) return 'F';
+    return 'M';
+  }
+
+  // aplica ventaja: devuelve golpes ajustados (sin alterar tarjeta)
+  function applyAdvantageToGolpesArray(golpesArr, userData, fieldVentajas) {
+    // fieldVentajas: { vantM, vantF } arrays or null
+    const result = new Array(18).fill(null);
+    for(let i=0;i<18;i++){
+      const raw = golpesArr[i];
+      if (typeof raw !== 'number') { result[i] = null; continue; }
+      let adj = raw;
+      const gender = genderOfUser(userData);
+      const handicap = userData.handicap || 0;
+      const vantArr = (gender === 'M') ? fieldVentajas.vantM : fieldVentajas.vantF;
+      const v = Array.isArray(vantArr) ? (Number(vantArr[i]) || 0) : 0;
+      // si handicap >= v entonces se resta 1 punto
+      if (v && handicap >= v) adj = adj - 1;
+      result[i] = adj;
+    }
+    return result;
+  }
+
+  // compara 2 parejas: devuelve objeto con tabla por hoyo y suma de puntos por pareja (array [pointsA, pointsB])
+  async function computeMatchup(pairA, pairB, price) {
+    // prepare: for each player fetch tarjeta y golpes (aplicando ventajas del campo si sabemos campoId)
+    // asumimos que tarjetas tienen campoId; si no, podremos no tener ventajas
+    const pA1 = findTarjetaForUser(pairA.p1Uid);
+    const pA2 = findTarjetaForUser(pairA.p2Uid);
+    const pB1 = findTarjetaForUser(pairB.p1Uid);
+    const pB2 = findTarjetaForUser(pairB.p2Uid);
+
+    const campoId = (pA1?.campoId || pA2?.campoId || pB1?.campoId || pB2?.campoId) || null;
+    const fieldInfo = await obtenerParYVentajas(campoId);
+
+    // build golpesArr raw
+    const a1Arr = pA1 ? buildGolpesArrFromTarjeta(pA1) : new Array(18).fill(null);
+    const a2Arr = pA2 ? buildGolpesArrFromTarjeta(pA2) : new Array(18).fill(null);
+    const b1Arr = pB1 ? buildGolpesArrFromTarjeta(pB1) : new Array(18).fill(null);
+    const b2Arr = pB2 ? buildGolpesArrFromTarjeta(pB2) : new Array(18).fill(null);
+
+    // obtener user objects (nombre, handicap, gender)
+    const uA1 = allUsers.find(u=>u.uid===pairA.p1Uid) || { uid: pairA.p1Uid, nombre:getUserName(pairA.p1Uid), handicap:0, gender:'M' };
+    const uA2 = allUsers.find(u=>u.uid===pairA.p2Uid) || { uid: pairA.p2Uid, nombre:getUserName(pairA.p2Uid), handicap:0, gender:'M' };
+    const uB1 = allUsers.find(u=>u.uid===pairB.p1Uid) || { uid: pairB.p1Uid, nombre:getUserName(pairB.p1Uid), handicap:0, gender:'M' };
+    const uB2 = allUsers.find(u=>u.uid===pairB.p2Uid) || { uid: pairB.p2Uid, nombre:getUserName(pairB.p2Uid), handicap:0, gender:'M' };
+
+    // aplicar ventajas por hoyo (si existen)
+    const aa1 = applyAdvantageToGolpesArray(a1Arr, uA1, fieldInfo);
+    const aa2 = applyAdvantageToGolpesArray(a2Arr, uA2, fieldInfo);
+    const bb1 = applyAdvantageToGolpesArray(b1Arr, uB1, fieldInfo);
+    const bb2 = applyAdvantageToGolpesArray(b2Arr, uB2, fieldInfo);
+
+    // preparar estructura por hoyo
+    const holes = [];
+    let totalPointsA = 0;
+    let totalPointsB = 0;
+
+    for(let h=0;h<18;h++){
+      const vals = {
+        holeIndex: h+1,
+        players: [
+          { uid: uA1.uid, name: uA1.nombre, raw: a1Arr[h], adj: aa1[h], initials: initialsFromName(uA1.nombre), teamColor: pairA.color },
+          { uid: uA2.uid, name: uA2.nombre, raw: a2Arr[h], adj: aa2[h], initials: initialsFromName(uA2.nombre), teamColor: pairA.color },
+          { uid: uB1.uid, name: uB1.nombre, raw: b1Arr[h], adj: bb1[h], initials: initialsFromName(uB1.nombre), teamColor: pairB.color },
+          { uid: uB2.uid, name: uB2.nombre, raw: b2Arr[h], adj: bb2[h], initials: initialsFromName(uB2.nombre), teamColor: pairB.color }
+        ],
+        pointsA:0,
+        pointsB:0
+      };
+
+      // determinar alto y bajo dentro de cada pareja (usar adj; null = no jugó)
+      // Si ambos null -> no hay enfrentamiento -> puntaje 0
+      const aAdj = [vals.players[0].adj, vals.players[1].adj];
+      const bAdj = [vals.players[2].adj, vals.players[3].adj];
+
+      const validA = aAdj.filter(x=>typeof x==='number');
+      const validB = bAdj.filter(x=>typeof x==='number');
+
+      if(validA.length===0 || validB.length===0){
+        // no se puede comparar
+        holes.push(vals);
+        continue;
+      }
+
+      // identificar alto y bajo: alto = max (mayor golpes), bajo = min (menor golpes)
+      const aHigh = Math.max(...validA);
+      const aLow = Math.min(...validA);
+      const bHigh = Math.max(...validB);
+      const bLow = Math.min(...validB);
+
+      // get which player index is high/low within pair A and B (choose first occurrence)
+      function findIndexOfValueInPair(arrAdj, value, offset){ // offset = 0 for A, 2 for B
+        for(let i=0;i<2;i++){
+          if(typeof arrAdj[i] === 'number' && arrAdj[i] === value) return offset + i;
+        }
+        return offset; // fallback
+      }
+      const aHighIdx = findIndexOfValueInPair([vals.players[0].adj, vals.players[1].adj], aHigh, 0);
+      const aLowIdx  = findIndexOfValueInPair([vals.players[0].adj, vals.players[1].adj], aLow, 0);
+      const bHighIdx = findIndexOfValueInPair([vals.players[2].adj, vals.players[3].adj], bHigh, 2);
+      const bLowIdx  = findIndexOfValueInPair([vals.players[2].adj, vals.players[3].adj], bLow, 2);
+
+      // Compare high vs high
+      const ah = vals.players[aHighIdx].adj;
+      const bh = vals.players[bHighIdx].adj;
+      let ph = 0;
+      if(typeof ah === 'number' && typeof bh === 'number'){
+        if(ah < bh){ ph = +1; } else if (ah > bh){ ph = -1; } else ph = 0;
+      }
+      // Compare low vs low
+      const al = vals.players[aLowIdx].adj;
+      const bl = vals.players[bLowIdx].adj;
+      let pl = 0;
+      if(typeof al === 'number' && typeof bl === 'number'){
+        if(al < bl){ pl = +1; } else if (al > bl){ pl = -1; } else pl = 0;
+      }
+
+      // Nota: ph/pl están dados desde perspectiva de A vs B:
+      // ph = +1 => A gana ese enfrentamiento (alto vs alto). -1 => A pierde.
+      // Sumamos para puntos por hoyo
+      const sum = ph + pl;
+      vals.pointsA = sum;
+      vals.pointsB = -sum;
+      totalPointsA += vals.pointsA;
+      totalPointsB += vals.pointsB;
+      // guardar índices relevantes para render
+      vals.meta = { aHighIdx, aLowIdx, bHighIdx, bLowIdx, ph, pl };
+      holes.push(vals);
+    }
+
+    // calculo de saldos por usuario: based on totalPoints * price (por miembro)
+    const perUserDelta = {};
+    const gainA = totalPointsA * price;
+    const gainB = totalPointsB * price;
+    // each member of pair receives gainA ; members of B receive gainB (can be negative)
+    perUserDelta[pairA.p1Uid] = (perUserDelta[pairA.p1Uid]||0) + gainA;
+    perUserDelta[pairA.p2Uid] = (perUserDelta[pairA.p2Uid]||0) + gainA;
+    perUserDelta[pairB.p1Uid] = (perUserDelta[pairB.p1Uid]||0) + gainB;
+    perUserDelta[pairB.p2Uid] = (perUserDelta[pairB.p2Uid]||0) + gainB;
+
+    return { holes, totalPointsA, totalPointsB, perUserDelta, pairA, pairB };
+  }
+
+  async function computeAndRenderAllMatchups(price){
+    matchupsContainer.innerHTML = '';
+    // obtener tarjetas si no
+    if(!tarjetasCache || tarjetasCache.length===0) await obtenerTarjetasConScores();
+
+    // generar matchups: cada par con cada otro par (A vs B, B vs C, etc. Excluir emparejamientos con sí mismo)
+    const results = [];
+    for(let i=0;i<pairs.length;i++){
+      for(let j=i+1;j<pairs.length;j++){
+        const r = await computeMatchup(pairs[i], pairs[j], price);
+        results.push(r);
+      }
+    }
+
+    // acumular saldo total para currentUser
+    let totalSaldoUser = 0;
+    // sumar de cada matchup
+    results.forEach(r=>{
+      const delta = r.perUserDelta[currentUser?.uid] || 0;
+      totalSaldoUser += delta;
+    });
+
+    // render each matchup as a table block
+    results.forEach((r, idx)=>{
+      const block = document.createElement('div');
+      block.className = 'card';
+      block.style.padding = '8px';
+      // header: equipos y pts totales
+      const header = document.createElement('div');
+      header.className = 'team-header';
+      header.innerHTML = `
+        <div style="display:flex;align-items:center;gap:8px;">
+          <div style="width:18px;height:18px;border-radius:50%;background:${r.pairA.color};"></div>
+          Equipo A: ${getUserName(r.pairA.p1Uid)} & ${getUserName(r.pairA.p2Uid)} (Pts: ${r.totalPointsA})
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;">
+          <div style="width:18px;height:18px;border-radius:50%;background:${r.pairB.color};"></div>
+          Equipo B: ${getUserName(r.pairB.p1Uid)} & ${getUserName(r.pairB.p2Uid)} (Pts: ${r.totalPointsB})
+        </div>
+      `;
+      block.appendChild(header);
+
+      // table show 4 players rows: A1, A2, B1, B2
+      const table = document.createElement('table');
+      const thead = document.createElement('thead');
+      const trh = document.createElement('tr');
+      trh.innerHTML = `<th class="nameCol">Jugador</th>`;
+      for(let h=1;h<=18;h++){
+        const th = document.createElement('th'); th.textContent = 'H'+h; trh.appendChild(th);
+      }
+      const thRes = document.createElement('th'); thRes.textContent = 'Puntaje'; trh.appendChild(thRes);
+      thead.appendChild(trh);
+      table.appendChild(thead);
+
+      const tbody = document.createElement('tbody');
+
+      // Helper to build a row for a given playerIndex in r.holes.players
+      function buildRowForPlayer(playerIndex){
+        const tr = document.createElement('tr');
+        const playerInfo = r.holes[0].players[playerIndex];
+        const nameTd = document.createElement('td'); nameTd.className='nameCol';
+        nameTd.innerHTML = `<div style="display:flex;align-items:center;gap:8px;">
+            <div class="badge" style="background:${playerInfo.teamColor};border-color:transparent;color:#fff;">${playerInfo.initials}</div>
+            <div style="font-weight:800">${playerInfo.name}</div>
+          </div>`;
+        tr.appendChild(nameTd);
+
+        // For each hole cell compute styling
+        let accumulatedPairPoints = 0;
+        for(let h=0;h<18;h++){
+          const td = document.createElement('td');
+          const hole = r.holes[h];
+          const p = hole.players[playerIndex];
+          const cellVal = (typeof p.adj === 'number') ? p.adj : '-';
+          td.textContent = cellVal;
+          // color numeric: green if it's the lower (better) between the two opponents in that head-to-head, red if higher
+          // determine opponent index for this player's head-to-head:
+          // if this player belongs to A (index 0 or 1), then opponent is the corresponding high/low in B
+          // find which role (high/low) this player had in his pair for this hole
+          const meta = hole.meta || {};
+          // default bg neutral
+          td.className = '';
+          td.style.background = '';
+          if(meta && Object.keys(meta).length){
+            // find if this player is A high/low or B high/low
+            let role = null; // 'A-high','A-low','B-high','B-low'
+            if(playerIndex === meta.aHighIdx) role = 'A-high';
+            else if(playerIndex === meta.aLowIdx) role = 'A-low';
+            else if(playerIndex === meta.bHighIdx) role = 'B-high';
+            else if(playerIndex === meta.bLowIdx) role = 'B-low';
+
+            // Identify which pair color to use as background for this head to head:
+            // We'll use the color of the winning side of that head-to-head (if ph/pl indicate)
+            if(role === 'A-high' || role === 'A-low'){
+              // compare with appropriate B
+              const isHigh = role.endsWith('high');
+              const competitorIdx = isHigh ? meta.bHighIdx : meta.bLowIdx;
+              // determine winner for that comparison
+              const ph = isHigh ? meta.ph : meta.pl;
+              if(ph > 0){ // A won this sub-match
+                td.style.background = r.pairA.color;
+              } else if (ph < 0){
+                td.style.background = r.pairB.color;
+              } else {
+                td.style.background = '#f5f5f5';
+              }
+              // color number: green if player's adj is lower than opponent adj, red if higher
+              const oppAdj = hole.players[competitorIdx].adj;
+              if(typeof p.adj === 'number' && typeof oppAdj === 'number'){
+                if(p.adj < oppAdj){ td.classList.add('score-less'); }
+                else if (p.adj > oppAdj) { td.classList.add('score-more'); }
+              }
+            } else if (role === 'B-high' || role === 'B-low'){
+              const isHigh = role.endsWith('high');
+              const competitorIdx = isHigh ? meta.aHighIdx : meta.aLowIdx;
+              const ph = isHigh ? meta.ph : meta.pl;
+              if(ph > 0){ // from perspective A: ph>0 A won -> winner color A
+                td.style.background = r.pairA.color;
+              } else if (ph < 0){
+                td.style.background = r.pairB.color;
+              } else {
+                td.style.background = '#f5f5f5';
+              }
+              const oppAdj = hole.players[competitorIdx].adj;
+              if(typeof p.adj === 'number' && typeof oppAdj === 'number'){
+                if(p.adj < oppAdj){ td.classList.add('score-less'); }
+                else if (p.adj > oppAdj) { td.classList.add('score-more'); }
+              }
+            } else {
+              td.style.background = '#fafafa';
+            }
+          } else {
+            td.style.background = '#fafafa';
+          }
+          tr.appendChild(td);
+        }
+
+        // last column: puntaje de la pareja en ese hoyo (suma de ph+pl)
+        // But we must compute pair's point per hole for this row's team
+        // find pair of this player (A or B)
+        const isA = (playerIndex === 0 || playerIndex === 1);
+        const ptsCol = document.createElement('td');
+        // sum points over holes for pair (for simplicity compute now)
+        let sumPair = 0;
+        for(let h=0;h<18;h++){ sumPair += r.holes[h][isA ? 'pointsA' : 'pointsB']; }
+        ptsCol.textContent = sumPair;
+        ptsCol.style.fontWeight = '900';
+        ptsCol.style.background = isA ? r.pairA.color : r.pairB.color;
+        ptsCol.style.color = '#fff';
+        tr.appendChild(ptsCol);
+
+        return tr;
+      }
+
+      // rows: A1, A2, B1, B2
+      const rowA1 = buildRowForPlayer(0);
+      const rowA2 = buildRowForPlayer(1);
+      const rowB1 = buildRowForPlayer(2);
+      const rowB2 = buildRowForPlayer(3);
+
+      tbody.appendChild(rowA1);
+      tbody.appendChild(rowA2);
+      tbody.appendChild(rowB1);
+      tbody.appendChild(rowB2);
+      table.appendChild(tbody);
+      block.appendChild(table);
+
+      // summary line: saldo por miembro de cada equipo en este matchup
+      const sumDiv = document.createElement('div');
+      sumDiv.style.marginTop = '8px';
+      const gainA = r.totalPointsA * price;
+      const gainB = r.totalPointsB * price;
+      sumDiv.innerHTML = `<div style="display:flex;gap:12px;align-items:center;">
+        <div style="padding:6px;border-radius:8px;background:${r.pairA.color};color:#fff;font-weight:900;">
+          Equipo A por miembro: ${gainA>=0?'+':''}${gainA}
+        </div>
+        <div style="padding:6px;border-radius:8px;background:${r.pairB.color};color:#fff;font-weight:900;">
+          Equipo B por miembro: ${gainB>=0?'+':''}${gainB}
+        </div>
+      </div>`;
+      block.appendChild(sumDiv);
+
+      matchupsContainer.appendChild(block);
+    });
+
+    // mostrar saldo global del currentUser acumulado
+    miSaldoEl.textContent = `Saldo total estimado: ${totalSaldoUser>=0?'+':''}${totalSaldoUser}`;
+    miSaldoEl.style.background = totalSaldoUser >= 0 ? 'linear-gradient(90deg,#e6ffe6,#ddffdd)' : 'linear-gradient(90deg,#ffe6e6,#ffdede)';
+    miSaldoEl.style.color = totalSaldoUser >= 0 ? 'green' : 'red';
+    miSaldoEl.style.padding = '8px';
+  }
+
+  // ---------------------- INIT ----------------------
+  async function initAll(){
+    await loadUsers();
+    await obtenerTarjetasConScores();
+    renderPairsList();
+  }
+
+  onAuthStateChanged(authInst, async (user)=>{
+    currentUser = user;
+    if(!user){
+      // still load users but show limited
+      await initAll();
+      return;
+    }
+    await initAll();
+  });
+
+  // inicia al cargar
+  initAll();
+
+</script>
+</body>
+</html>
