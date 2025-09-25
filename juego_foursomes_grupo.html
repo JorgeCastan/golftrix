@@ -395,6 +395,10 @@ startGameBtn.addEventListener("click", async () => {
       return;
     }
 
+    // 🔥 Cargar tarjetas primero
+    await obtenerTarjetasConScores();
+
+
     // Filtrar las demás parejas
     const otherPairs = pairs.filter(p => p.id !== myPair.id);
 
