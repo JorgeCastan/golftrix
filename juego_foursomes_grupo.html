@@ -503,137 +503,145 @@ function getUserObj(uid) {
     };
   }
 
-  async function computeAndRenderAllMatchups(price, myPair){
-  await obtenerTarjetasConScores();
-
+  async function computeAndRenderAllMatchups(price, myPair) {
   matchupsContainer.innerHTML = '';
 
-  // Recorremos las parejas de 2 en 2
-  for(let i=0;i<pairs.length;i+=2){
-    const pairA = pairs[i];
-    const pairB = pairs[i+1];
-    if(!pairA || !pairB) continue;
+  if(!pairs || pairs.length<2) return;
+
+  // generar matchups: si myPair existe, solo vs otros
+  const matchupPairs = myPair ? pairs.filter(p => p.id !== myPair.id) : pairs;
+  const matchups = [];
+
+  for(const p of matchupPairs){
+    if(myPair){
+      matchups.push(await computeMatchup(myPair, p, price));
+    } else {
+      for(let i=0;i<pairs.length;i++){
+        for(let j=i+1;j<pairs.length;j++){
+          matchups.push(await computeMatchup(pairs[i], pairs[j], price));
+        }
+      }
+      break;
+    }
+  }
+
+  // calcular saldo total estimado del usuario actual
+  let totalSaldoUser = 0;
+  matchups.forEach(r=>{
+    if(currentUser){
+      const uid = currentUser.uid;
+      const userInA = r.pairA.p1Uid === uid || r.pairA.p2Uid === uid;
+      const userInB = r.pairB.p1Uid === uid || r.pairB.p2Uid === uid;
+      let delta = 0;
+      if(userInA) delta = r.totalPointsA - r.totalPointsB;
+      else if(userInB) delta = r.totalPointsB - r.totalPointsA;
+      totalSaldoUser += delta;
+    }
+  });
+
+  // renderizar tablas
+  for(const r of matchups){
+    const tableBlock = document.createElement('div');
+    tableBlock.className = 'card';
+    tableBlock.style.padding='8px';
+
+    const header = document.createElement('div');
+    header.className='team-header';
+    header.innerHTML = `
+      <div style="display:flex;align-items:center;gap:8px;">
+        <div style="width:18px;height:18px;border-radius:50%;background:${r.pairA.color};"></div>
+        Equipo A: ${getUserName(r.pairA.p1Uid)} & ${getUserName(r.pairA.p2Uid)} (Pts: ${r.totalPointsA})
+      </div>
+      <div style="display:flex;align-items:center;gap:8px;">
+        <div style="width:18px;height:18px;border-radius:50%;background:${r.pairB.color};"></div>
+        Equipo B: ${getUserName(r.pairB.p1Uid)} & ${getUserName(r.pairB.p2Uid)} (Pts: ${r.totalPointsB})
+      </div>
+    `;
+    tableBlock.appendChild(header);
 
     const table = document.createElement('table');
     const thead = document.createElement('thead');
+    const trh = document.createElement('tr');
+    trh.innerHTML = `<th class="nameCol">Jugador</th>` + Array.from({length:18},(_,i)=>`<th>H${i+1}</th>`).join('') + `<th>Puntaje</th>`;
+    thead.appendChild(trh);
+    table.appendChild(thead);
+
     const tbody = document.createElement('tbody');
 
-    thead.innerHTML = `
-      <tr>
-        <th class="nameCol">Jugador</th>
-        ${Array.from({length:18}, (_,i)=>`<th>H${i+1}</th>`).join('')}
-      </tr>
-    `;
-
-    // obtener tarjetas y golpes
-    function getUserRow(uid){
-      const user = allUsers.find(u=>u.id===uid);
-      const tarjeta = findTarjetaForUser(uid);
-      const golpes = tarjeta ? buildGolpesArrFromTarjeta(tarjeta) : new Array(18).fill(null);
-      return { uid, name:user?.nombre||uid, golpes, color:'' };
-    }
-
-    const playersA = [ getUserRow(pairA.p1Uid), getUserRow(pairA.p2Uid) ];
-    const playersB = [ getUserRow(pairB.p1Uid), getUserRow(pairB.p2Uid) ];
-
-    // construir filas de jugadores
-    const rows = [...playersA, ...playersB].map(pl=>{
+    // 4 jugadores
+    for(let pi=0; pi<4; pi++){
       const tr = document.createElement('tr');
-      tr.innerHTML = `<td class="nameCol">${pl.name}</td>`;
-      pl.cells = [];
-      for(let h=0;h<18;h++){
+      const playerInfo = r.holes[0].players[pi];
+      const nameTd = document.createElement('td');
+      nameTd.className='nameCol';
+      nameTd.innerHTML = `<div style="display:flex;align-items:center;gap:8px;">
+        <div class="badge" style="background:${playerInfo.teamColor};border-color:transparent;color:#fff;">${playerInfo.initials}</div>
+        <div style="font-weight:800">${playerInfo.name}</div>
+      </div>`;
+      tr.appendChild(nameTd);
+
+      let pairPoints = 0;
+      for(let h=0; h<18; h++){
         const td = document.createElement('td');
-        td.classList.add('hole-empty');
-        pl.cells.push(td);
+        const hole = r.holes[h];
+        const p = hole.players[pi];
+        td.textContent = (typeof p.adj==='number') ? p.adj : '-';
         tr.appendChild(td);
+        if(pi<2) pairPoints += hole.pointsA;
+        else pairPoints += hole.pointsB;
       }
-      return tr;
-    });
-
-    // marcador acumulado por pareja
-    let marcadorA = 0;
-    let marcadorB = 0;
-
-    // lógica por hoyo
-    for(let h=0; h<18; h++){
-      const a1 = playersA[0].golpes[h];
-      const a2 = playersA[1].golpes[h];
-      const b1 = playersB[0].golpes[h];
-      const b2 = playersB[1].golpes[h];
-
-      if([a1,a2,b1,b2].some(v=>v===null)){ continue; }
-
-      // ordenar dentro de cada pareja
-      const [aLow,aHigh] = a1<=a2 ? [playersA[0],playersA[1]] : [playersA[1],playersA[0]];
-      const [bLow,bHigh] = b1<=b2 ? [playersB[0],playersB[1]] : [playersB[1],playersB[0]];
-
-      // duelos: altos y bajos
-      const duelos = [
-        {j1:aHigh, g1:aHigh.golpes[h], j2:bHigh, g2:bHigh.golpes[h], color:pairA.color},
-        {j1:aLow,  g1:aLow.golpes[h],  j2:bLow,  g2:bLow.golpes[h],  color:pairB.color}
-      ];
-
-      let puntosA = 0;
-      let puntosB = 0;
-
-      duelos.forEach(d=>{
-        const c1 = d.j1.cells[h];
-        const c2 = d.j2.cells[h];
-        c1.classList.remove('hole-empty');
-        c2.classList.remove('hole-empty');
-        c1.style.background = d.color;
-        c2.style.background = d.color;
-
-        // resultado
-        if(d.g1<d.g2){
-          c1.textContent = d.g1; c1.style.color='green';
-          c2.textContent = d.g2; c2.style.color='red';
-          if(d.color===pairA.color) puntosA++; else puntosB++;
-        } else if(d.g2<d.g1){
-          c1.textContent = d.g1; c1.style.color='red';
-          c2.textContent = d.g2; c2.style.color='green';
-          if(d.color===pairA.color) puntosB++; else puntosA++;
-        } else {
-          // empate
-          c1.textContent = d.g1; c1.style.color='black';
-          c2.textContent = d.g2; c2.style.color='black';
-        }
-      });
-
-      marcadorA += puntosA;
-      marcadorB += puntosB;
-
-      // fila marcador por hoyo
-      const scoreRow = tbody.querySelector(`.scoreRow${h}`) || document.createElement('tr');
-      if(!scoreRow.classList.contains(`scoreRow${h}`)){
-        scoreRow.classList.add(`scoreRow${h}`);
-        scoreRow.innerHTML = `<td class="nameCol">Marcador</td>`;
-        for(let k=0;k<18;k++){
-          const td = document.createElement('td');
-          scoreRow.appendChild(td);
-        }
-        tbody.appendChild(scoreRow);
-      }
-      const tdScore = scoreRow.children[h+1];
-      tdScore.style.background = `linear-gradient(90deg,${pairA.color} 50%,${pairB.color} 50%)`;
-      let texto = `0 / 0`;
-      if(puntosA>puntosB){
-        texto = `+${puntosA} / -${puntosB}`;
-        tdScore.style.color='green';
-      } else if(puntosB>puntosA){
-        texto = `-${puntosA} / +${puntosB}`;
-        tdScore.style.color='red';
-      } else {
-        tdScore.style.color='black';
-      }
-      tdScore.textContent = texto;
+      const ptsCol = document.createElement('td');
+      ptsCol.textContent = pairPoints;
+      ptsCol.style.fontWeight='900';
+      ptsCol.style.background = (pi<2)? r.pairA.color : r.pairB.color;
+      ptsCol.style.color='#fff';
+      tr.appendChild(ptsCol);
+      tbody.appendChild(tr);
     }
 
-    rows.forEach(r=>tbody.appendChild(r));
-    table.appendChild(thead);
+    // 🔥 Fila extra de puntaje por equipo
+    const scoreRow = document.createElement('tr');
+    const labelTd = document.createElement('td');
+    labelTd.className = 'nameCol';
+    labelTd.style.fontWeight = 'bold';
+    labelTd.textContent = 'Marcador';
+    scoreRow.appendChild(labelTd);
+
+    for(let h=0; h<18; h++){
+      const td = document.createElement('td');
+      td.style.background = `linear-gradient(90deg,${r.pairA.color} 50%,${r.pairB.color} 50%)`;
+      td.style.color = '#000';
+      td.style.fontWeight = 'bold';
+
+      const hole = r.holes[h];
+      let texto = '0 - 0';
+      if(hole.pointsA > hole.pointsB){
+        texto = `+${hole.pointsA} / -${hole.pointsB}`;
+        td.style.color = 'green';
+      } else if(hole.pointsB > hole.pointsA){
+        texto = `-${hole.pointsA} / +${hole.pointsB}`;
+        td.style.color = 'red';
+      }
+      td.textContent = texto;
+      scoreRow.appendChild(td);
+    }
+
+    // columna final vacía para que cuadre con "Puntaje"
+    const lastTd = document.createElement('td');
+    scoreRow.appendChild(lastTd);
+
+    tbody.appendChild(scoreRow);
+
     table.appendChild(tbody);
-    matchupsContainer.appendChild(table);
+    tableBlock.appendChild(table);
+
+    matchupsContainer.appendChild(tableBlock);
   }
+
+  miSaldoEl.textContent = `Saldo total estimado: ${totalSaldoUser>=0?'+':''}${totalSaldoUser}`;
+  miSaldoEl.style.background = totalSaldoUser>=0?'linear-gradient(90deg,#e6ffe6,#ddffdd)':'linear-gradient(90deg,#ffe6e6,#ffdede)';
+  miSaldoEl.style.color = totalSaldoUser>=0?'green':'red';
+  miSaldoEl.style.padding='8px';
 }
 
 
