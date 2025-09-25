@@ -399,21 +399,7 @@ startGameBtn.addEventListener("click", async () => {
     gameMeta.innerText = `Juego ${juegoId} — Precio por pareja ${priceInput.value} — Parejas: ${pairs.length}`;
 
     // Mostrar solo enfrentamientos donde mi pareja participa
-    const myPair = getMyPair();
-    if (!myPair) {
-      console.warn("⚠️ El usuario actual no pertenece a ninguna pareja");
-      // 👉 Mostrar todas las parejas aunque yo no esté en ninguna
-      matchupsContainer.innerHTML = "";
-      for (let i = 0; i < pairs.length; i++) {
-        for (let j = i + 1; j < pairs.length; j++) {
-          const matchup = await computeMatchup(pairs[i], pairs[j], priceInput.value || 0);
-          const tableEl = renderMatchupTable(pairs[i], pairs[j], matchup);
-          matchupsContainer.appendChild(tableEl);
-        }
-      }
-      return;
-    }
-
+    await computeAndRenderAllMatchups(Number(priceInput.value));
 
 
     // 🔥 Cargar tarjetas primero
@@ -747,32 +733,23 @@ function getUserObj(uid) {
   // ---------------------- INIT ----------------------
 async function initAll() {
   try {
-    const jRef = doc(db, 'juego_foursomes', juegoId);
-    const jSnap = await getDoc(jRef);
-    if (jSnap.exists()) {
-  const jData = jSnap.data();
-  grupoId = jData?.grupoId || jData?.grupo || grupoId;
-  console.log("initAll: grupoId =", grupoId);
-
-  // Verificamos si ya existe un juego_foursomes con este juegoId
-  const jfDoc = await getDoc(doc(db, "juego_foursomes", juegoId));
-  if (jfDoc.exists()) {
-    // ⚡ Ya existe un juego guardado en foursomes → mostrar directo el área de juego
-    const jfData = jfDoc.data();
-    pairs = Array.isArray(jfData?.pairs) ? jfData.pairs : [];
-    priceInput.value = jfData?.price || '';
-    gameArea.style.display = 'block';
-    gameMeta.innerText = `Juego ${juegoId} — Precio por pareja ${priceInput.value} — Parejas: ${pairs.length}`;
-  } else {
-    // 🟢 No hay aún un juego guardado → usar la lógica normal de "juegos"
-    pairs = Array.isArray(jData?.pairs) ? jData.pairs : [];
-    priceInput.value = jData?.price || '';
-    if (pairs.length > 0) {
-      gameArea.style.display = 'block';
-      gameMeta.innerText = `Juego ${juegoId} — Precio por pareja ${priceInput.value} — Parejas: ${pairs.length}`;
-    }
-  }
+    const jfRef = doc(db, 'juego_foursomes', juegoId);
+const jfSnap = await getDoc(jfRef);
+if (jfSnap.exists()) {
+  const jfData = jfSnap.data();
+  grupoId = jfData?.grupoId || grupoId;
+  pairs = Array.isArray(jfData?.pairs) ? jfData.pairs : [];
+  priceInput.value = jfData?.price || '';
+  gameArea.style.display = 'block';
+  gameMeta.innerText = `Juego ${juegoId} — Precio por pareja ${priceInput.value} — Parejas: ${pairs.length}`;
+} else {
+  console.warn("No existe el documento en juego_foursomes todavía");
 }
+
+if(pairs.length > 0 && priceInput.value){
+  await computeAndRenderAllMatchups(Number(priceInput.value));
+}
+renderPairsList();
 
 
   } catch(e){
