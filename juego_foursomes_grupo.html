@@ -111,6 +111,15 @@
 
   const authInst = auth;
   let currentUser = null;
+  onAuthStateChanged(authInst, (user) => {
+    if (user) {
+      currentUser = user;
+      console.log("Usuario logueado:", currentUser.uid);
+    } else {
+      console.warn("No hay usuario autenticado");
+    }
+  });
+
 
   // Data caches
   let allUsers = []; // { uid, nombre, initials, handicap, gender }
@@ -322,6 +331,14 @@ async function loadUsers() {
     return u ? u.nombre : uid;
   }
 
+  function getMyPair() {
+    if (!currentUser) return null;
+    return pairs.find(
+      p => p.p1Uid === currentUser.uid || p.p2Uid === currentUser.uid
+    ) || null;
+  }
+
+
   addPairBtn.addEventListener('click', ()=>{
     const p1 = player1Select.value;
     const p2 = player2Select.value;
@@ -370,6 +387,26 @@ startGameBtn.addEventListener("click", async () => {
     // Mostrar el área de juego
     gameArea.style.display = 'block';
     gameMeta.innerText = `Juego ${juegoId} — Precio por pareja ${priceInput.value} — Parejas: ${pairs.length}`;
+
+    // Mostrar solo enfrentamientos donde mi pareja participa
+    const myPair = getMyPair();
+    if (!myPair) {
+      console.warn("El usuario no pertenece a ninguna pareja");
+      return;
+    }
+
+    // Filtrar las demás parejas
+    const otherPairs = pairs.filter(p => p.id !== myPair.id);
+
+    // Limpiar contenedor
+    matchupsContainer.innerHTML = "";
+
+    // Construir tablas de enfrentamiento solo con mi pareja
+    otherPairs.forEach(async (op) => {
+      const matchup = await computeMatchup(myPair, op, priceInput.value || 0);
+      const tableEl = renderMatchupTable(myPair, op, matchup); // <- ya la tienes definida en tu lógica
+      matchupsContainer.appendChild(tableEl);
+    });
 
   } catch (err) {
     console.error("Error al iniciar juego:", err);
@@ -750,6 +787,8 @@ async function initAll() {
     }
     await initAll();
   });
+
+  
 
   // inicia al cargar
   initAll();
