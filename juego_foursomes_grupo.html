@@ -503,111 +503,134 @@ function getUserObj(uid) {
     };
   }
 
-  async function computeAndRenderAllMatchups(price, myPair){
-  matchupsContainer.innerHTML = '';
+  async function computeAndRenderAllMatchups(pricePerPair, myPair) {
+  matchupsContainer.innerHTML = "";
 
-  if(!pairs || pairs.length<2) return;
+  await obtenerTarjetasConScores();
 
-  // generar matchups: si myPair existe, solo vs otros
-  const matchupPairs = myPair ? pairs.filter(p => p.id !== myPair.id) : pairs;
-  const matchups = [];
+  // asumimos pares de 2 en 2
+  for (let i = 0; i < pairs.length; i += 2) {
+    const pairA = pairs[i];
+    const pairB = pairs[i + 1];
+    if (!pairA || !pairB) continue;
 
-  for(const p of matchupPairs){
-    if(myPair){
-      matchups.push(await computeMatchup(myPair, p, price));
-    } else {
-      for(let i=0;i<pairs.length;i++){
-        for(let j=i+1;j<pairs.length;j++){
-          matchups.push(await computeMatchup(pairs[i], pairs[j], price));
-        }
-      }
-      break;
-    }
-  }
+    const colorA = pairA.color;
+    const colorB = pairB.color;
 
-  // calcular saldo total estimado del usuario actual
-  let totalSaldoUser = 0;
-  matchups.forEach(r=>{
-    if(currentUser){
-      const uid = currentUser.uid;
-      const userInA = r.pairA.p1Uid === uid || r.pairA.p2Uid === uid;
-      const userInB = r.pairB.p1Uid === uid || r.pairB.p2Uid === uid;
-      let delta = 0;
-      if(userInA) delta = r.totalPointsA - r.totalPointsB;
-      else if(userInB) delta = r.totalPointsB - r.totalPointsA;
-      totalSaldoUser += delta;
-    }
-  });
+    // construir jugadores
+    const playersA = [pairA.p1Uid, pairA.p2Uid].map(uid => {
+      const u = allUsers.find(x => x.id === uid);
+      const tarjeta = findTarjetaForUser(uid);
+      const golpes = tarjeta ? buildGolpesArrFromTarjeta(tarjeta) : new Array(18).fill(null);
+      return { uid, user: u, golpes };
+    });
 
-  // renderizar tablas
-  for(const r of matchups){
-    const tableBlock = document.createElement('div');
-    tableBlock.className = 'card';
-    tableBlock.style.padding='8px';
+    const playersB = [pairB.p1Uid, pairB.p2Uid].map(uid => {
+      const u = allUsers.find(x => x.id === uid);
+      const tarjeta = findTarjetaForUser(uid);
+      const golpes = tarjeta ? buildGolpesArrFromTarjeta(tarjeta) : new Array(18).fill(null);
+      return { uid, user: u, golpes };
+    });
 
-    const header = document.createElement('div');
-    header.className='team-header';
-    header.innerHTML = `
-      <div style="display:flex;align-items:center;gap:8px;">
-        <div style="width:18px;height:18px;border-radius:50%;background:${r.pairA.color};"></div>
-        Equipo A: ${getUserName(r.pairA.p1Uid)} & ${getUserName(r.pairA.p2Uid)} (Pts: ${r.totalPointsA})
-      </div>
-      <div style="display:flex;align-items:center;gap:8px;">
-        <div style="width:18px;height:18px;border-radius:50%;background:${r.pairB.color};"></div>
-        Equipo B: ${getUserName(r.pairB.p1Uid)} & ${getUserName(r.pairB.p2Uid)} (Pts: ${r.totalPointsB})
-      </div>
-    `;
-    tableBlock.appendChild(header);
+    // tabla
+    const table = document.createElement("table");
+    let thead = `<thead><tr><th class="nameCol">Jugador</th>`;
+    for (let h = 1; h <= 18; h++) thead += `<th>${h}</th>`;
+    thead += "</tr></thead>";
+    table.innerHTML = thead;
 
-    const table = document.createElement('table');
-    const thead = document.createElement('thead');
-    const trh = document.createElement('tr');
-    trh.innerHTML = `<th class="nameCol">Jugador</th>` + Array.from({length:18},(_,i)=>`<th>H${i+1}</th>`).join('') + `<th>Puntaje</th>`;
-    thead.appendChild(trh);
-    table.appendChild(thead);
+    const tbody = document.createElement("tbody");
 
-    const tbody = document.createElement('tbody');
-    for(let pi=0; pi<4; pi++){
-      const tr = document.createElement('tr');
-      const playerInfo = r.holes[0].players[pi];
-      const nameTd = document.createElement('td');
-      nameTd.className='nameCol';
-      nameTd.innerHTML = `<div style="display:flex;align-items:center;gap:8px;">
-        <div class="badge" style="background:${playerInfo.teamColor};border-color:transparent;color:#fff;">${playerInfo.initials}</div>
-        <div style="font-weight:800">${playerInfo.name}</div>
-      </div>`;
-      tr.appendChild(nameTd);
-
-      let pairPoints = 0;
-      for(let h=0; h<18; h++){
-        const td = document.createElement('td');
-        const hole = r.holes[h];
-        const p = hole.players[pi];
-        td.textContent = (typeof p.adj==='number') ? p.adj : '-';
+    // render jugadores
+    function renderPlayerRow(player, pairColor) {
+      const tr = document.createElement("tr");
+      tr.innerHTML = `<td class="nameCol" style="background:${pairColor};color:#fff;">${player.user?.nombre || player.uid}</td>`;
+      for (let h = 0; h < 18; h++) {
+        const golpes = player.golpes[h];
+        const td = document.createElement("td");
+        td.textContent = golpes ?? "-";
         tr.appendChild(td);
-        if(pi<2) pairPoints += hole.pointsA;
-        else pairPoints += hole.pointsB;
       }
-      const ptsCol = document.createElement('td');
-      ptsCol.textContent = pairPoints;
-      ptsCol.style.fontWeight='900';
-      ptsCol.style.background = (pi<2)? r.pairA.color : r.pairB.color;
-      ptsCol.style.color='#fff';
-      tr.appendChild(ptsCol);
       tbody.appendChild(tr);
     }
+    playersA.forEach(p => renderPlayerRow(p, colorA));
+    playersB.forEach(p => renderPlayerRow(p, colorB));
 
+    // marcador por hoyo
+    const scoreRow = document.createElement("tr");
+    scoreRow.innerHTML = `<td class="nameCol">Marcador</td>`;
+    for (let h = 0; h < 18; h++) {
+      // obtener scores de cada jugador en este hoyo
+      const scores = [...playersA, ...playersB].map(p => ({
+        player: p,
+        golpes: typeof p.golpes[h] === "number" ? p.golpes[h] : null
+      }));
+
+      // descartar nulls
+      const validScores = scores.filter(s => s.golpes !== null);
+      if (validScores.length < 4) {
+        scoreRow.innerHTML += `<td class="hole-empty">-</td>`;
+        continue;
+      }
+
+      // ordenar por golpes
+      validScores.sort((a, b) => a.golpes - b.golpes);
+
+      // si hay empate múltiple
+      let matchPairs;
+      if (new Set(validScores.map(s => s.golpes)).size <= 2) {
+        // todos iguales o 3 iguales: asignación random
+        matchPairs = [
+          [validScores[0], validScores[2]],
+          [validScores[1], validScores[3]]
+        ];
+      } else {
+        // normal: bajo vs bajo, alto vs alto
+        const lowA = playersA.reduce((min, p) => (p.golpes[h] < min.golpes[h] ? p : min), playersA[0]);
+        const highA = playersA.reduce((max, p) => (p.golpes[h] > max.golpes[h] ? p : max), playersA[0]);
+        const lowB = playersB.reduce((min, p) => (p.golpes[h] < min.golpes[h] ? p : min), playersB[0]);
+        const highB = playersB.reduce((max, p) => (p.golpes[h] > max.golpes[h] ? p : max), playersB[0]);
+        matchPairs = [
+          [ {player: lowA, golpes: lowA.golpes[h]}, {player: lowB, golpes: lowB.golpes[h]} ],
+          [ {player: highA, golpes: highA.golpes[h]}, {player: highB, golpes: highB.golpes[h]} ]
+        ];
+      }
+
+      // aplicar colores en celdas
+      matchPairs.forEach(([a, b]) => {
+        const winner = a.golpes < b.golpes ? a : (b.golpes < a.golpes ? b : null);
+        const loser = winner ? (winner === a ? b : a) : null;
+
+        [a, b].forEach(p => {
+          const row = [...tbody.rows].find(r => r.cells[0].textContent === (p.player.user?.nombre || p.player.uid));
+          if (row) {
+            const td = row.cells[h + 1];
+            td.style.background = (p.player === playersA[0] || p.player === playersA[1]) ? colorA : colorB;
+            td.style.color = winner === p ? "green" : loser === p ? "red" : "black";
+          }
+        });
+      });
+
+      // marcador de parejas
+      let sumA = playersA.reduce((acc, p) => acc + (p.golpes[h] ?? 0), 0);
+      let sumB = playersB.reduce((acc, p) => acc + (p.golpes[h] ?? 0), 0);
+      let cell = "";
+      if (sumA < sumB) {
+        cell = `<td style="background:${colorA};color:green;">+1</td>`;
+      } else if (sumB < sumA) {
+        cell = `<td style="background:${colorB};color:green;">+1</td>`;
+      } else {
+        cell = `<td style="background:#eee;color:black;">0</td>`;
+      }
+      scoreRow.innerHTML += cell;
+    }
+
+    tbody.appendChild(scoreRow);
     table.appendChild(tbody);
-    tableBlock.appendChild(table);
-
-    matchupsContainer.appendChild(tableBlock);
+    matchupsContainer.appendChild(table);
   }
-
-  miSaldoEl.textContent = `Saldo total estimado: ${totalSaldoUser>=0?'+':''}${totalSaldoUser}`;
-  miSaldoEl.style.background = totalSaldoUser>=0?'linear-gradient(90deg,#e6ffe6,#ddffdd)':'linear-gradient(90deg,#ffe6e6,#ffdede)';
-  miSaldoEl.style.color = totalSaldoUser>=0?'green':'red';
-  miSaldoEl.style.padding='8px';
 }
+
 
 
   // ---------------------- INIT ----------------------
