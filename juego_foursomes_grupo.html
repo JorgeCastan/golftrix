@@ -555,6 +555,19 @@ async function computeMatchup(pairA, pairB, price) {
 
 
   async function computeAndRenderAllMatchups(price){
+    const myPair = getMyPair();
+    if(myPair) {
+      // Solo generar matchups de mi pareja vs otros
+      const filteredPairs = pairs.filter(p => p.id !== myPair.id);
+      matchupsContainer.innerHTML = "";
+      for(const op of filteredPairs){
+        const matchup = await computeMatchup(myPair, op, price);
+        const tableEl = renderMatchupTable(myPair, op, matchup);
+        matchupsContainer.appendChild(tableEl);
+      }
+      return; // ⚠️ Muy importante: salir de la función aquí para no generar todas las combinaciones
+    }
+
     matchupsContainer.innerHTML = '';
     // obtener tarjetas si no
     if(!tarjetasCache || tarjetasCache.length===0) await obtenerTarjetasConScores();
