@@ -362,21 +362,17 @@ async function loadUsers() {
 
 startGameBtn.addEventListener("click", async () => {
   try {
-    if (!juegoId || !grupoId) {
-      console.error("Faltan datos: juegoId o grupoId");
-      return;
-    }
+    if (!juegoId) { console.error("Faltan datos: juegoId"); return; }
+    if (!grupoId) await ensureGrupoId();
 
     const foursomeRef = doc(db, "juego_foursomes", juegoId);
     const foursomeSnap = await getDoc(foursomeRef);
 
     if (foursomeSnap.exists()) {
-      console.log("✅ Juego ya existe en juego_foursomes → cargando datos");
       const jfData = foursomeSnap.data();
       pairs = Array.isArray(jfData?.pairs) ? jfData.pairs : [];
       priceInput.value = jfData?.price || '';
     } else {
-      console.log("🆕 Creando nuevo juego en juego_foursomes...");
       await setDoc(foursomeRef, {
         juegoId,
         grupoId,
@@ -386,37 +382,16 @@ startGameBtn.addEventListener("click", async () => {
       });
     }
 
-    // 🔥 Vuelve a leer para asegurar consistencia
-    const latestSnap = await getDoc(foursomeRef);
-    if (latestSnap.exists()) {
-      const latestData = latestSnap.data();
-      pairs = Array.isArray(latestData?.pairs) ? latestData.pairs : [];
-      priceInput.value = latestData?.price || '';
+    // reasignar myPair
+    if(currentUser){
+      myPair = pairs.find(p => p.p1Uid === currentUser.uid || p.p2Uid === currentUser.uid) || null;
     }
 
-
-
-    // Mostrar el área de juego
     gameArea.style.display = 'block';
+    document.querySelector('.card').style.display = 'none';
     gameMeta.innerText = `Juego ${juegoId} — Precio por pareja ${priceInput.value} — Parejas: ${pairs.length}`;
 
-    // Mostrar solo enfrentamientos donde mi pareja participa
-    await computeAndRenderAllMatchups(Number(priceInput.value));
-
-
-    // 🔥 Cargar tarjetas primero
-    await obtenerTarjetasConScores();
-
-
-    if(!myPair){
-      myPair = pairs.find(p => p.p1Uid === currentUser?.uid || p.p2Uid === currentUser?.uid) || null;
-    }
-    if(myPair){
-      await computeAndRenderAllMatchups(Number(priceInput.value), myPair);
-    } else {
-      console.warn("No se encontró la pareja del usuario actual.");
-    }
-
+    await computeAndRenderAllMatchups(Number(priceInput.value), myPair);
 
   } catch (err) {
     console.error("Error al iniciar juego:", err);
@@ -529,243 +504,150 @@ function getUserObj(uid) {
   }
 
   async function computeAndRenderAllMatchups(price, myPair){
-    if(myPair) {
-      // Solo generar matchups de mi pareja vs otros
-      const filteredPairs = pairs.filter(p => p.id !== myPair.id);
-      matchupsContainer.innerHTML = "";
-      for(const op of filteredPairs){
-        const matchup = await computeMatchup(myPair, op, price);
-        const tableEl = renderMatchupTable(myPair, op, matchup);
-        matchupsContainer.appendChild(tableEl);
-      }
-      return;
-    }
+  matchupsContainer.innerHTML = '';
 
-    matchupsContainer.innerHTML = '';
-    // obtener tarjetas si no
-    if(!tarjetasCache || tarjetasCache.length===0) await obtenerTarjetasConScores();
+  if(!pairs || pairs.length<2) return;
 
-    // generar matchups: cada par con cada otro par (A vs B, B vs C, etc. Excluir emparejamientos con sí mismo)
-    const results = [];
-    for(let i=0;i<pairs.length;i++){
-      for(let j=i+1;j<pairs.length;j++){
-        const r = await computeMatchup(pairs[i], pairs[j], price);
-        results.push(r);
-      }
-    }
+  // generar matchups: si myPair existe, solo vs otros
+  const matchupPairs = myPair ? pairs.filter(p => p.id !== myPair.id) : pairs;
+  const matchups = [];
 
-    // acumular saldo total para currentUser
-    let totalSaldoUser = 0;
-    // sumar de cada matchup
-    results.forEach(r=>{
-      const delta = r.perUserDelta[currentUser?.uid] || 0;
-      totalSaldoUser += delta;
-    });
-
-    // render each matchup as a table block
-    results.forEach((r, idx)=>{
-      const block = document.createElement('div');
-      block.className = 'card';
-      block.style.padding = '8px';
-      // header: equipos y pts totales
-      const header = document.createElement('div');
-      header.className = 'team-header';
-      header.innerHTML = `
-        <div style="display:flex;align-items:center;gap:8px;">
-          <div style="width:18px;height:18px;border-radius:50%;background:${r.pairA.color};"></div>
-          Equipo A: ${getUserName(r.pairA.p1Uid)} & ${getUserName(r.pairA.p2Uid)} (Pts: ${r.totalPointsA})
-        </div>
-        <div style="display:flex;align-items:center;gap:8px;">
-          <div style="width:18px;height:18px;border-radius:50%;background:${r.pairB.color};"></div>
-          Equipo B: ${getUserName(r.pairB.p1Uid)} & ${getUserName(r.pairB.p2Uid)} (Pts: ${r.totalPointsB})
-        </div>
-      `;
-      block.appendChild(header);
-
-      // table show 4 players rows: A1, A2, B1, B2
-      const table = document.createElement('table');
-      const thead = document.createElement('thead');
-      const trh = document.createElement('tr');
-      trh.innerHTML = `<th class="nameCol">Jugador</th>`;
-      for(let h=1;h<=18;h++){
-        const th = document.createElement('th'); th.textContent = 'H'+h; trh.appendChild(th);
-      }
-      const thRes = document.createElement('th'); thRes.textContent = 'Puntaje'; trh.appendChild(thRes);
-      thead.appendChild(trh);
-      table.appendChild(thead);
-
-      const tbody = document.createElement('tbody');
-
-      // Helper to build a row for a given playerIndex in r.holes.players
-      function buildRowForPlayer(playerIndex){
-        const tr = document.createElement('tr');
-        const playerInfo = r.holes[0].players[playerIndex];
-        const nameTd = document.createElement('td'); nameTd.className='nameCol';
-        nameTd.innerHTML = `<div style="display:flex;align-items:center;gap:8px;">
-            <div class="badge" style="background:${playerInfo.teamColor};border-color:transparent;color:#fff;">${playerInfo.initials}</div>
-            <div style="font-weight:800">${playerInfo.name}</div>
-          </div>`;
-        tr.appendChild(nameTd);
-
-        // For each hole cell compute styling
-        let accumulatedPairPoints = 0;
-        for(let h=0;h<18;h++){
-          const td = document.createElement('td');
-          const hole = r.holes[h];
-          const p = hole.players[playerIndex];
-          const cellVal = (typeof p.adj === 'number') ? p.adj : '-';
-          td.textContent = cellVal;
-          // color numeric: green if it's the lower (better) between the two opponents in that head-to-head, red if higher
-          // determine opponent index for this player's head-to-head:
-          // if this player belongs to A (index 0 or 1), then opponent is the corresponding high/low in B
-          // find which role (high/low) this player had in his pair for this hole
-          const meta = hole.meta || {};
-          // default bg neutral
-          td.className = '';
-          td.style.background = '';
-          if(meta && Object.keys(meta).length){
-            // find if this player is A high/low or B high/low
-            let role = null; // 'A-high','A-low','B-high','B-low'
-            if(playerIndex === meta.aHighIdx) role = 'A-high';
-            else if(playerIndex === meta.aLowIdx) role = 'A-low';
-            else if(playerIndex === meta.bHighIdx) role = 'B-high';
-            else if(playerIndex === meta.bLowIdx) role = 'B-low';
-
-            // Identify which pair color to use as background for this head to head:
-            // We'll use the color of the winning side of that head-to-head (if ph/pl indicate)
-            if(role === 'A-high' || role === 'A-low'){
-              // compare with appropriate B
-              const isHigh = role.endsWith('high');
-              const competitorIdx = isHigh ? meta.bHighIdx : meta.bLowIdx;
-              // determine winner for that comparison
-              const ph = isHigh ? meta.ph : meta.pl;
-              if(ph > 0){ // A won this sub-match
-                td.style.background = r.pairA.color;
-              } else if (ph < 0){
-                td.style.background = r.pairB.color;
-              } else {
-                td.style.background = '#f5f5f5';
-              }
-              // color number: green if player's adj is lower than opponent adj, red if higher
-              const oppAdj = hole.players[competitorIdx].adj;
-              if(typeof p.adj === 'number' && typeof oppAdj === 'number'){
-                if(p.adj < oppAdj){ td.classList.add('score-less'); }
-                else if (p.adj > oppAdj) { td.classList.add('score-more'); }
-              }
-            } else if (role === 'B-high' || role === 'B-low'){
-              const isHigh = role.endsWith('high');
-              const competitorIdx = isHigh ? meta.aHighIdx : meta.aLowIdx;
-              const ph = isHigh ? meta.ph : meta.pl;
-              if(ph > 0){ // from perspective A: ph>0 A won -> winner color A
-                td.style.background = r.pairA.color;
-              } else if (ph < 0){
-                td.style.background = r.pairB.color;
-              } else {
-                td.style.background = '#f5f5f5';
-              }
-              const oppAdj = hole.players[competitorIdx].adj;
-              if(typeof p.adj === 'number' && typeof oppAdj === 'number'){
-                if(p.adj < oppAdj){ td.classList.add('score-less'); }
-                else if (p.adj > oppAdj) { td.classList.add('score-more'); }
-              }
-            } else {
-              td.style.background = '#fafafa';
-            }
-          } else {
-            td.style.background = '#fafafa';
-          }
-          tr.appendChild(td);
+  for(const p of matchupPairs){
+    if(myPair){
+      matchups.push(await computeMatchup(myPair, p, price));
+    } else {
+      for(let i=0;i<pairs.length;i++){
+        for(let j=i+1;j<pairs.length;j++){
+          matchups.push(await computeMatchup(pairs[i], pairs[j], price));
         }
-
-        // last column: puntaje de la pareja en ese hoyo (suma de ph+pl)
-        // But we must compute pair's point per hole for this row's team
-        // find pair of this player (A or B)
-        const isA = (playerIndex === 0 || playerIndex === 1);
-        const ptsCol = document.createElement('td');
-        // sum points over holes for pair (for simplicity compute now)
-        let sumPair = 0;
-        for(let h=0;h<18;h++){ sumPair += r.holes[h][isA ? 'pointsA' : 'pointsB']; }
-        ptsCol.textContent = sumPair;
-        ptsCol.style.fontWeight = '900';
-        ptsCol.style.background = isA ? r.pairA.color : r.pairB.color;
-        ptsCol.style.color = '#fff';
-        tr.appendChild(ptsCol);
-
-        return tr;
       }
-
-      // rows: A1, A2, B1, B2
-      const rowA1 = buildRowForPlayer(0);
-      const rowA2 = buildRowForPlayer(1);
-      const rowB1 = buildRowForPlayer(2);
-      const rowB2 = buildRowForPlayer(3);
-
-      tbody.appendChild(rowA1);
-      tbody.appendChild(rowA2);
-      tbody.appendChild(rowB1);
-      tbody.appendChild(rowB2);
-      table.appendChild(tbody);
-      block.appendChild(table);
-
-      // summary line: saldo por miembro de cada equipo en este matchup
-      const sumDiv = document.createElement('div');
-      sumDiv.style.marginTop = '8px';
-      const gainA = r.totalPointsA * price;
-      const gainB = r.totalPointsB * price;
-      sumDiv.innerHTML = `<div style="display:flex;gap:12px;align-items:center;">
-        <div style="padding:6px;border-radius:8px;background:${r.pairA.color};color:#fff;font-weight:900;">
-          Equipo A por miembro: ${gainA>=0?'+':''}${gainA}
-        </div>
-        <div style="padding:6px;border-radius:8px;background:${r.pairB.color};color:#fff;font-weight:900;">
-          Equipo B por miembro: ${gainB>=0?'+':''}${gainB}
-        </div>
-      </div>`;
-      block.appendChild(sumDiv);
-
-      matchupsContainer.appendChild(block);
-    });
-
-    // mostrar saldo global del currentUser acumulado
-    miSaldoEl.textContent = `Saldo total estimado: ${totalSaldoUser>=0?'+':''}${totalSaldoUser}`;
-    miSaldoEl.style.background = totalSaldoUser >= 0 ? 'linear-gradient(90deg,#e6ffe6,#ddffdd)' : 'linear-gradient(90deg,#ffe6e6,#ffdede)';
-    miSaldoEl.style.color = totalSaldoUser >= 0 ? 'green' : 'red';
-    miSaldoEl.style.padding = '8px';
+      break;
+    }
   }
+
+  // calcular saldo total estimado del usuario actual
+  let totalSaldoUser = 0;
+  matchups.forEach(r=>{
+    if(currentUser){
+      const uid = currentUser.uid;
+      const userInA = r.pairA.p1Uid === uid || r.pairA.p2Uid === uid;
+      const userInB = r.pairB.p1Uid === uid || r.pairB.p2Uid === uid;
+      let delta = 0;
+      if(userInA) delta = r.totalPointsA - r.totalPointsB;
+      else if(userInB) delta = r.totalPointsB - r.totalPointsA;
+      totalSaldoUser += delta;
+    }
+  });
+
+  // renderizar tablas
+  for(const r of matchups){
+    const tableBlock = document.createElement('div');
+    tableBlock.className = 'card';
+    tableBlock.style.padding='8px';
+
+    const header = document.createElement('div');
+    header.className='team-header';
+    header.innerHTML = `
+      <div style="display:flex;align-items:center;gap:8px;">
+        <div style="width:18px;height:18px;border-radius:50%;background:${r.pairA.color};"></div>
+        Equipo A: ${getUserName(r.pairA.p1Uid)} & ${getUserName(r.pairA.p2Uid)} (Pts: ${r.totalPointsA})
+      </div>
+      <div style="display:flex;align-items:center;gap:8px;">
+        <div style="width:18px;height:18px;border-radius:50%;background:${r.pairB.color};"></div>
+        Equipo B: ${getUserName(r.pairB.p1Uid)} & ${getUserName(r.pairB.p2Uid)} (Pts: ${r.totalPointsB})
+      </div>
+    `;
+    tableBlock.appendChild(header);
+
+    const table = document.createElement('table');
+    const thead = document.createElement('thead');
+    const trh = document.createElement('tr');
+    trh.innerHTML = `<th class="nameCol">Jugador</th>` + Array.from({length:18},(_,i)=>`<th>H${i+1}</th>`).join('') + `<th>Puntaje</th>`;
+    thead.appendChild(trh);
+    table.appendChild(thead);
+
+    const tbody = document.createElement('tbody');
+    for(let pi=0; pi<4; pi++){
+      const tr = document.createElement('tr');
+      const playerInfo = r.holes[0].players[pi];
+      const nameTd = document.createElement('td');
+      nameTd.className='nameCol';
+      nameTd.innerHTML = `<div style="display:flex;align-items:center;gap:8px;">
+        <div class="badge" style="background:${playerInfo.teamColor};border-color:transparent;color:#fff;">${playerInfo.initials}</div>
+        <div style="font-weight:800">${playerInfo.name}</div>
+      </div>`;
+      tr.appendChild(nameTd);
+
+      let pairPoints = 0;
+      for(let h=0; h<18; h++){
+        const td = document.createElement('td');
+        const hole = r.holes[h];
+        const p = hole.players[pi];
+        td.textContent = (typeof p.adj==='number') ? p.adj : '-';
+        tr.appendChild(td);
+        if(pi<2) pairPoints += hole.pointsA;
+        else pairPoints += hole.pointsB;
+      }
+      const ptsCol = document.createElement('td');
+      ptsCol.textContent = pairPoints;
+      ptsCol.style.fontWeight='900';
+      ptsCol.style.background = (pi<2)? r.pairA.color : r.pairB.color;
+      ptsCol.style.color='#fff';
+      tr.appendChild(ptsCol);
+      tbody.appendChild(tr);
+    }
+
+    table.appendChild(tbody);
+    tableBlock.appendChild(table);
+
+    matchupsContainer.appendChild(tableBlock);
+  }
+
+  miSaldoEl.textContent = `Saldo total estimado: ${totalSaldoUser>=0?'+':''}${totalSaldoUser}`;
+  miSaldoEl.style.background = totalSaldoUser>=0?'linear-gradient(90deg,#e6ffe6,#ddffdd)':'linear-gradient(90deg,#ffe6e6,#ffdede)';
+  miSaldoEl.style.color = totalSaldoUser>=0?'green':'red';
+  miSaldoEl.style.padding='8px';
+}
+
 
   // ---------------------- INIT ----------------------
-async function initAll() {
-  try {
-    const jfRef = doc(db, 'juego_foursomes', juegoId);
-    const jfSnap = await getDoc(jfRef);
-    if (jfSnap.exists()) {
-      const jfData = jfSnap.data();
-      grupoId = jfData?.grupoId || grupoId;
-      pairs = Array.isArray(jfData?.pairs) ? jfData.pairs : [];
-      priceInput.value = jfData?.price || '';
-      gameArea.style.display = 'block';
-      document.querySelector('.card').style.display = 'none'; // Oculta el form de creación de parejas
-      gameMeta.innerText = `Juego ${juegoId} — Precio por pareja ${priceInput.value} — Parejas: ${pairs.length}`;
+  async function initAll() {
+    try {
+      await ensureGrupoId();
+      await loadUsers();
+      await obtenerTarjetasConScores();
 
-      // asignar myPair global
-      myPair = pairs.find(p => p.p1Uid === currentUser?.uid || p.p2Uid === currentUser?.uid) || null;
+      const jfRef = doc(db, 'juego_foursomes', juegoId);
+      const jfSnap = await getDoc(jfRef);
+      if (jfSnap.exists()) {
+        const jfData = jfSnap.data();
+        grupoId = jfData?.grupoId || grupoId;
+        pairs = Array.isArray(jfData?.pairs) ? jfData.pairs : [];
+        priceInput.value = jfData?.price || '';
+        renderPairsList();
 
-      renderPairsList();
-    } else {
-      console.warn("No existe el documento en juego_foursomes todavía");
-      renderPairsList();
+        // asignar myPair solo si currentUser existe
+        if(currentUser){
+          myPair = pairs.find(p => p.p1Uid === currentUser.uid || p.p2Uid === currentUser.uid) || null;
+        }
+
+        if(pairs.length>0 && priceInput.value && myPair){
+          gameArea.style.display = 'block';
+          document.querySelector('.card').style.display = 'none'; // ocultar form
+          gameMeta.innerText = `Juego ${juegoId} — Precio por pareja ${priceInput.value} — Parejas: ${pairs.length}`;
+          await computeAndRenderAllMatchups(Number(priceInput.value), myPair);
+        }
+
+      } else {
+        console.warn("No existe el documento en juego_foursomes todavía");
+        renderPairsList();
+      }
+
+    } catch(e){
+      console.error('initAll: error al inicializar', e);
     }
-
-    await loadUsers();
-    await obtenerTarjetasConScores();
-
-    if (pairs.length > 0 && priceInput.value && myPair) {
-      await computeAndRenderAllMatchups(Number(priceInput.value), myPair);
-    }
-
-  } catch(e){
-    console.warn('initAll: no pude leer juego_foursomes', e);
   }
-}
+
 
   onAuthStateChanged(authInst, async (user)=>{
     currentUser = user;
