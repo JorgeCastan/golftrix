@@ -332,11 +332,12 @@ async function loadUsers() {
   }
 
   function getMyPair() {
-    if (!currentUser) return null;
+    if (!currentUser || !pairs || pairs.length === 0) return null;
     return pairs.find(
       p => p.p1Uid === currentUser.uid || p.p2Uid === currentUser.uid
     ) || null;
   }
+
 
 
   addPairBtn.addEventListener('click', ()=>{
@@ -368,13 +369,12 @@ startGameBtn.addEventListener("click", async () => {
     const foursomeSnap = await getDoc(foursomeRef);
 
     if (foursomeSnap.exists()) {
-      console.log("El juego ya existe en juego_foursomes → solo mostrar");
+      console.log("El juego ya existe en juego_foursomes → actualizar pares locales");
       const jfData = foursomeSnap.data();
-      pairs = jfData?.pairs || [];
+      pairs = Array.isArray(jfData?.pairs) ? jfData.pairs : [];
       priceInput.value = jfData?.price || '';
     } else {
       console.log("Creando nuevo juego en juego_foursomes...");
-
       await setDoc(foursomeRef, {
         juegoId,
         grupoId,
@@ -384,6 +384,10 @@ startGameBtn.addEventListener("click", async () => {
       });
     }
 
+    // 🔥 aseguramos que Firestore tenga la última versión de pairs
+    await updateDoc(foursomeRef, { pairs, price: priceInput.value || '' });
+
+
     // Mostrar el área de juego
     gameArea.style.display = 'block';
     gameMeta.innerText = `Juego ${juegoId} — Precio por pareja ${priceInput.value} — Parejas: ${pairs.length}`;
@@ -391,9 +395,12 @@ startGameBtn.addEventListener("click", async () => {
     // Mostrar solo enfrentamientos donde mi pareja participa
     const myPair = getMyPair();
     if (!myPair) {
-      console.warn("El usuario no pertenece a ninguna pareja");
+      console.warn("⚠️ El usuario actual no pertenece a ninguna pareja");
+      console.log("currentUser:", currentUser?.uid);
+      console.log("pairs actuales:", pairs);
       return;
     }
+
 
     // 🔥 Cargar tarjetas primero
     await obtenerTarjetasConScores();
