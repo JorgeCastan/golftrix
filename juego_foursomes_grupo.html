@@ -86,6 +86,8 @@
 </script>
 
 <script type="module">
+  let myPair = null;  // <-- global para tu usuario actual
+
   import { app, db, auth } from './firebase-config.js';
   import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
   import {
@@ -406,13 +408,14 @@ startGameBtn.addEventListener("click", async () => {
     await obtenerTarjetasConScores();
 
 
-    const otherPairs = pairs.filter(p => p.id !== myPair.id);
-    matchupsContainer.innerHTML = "";
-    otherPairs.forEach(async (op) => {
-      const matchup = await computeMatchup(myPair, op, priceInput.value || 0);
-      const tableEl = renderMatchupTable(myPair, op, matchup);
-      matchupsContainer.appendChild(tableEl);
-    });
+    if(!myPair){
+      myPair = pairs.find(p => p.p1Uid === currentUser?.uid || p.p2Uid === currentUser?.uid) || null;
+    }
+    if(myPair){
+      await computeAndRenderAllMatchups(Number(priceInput.value), myPair);
+    } else {
+      console.warn("No se encontró la pareja del usuario actual.");
+    }
 
 
   } catch (err) {
@@ -733,53 +736,36 @@ function getUserObj(uid) {
 async function initAll() {
   try {
     const jfRef = doc(db, 'juego_foursomes', juegoId);
-const jfSnap = await getDoc(jfRef);
-if (jfSnap.exists()) {
-  const jfData = jfSnap.data();
-  grupoId = jfData?.grupoId || grupoId;
-  pairs = Array.isArray(jfData?.pairs) ? jfData.pairs : [];
-  priceInput.value = jfData?.price || '';
-  gameArea.style.display = 'block';
-  document.querySelector('.card').style.display = 'none'; // Oculta el form de creación de parejas
-  gameMeta.innerText = `Juego ${juegoId} — Precio por pareja ${priceInput.value} — Parejas: ${pairs.length}`;
+    const jfSnap = await getDoc(jfRef);
+    if (jfSnap.exists()) {
+      const jfData = jfSnap.data();
+      grupoId = jfData?.grupoId || grupoId;
+      pairs = Array.isArray(jfData?.pairs) ? jfData.pairs : [];
+      priceInput.value = jfData?.price || '';
+      gameArea.style.display = 'block';
+      document.querySelector('.card').style.display = 'none'; // Oculta el form de creación de parejas
+      gameMeta.innerText = `Juego ${juegoId} — Precio por pareja ${priceInput.value} — Parejas: ${pairs.length}`;
 
-  // 🔹 NUEVO: asignar myPair aquí
-  const myPair = pairs.find(p => p.p1Uid === currentUser?.uid || p.p2Uid === currentUser?.uid) || null;
+      // asignar myPair global
+      myPair = pairs.find(p => p.p1Uid === currentUser?.uid || p.p2Uid === currentUser?.uid) || null;
 
-  if(pairs.length > 0 && priceInput.value && myPair){
-    await computeAndRenderAllMatchups(Number(priceInput.value));
-  }
-}else {
-  console.warn("No existe el documento en juego_foursomes todavía");
-}
+      renderPairsList();
+    } else {
+      console.warn("No existe el documento en juego_foursomes todavía");
+      renderPairsList();
+    }
 
-if(pairs.length > 0 && priceInput.value){
-  await computeAndRenderAllMatchups(Number(priceInput.value));
-}
-renderPairsList();
+    await loadUsers();
+    await obtenerTarjetasConScores();
 
+    if (pairs.length > 0 && priceInput.value && myPair) {
+      await computeAndRenderAllMatchups(Number(priceInput.value), myPair);
+    }
 
   } catch(e){
     console.warn('initAll: no pude leer juego_foursomes', e);
   }
-
-  // esperar a tener grupoId antes de cargar usuarios
-    if(grupoId) {
-    await loadUsers();
-    } else {
-    console.warn("No hay grupoId definido, los selects de jugadores estarán vacíos");
-    }
-    await obtenerTarjetasConScores();
-
-
-  if(pairs.length > 0 && priceInput.value) {
-    await computeAndRenderAllMatchups(Number(priceInput.value));
-  }
-  renderPairsList();
 }
-
-
-
 
   onAuthStateChanged(authInst, async (user)=>{
     currentUser = user;
