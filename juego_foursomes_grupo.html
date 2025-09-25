@@ -369,12 +369,12 @@ startGameBtn.addEventListener("click", async () => {
     const foursomeSnap = await getDoc(foursomeRef);
 
     if (foursomeSnap.exists()) {
-      console.log("El juego ya existe en juego_foursomes → actualizar pares locales");
+      console.log("✅ Juego ya existe en juego_foursomes → cargando datos");
       const jfData = foursomeSnap.data();
       pairs = Array.isArray(jfData?.pairs) ? jfData.pairs : [];
       priceInput.value = jfData?.price || '';
     } else {
-      console.log("Creando nuevo juego en juego_foursomes...");
+      console.log("🆕 Creando nuevo juego en juego_foursomes...");
       await setDoc(foursomeRef, {
         juegoId,
         grupoId,
@@ -384,8 +384,14 @@ startGameBtn.addEventListener("click", async () => {
       });
     }
 
-    // 🔥 aseguramos que Firestore tenga la última versión de pairs
-    await updateDoc(foursomeRef, { pairs, price: priceInput.value || '' });
+    // 🔥 Vuelve a leer para asegurar consistencia
+    const latestSnap = await getDoc(foursomeRef);
+    if (latestSnap.exists()) {
+      const latestData = latestSnap.data();
+      pairs = Array.isArray(latestData?.pairs) ? latestData.pairs : [];
+      priceInput.value = latestData?.price || '';
+    }
+
 
 
     // Mostrar el área de juego
@@ -396,28 +402,32 @@ startGameBtn.addEventListener("click", async () => {
     const myPair = getMyPair();
     if (!myPair) {
       console.warn("⚠️ El usuario actual no pertenece a ninguna pareja");
-      console.log("currentUser:", currentUser?.uid);
-      console.log("pairs actuales:", pairs);
+      // 👉 Mostrar todas las parejas aunque yo no esté en ninguna
+      matchupsContainer.innerHTML = "";
+      for (let i = 0; i < pairs.length; i++) {
+        for (let j = i + 1; j < pairs.length; j++) {
+          const matchup = await computeMatchup(pairs[i], pairs[j], priceInput.value || 0);
+          const tableEl = renderMatchupTable(pairs[i], pairs[j], matchup);
+          matchupsContainer.appendChild(tableEl);
+        }
+      }
       return;
     }
+
 
 
     // 🔥 Cargar tarjetas primero
     await obtenerTarjetasConScores();
 
 
-    // Filtrar las demás parejas
     const otherPairs = pairs.filter(p => p.id !== myPair.id);
-
-    // Limpiar contenedor
     matchupsContainer.innerHTML = "";
-
-    // Construir tablas de enfrentamiento solo con mi pareja
     otherPairs.forEach(async (op) => {
       const matchup = await computeMatchup(myPair, op, priceInput.value || 0);
-      const tableEl = renderMatchupTable(myPair, op, matchup); // <- ya la tienes definida en tu lógica
+      const tableEl = renderMatchupTable(myPair, op, matchup);
       matchupsContainer.appendChild(tableEl);
     });
+
 
   } catch (err) {
     console.error("Error al iniciar juego:", err);
