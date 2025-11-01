@@ -187,6 +187,36 @@
       padding: 15px;
     }
      /* Móvil: logo y título en columna centrados */
+/* === Ajustes visuales del campo Hándicap === */
+.handicap-container {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  width: 100%;
+}
+
+.handicap-view {
+  flex: 2;
+  min-width: 0;
+  font-size: 1rem;
+}
+
+.btn-calcular {
+  flex: 1;
+  padding: 10px 12px;
+  white-space: nowrap;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.9rem;
+}
+
+.btn-calcular .icon img {
+  width: 14px;
+}
+
+
 @media (max-width: 768px) {
   header {
     flex-direction: column;
@@ -208,6 +238,20 @@
     transform: none;
     font-size: 1.8rem;
   }
+  .handicap-container {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .btn-calcular {
+    width: 100%;
+    margin-top: 8px;
+  }
+
+  .handicap-view {
+    width: 100%;
+  }
+  
 }
   </style>
 </head>
@@ -239,16 +283,14 @@
       <input type="text" id="lastname" />
 
       <label>Hándicap</label>
-      <div style="display: flex; align-items: center; gap: 10px;">
-        <!-- Campo solo lectura: muestra el hándicap actual -->
-        <input type="number" id="handicap" readonly style="flex: 1;"/>
-
-        <!-- Botón que ejecuta handicap.js -->
-        <button type="button" id="editarHandicapBtn" style="padding: 10px 16px; white-space: nowrap;">
-          <div class="icon"><img src="icon_handicap.png" alt="Editar" width="16"></div>
-          Calcular / Editar
+      <div class="handicap-container">
+        <input type="number" id="handicap" readonly class="handicap-view" />
+        <button type="button" id="editarHandicapBtn" class="btn-calcular">
+          <div class="icon"><img src="icon_handicap.png" alt="Calcular" width="16"></div>
+          Calcular
         </button>
       </div>
+
 
       <label>Grupo</label>
       <input type="text" id="grupo" readonly />
