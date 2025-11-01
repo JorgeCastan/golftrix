@@ -239,7 +239,16 @@
       <input type="text" id="lastname" />
 
       <label>Hándicap</label>
-      <input type="number" id="handicap" />
+      <div style="display: flex; align-items: center; gap: 10px;">
+        <!-- Campo solo lectura: muestra el hándicap actual -->
+        <input type="number" id="handicap" readonly style="flex: 1;"/>
+
+        <!-- Botón que ejecuta handicap.js -->
+        <button type="button" id="editarHandicapBtn" style="padding: 10px 16px; white-space: nowrap;">
+          <div class="icon"><img src="icon_handicap.png" alt="Editar" width="16"></div>
+          Calcular / Editar
+        </button>
+      </div>
 
       <label>Grupo</label>
       <input type="text" id="grupo" readonly />
@@ -320,6 +329,19 @@ else {
       } else {
         window.location.href = 'index.html';
       }
+    });
+
+    // Botón para abrir o ejecutar el cálculo del hándicap
+    const editarHandicapBtn = document.getElementById('editarHandicapBtn');
+    editarHandicapBtn.addEventListener('click', () => {
+      import('./handicap.js')
+        .then(mod => {
+          console.log("✅ handicap.js cargado correctamente.");
+          if (typeof mod.iniciarHandicap === 'function') {
+            mod.iniciarHandicap(); // o cualquier función principal dentro de handicap.js
+          }
+        })
+        .catch(err => console.error("❌ Error al cargar handicap.js:", err));
     });
 
     document.getElementById('profileForm').addEventListener('submit', async (e) => {
