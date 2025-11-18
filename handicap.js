@@ -13,6 +13,7 @@ import {
   orderBy,
   limit,
   getDocs,
+  getDoc,
   doc,
   updateDoc,
   addDoc,
@@ -111,40 +112,64 @@ async function computeHandicapForUid(uid) {
 
   if (cards.length < 10) {
     const missing = 10 - cards.length;
-    return { ok: false, handicap: null, message: `Faltan ${missing} tarjetas completas.`, missing };
+    return { ok: false, handicap: null, message: `Faltan ${missing} tarjetas completas.`, missing, openForm: true };
   }
 
-  // tomar totales
-  const totals = cards.map(c => c.total);
-  // encontrar index de max y min una sola vez (si hay empates, elimina sólo uno de cada)
+  // Solo trabajar con tarjetas que tengan parCampo válido (número)
+  const validCards = cards.filter(c => typeof c.parCampo === 'number' && Number.isFinite(c.parCampo));
+
+  if (validCards.length < 10) {
+    // Si algunas de las últimas 10 no tienen parCampo, informar que faltan tarjetas válidas
+    const missingValid = 10 - validCards.length;
+    return { ok: false, handicap: null, message: `Faltan ${missingValid} tarjetas con par de campo válido.`, missing: missingValid, openForm: true };
+  }
+
+  // calcular diferencias (total - parCampo) para cada tarjeta (pueden ser negativas)
+  const diffs = validCards.map(c => {
+    return {
+      id: c.id,
+      diff: Number(c.total) - Number(c.parCampo),
+      createdAtMillis: c.createdAtMillis
+    };
+  });
+
+  // ordenar por createdAtMillis desc ya se hizo en fetch; pero mantenemos orden relativo
+  // construir array de solo diffs (en el mismo orden temporal)
+  const diffValues = diffs.map(d => d.diff);
+
+  // encontrar index de max y min (por valor numérico) — descartar solo una instancia de cada
   let maxIndex = 0, minIndex = 0;
-  for (let i = 1; i < totals.length; i++) {
-    if (totals[i] > totals[maxIndex]) maxIndex = i;
-    if (totals[i] < totals[minIndex]) minIndex = i;
+  for (let i = 1; i < diffValues.length; i++) {
+    if (diffValues[i] > diffValues[maxIndex]) maxIndex = i;
+    if (diffValues[i] < diffValues[minIndex]) minIndex = i;
   }
 
-  // construir arreglo con 8 totales restantes
+  // construir arreglo con 8 diffs restantes (descartando una max y una min)
   const remaining = [];
-  for (let i = 0; i < totals.length; i++) {
+  for (let i = 0; i < diffValues.length; i++) {
     if (i === maxIndex) { maxIndex = -1; continue; } // skip first max
     if (i === minIndex) { minIndex = -1; continue; } // skip first min
-    remaining.push(totals[i]);
+    remaining.push(diffValues[i]);
   }
-  // En caso raro de que algo saliera mal: asegurar que haya 8
+
+  // En caso raro de que no tengamos 8 (por empates o lógica), utilizamos heurística alternativa
   if (remaining.length !== 8) {
-    // si por redundancia no hay 8, intentar lógica alternativa: ordenar y tomar 2..9
-    const sorted = totals.slice().sort((a,b)=>a-b);
-    const alt = sorted.slice(1, 9);
+    const sorted = diffValues.slice().sort((a,b)=>a-b);
+    const alt = sorted.slice(1, 9); // tomar del 2° al 9° (descartar min y max)
     const avgAlt = alt.reduce((s,x)=>s+x,0)/alt.length;
     const handicapAlt = Math.round(avgAlt);
-    return { ok: true, handicap: handicapAlt, message: 'Calculado con heurística alternativa (empates).', missing: 0 };
+    // build signed string
+    const signStr = handicapAlt >= 0 ? `+${handicapAlt}` : `${handicapAlt}`;
+    return { ok: true, handicap: handicapAlt, handicapSigned: signStr, message: 'Calculado con heurística alternativa (empates).', missing: 0 };
   }
 
   const sum = remaining.reduce((s, x) => s + x, 0);
   const avg = sum / remaining.length;
-  const rounded = Math.round(avg); // aplica reglas de redondeo solicitadas
+  const rounded = Math.round(avg); // redondeo .5 hacia arriba
 
-  return { ok: true, handicap: rounded, message: 'Handicap calculado correctamente.', missing: 0 };
+  const handicapSigned = rounded >= 0 ? `+${rounded}` : `${rounded}`;
+
+  return { ok: true, handicap: rounded, handicapSigned, message: 'Handicap calculado correctamente.', missing: 0 };
 }
 
 /**
@@ -185,21 +210,22 @@ async function _calcAndSave(uid) {
     // no guarda; retorna info con missing
     return result;
   }
-  // Guardar en users/{uid}.handicap
+  // Guardar en users/{uid}.handicap y users/{uid}.handicapSigned (string con signo)
   try {
     const userRef = doc(db, 'users', uid);
     await updateDoc(userRef, {
       handicap: result.handicap,
+      handicapSigned: result.handicapSigned || (result.handicap >= 0 ? `+${result.handicap}` : `${result.handicap}`),
       lastHandicapUpdated: serverTimestamp()
     });
     return { ...result, saved: true };
   } catch (err) {
-    // si no existe el doc users quizá haya que setearlo (usa setDoc si quieres crear)
+    // si algo falla al intentar update (doc no existe o permisos), reintentar el mismo update (no usamos setDoc para no sobrescribir)
     try {
-      // crear si no existe
       const userRef = doc(db, 'users', uid);
       await updateDoc(userRef, {
         handicap: result.handicap,
+        handicapSigned: result.handicapSigned || (result.handicap >= 0 ? `+${result.handicap}` : `${result.handicap}`),
         lastHandicapUpdated: serverTimestamp()
       });
       return { ...result, saved: true };

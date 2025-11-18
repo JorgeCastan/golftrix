@@ -373,17 +373,41 @@ else {
       }
     });
 
-    // Botón para abrir o ejecutar el cálculo del hándicap
+    // Botón para ejecutar el cálculo del hándicap
     const editarHandicapBtn = document.getElementById('editarHandicapBtn');
-    editarHandicapBtn.addEventListener('click', () => {
-      import('./handicap.js')
-        .then(mod => {
-          console.log("✅ handicap.js cargado correctamente.");
-          if (typeof mod.iniciarHandicap === 'function') {
-            mod.iniciarHandicap(); // o cualquier función principal dentro de handicap.js
-          }
-        })
-        .catch(err => console.error("❌ Error al cargar handicap.js:", err));
+    editarHandicapBtn.addEventListener('click', async () => {
+      try {
+        const mod = await import('./handicap.js');
+        if (typeof mod.calculateAndSaveHandicap !== 'function') {
+          console.error('La función calculateAndSaveHandicap no existe en handicap.js');
+          return;
+        }
+        // Llamamos la función; si no pasamos uid utiliza el usuario autenticado
+        const res = await mod.calculateAndSaveHandicap();
+        console.log('Resultado cálculo handicap:', res);
+
+        if (!res.ok && res.missing) {
+          // Si faltan tarjetas, abrir el formulario para completarlas
+          // Puedes abrir en nueva ventana o en modal. Aquí abrimos otra ventana.
+          window.open('tarjetas_form.html', '_blank');
+          alert(`Faltan ${res.missing} tarjetas para calcular el handicap. Se abrirá el formulario.`);
+          return;
+        }
+
+        if (res.ok && res.saved) {
+          // actualizar valor visible en el input del perfil (si la página está abierta)
+          const handInput = document.getElementById('handicap');
+          if (handInput) handInput.value = res.handicap;
+          alert(`Handicap calculado y guardado: ${res.handicapSigned || res.handicap}`);
+        } else if (res.ok) {
+          alert(`Handicap calculado: ${res.handicapSigned || res.handicap}`);
+        } else {
+          alert('No se pudo calcular el handicap: ' + (res.message || 'Error'));
+        }
+      } catch (err) {
+        console.error('Error ejecutando calculateAndSaveHandicap:', err);
+        alert('Ocurrió un error al calcular el handicap. Revisa la consola.');
+      }
     });
 
     document.getElementById('profileForm').addEventListener('submit', async (e) => {
