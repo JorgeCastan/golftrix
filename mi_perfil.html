@@ -373,42 +373,80 @@ else {
       }
     });
 
-    // Botón para ejecutar el cálculo del hándicap
+    // Botón para ejecutar el cálculo del hándicap (versión móvil-friendly que abre la pestaña inmediatamente)
     const editarHandicapBtn = document.getElementById('editarHandicapBtn');
-    editarHandicapBtn.addEventListener('click', async () => {
+    editarHandicapBtn.addEventListener('click', async (evt) => {
+      // Abrir una nueva ventana inmediatamente para evitar bloqueo de popup en móviles
+      // Abrimos en blanco; luego navegaremos esa ventana si es necesario.
+      let popup = null;
       try {
+        popup = window.open('', '_blank');
+
+        // Si el popup fue bloqueado (null), avisar y continuar (aún intentamos abrir más tarde)
+        if (!popup) {
+          console.warn('Popup bloqueado por el navegador. Intentaremos abrir después del cálculo.');
+        } else {
+          // mostrar mensaje inicial en la nueva pestaña para que el usuario vea algo (opcional)
+          try {
+            popup.document.write('<title>Tarjetas — Golftrix</title><p style="font-family:Arial,sans-serif;padding:20px;">Abriendo formulario de tarjetas... si no carga automáticamente, vuelve a intentarlo desde tu perfil.</p>');
+          } catch (e) {
+            // escritura puede fallar por cross-origin o bloqueo; ignorar sin romper flujo
+          }
+        }
+
         const mod = await import('./handicap.js');
         if (typeof mod.calculateAndSaveHandicap !== 'function') {
           console.error('La función calculateAndSaveHandicap no existe en handicap.js');
+          // cerrar popup si lo abrimos y no se necesita
+          if (popup && !popup.closed) popup.close();
           return;
         }
-        // Llamamos la función; si no pasamos uid utiliza el usuario autenticado
+
+        // Ejecutar cálculo (esto es asíncrono)
         const res = await mod.calculateAndSaveHandicap();
         console.log('Resultado cálculo handicap:', res);
 
+        // Si faltan tarjetas, navegar la ventana popup al formulario
         if (!res.ok && res.missing) {
-          // Si faltan tarjetas, abrir el formulario para completarlas
-          // Puedes abrir en nueva ventana o en modal. Aquí abrimos otra ventana.
-          window.open('tarjetas_form.html', '_blank');
+          const url = 'tarjetas_form.html';
+          if (popup && !popup.closed) {
+            // navegar la ventana ya abierta (funciona en móviles si fue accionada por el click original)
+            try {
+              popup.location.href = url;
+              popup.focus();
+            } catch (e) {
+              // si falla por alguna razón, fallback: abrir nueva pestaña normal
+              window.open(url, '_blank');
+            }
+          } else {
+            // popup no disponible (bloqueada). Intentar abrir ahora (pero puede ser bloqueada)
+            window.open(url, '_blank');
+          }
           alert(`Faltan ${res.missing} tarjetas para calcular el handicap. Se abrirá el formulario.`);
           return;
         }
 
+        // Si el cálculo fue exitoso y guardado, actualizar UI y cerrar la ventana en blanco si se abrió
         if (res.ok && res.saved) {
-          // actualizar valor visible en el input del perfil (si la página está abierta)
           const handInput = document.getElementById('handicap');
           if (handInput) handInput.value = res.handicap;
           alert(`Handicap calculado y guardado: ${res.handicapSigned || res.handicap}`);
+          if (popup && !popup.closed) popup.close();
         } else if (res.ok) {
           alert(`Handicap calculado: ${res.handicapSigned || res.handicap}`);
+          if (popup && !popup.closed) popup.close();
         } else {
           alert('No se pudo calcular el handicap: ' + (res.message || 'Error'));
+          if (popup && !popup.closed) popup.close();
         }
       } catch (err) {
         console.error('Error ejecutando calculateAndSaveHandicap:', err);
+        // Si ocurrió error y abrimos popup, cerrarlo para no dejar pestaña en blanco
+        if (popup && !popup.closed) popup.close();
         alert('Ocurrió un error al calcular el handicap. Revisa la consola.');
       }
     });
+
 
     document.getElementById('profileForm').addEventListener('submit', async (e) => {
       e.preventDefault();
