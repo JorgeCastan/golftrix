@@ -373,76 +373,42 @@ else {
       }
     });
 
-    // Botón para ejecutar el cálculo del hándicap (versión compatible con móvil)
-// >>> Reemplaza el bloque anterior COMPLETAMENTE por este.
-const editarHandicapBtn = document.getElementById('editarHandicapBtn');
-editarHandicapBtn.addEventListener('click', async () => {
-  // 1) abrir una pestaña/ventana en blanco **sin await** para que los móviles
-  // permitan la apertura (es parte inmediata del click).
-  let popup = null;
-  try {
-    popup = window.open('', '_blank');
-  } catch (err) {
-    popup = null;
-  }
-
-  try {
-    const mod = await import('./handicap.js');
-    if (typeof mod.calculateAndSaveHandicap !== 'function') {
-      console.error('La función calculateAndSaveHandicap no existe en handicap.js');
-      // Si abrimos popup y no lo vamos a usar, cerrarlo para no dejar ventana en blanco
-      if (popup && !popup.closed) popup.close();
-      return;
-    }
-
-    // Llamamos la función asíncrona (puede tardar)
-    const res = await mod.calculateAndSaveHandicap();
-    console.log('Resultado cálculo handicap:', res);
-
-    // Si faltan tarjetas: navegar la popup (si existe) a tarjetas_form.html,
-    // si no existe popup (navegador bloqueó) hacemos fallback a abrir en la misma pestaña.
-    if (!res.ok && res.missing) {
-      const url = 'tarjetas_form.html';
-      if (popup && !popup.closed) {
-        try {
-          popup.location.href = url;
-          popup.focus();
-        } catch (err) {
-          // si no se puede cambiar location (por alguna política), fallback:
-          window.open(url, '_blank');
+    // Botón para ejecutar el cálculo del hándicap
+    const editarHandicapBtn = document.getElementById('editarHandicapBtn');
+    editarHandicapBtn.addEventListener('click', async () => {
+      try {
+        const mod = await import('./handicap.js');
+        if (typeof mod.calculateAndSaveHandicap !== 'function') {
+          console.error('La función calculateAndSaveHandicap no existe en handicap.js');
+          return;
         }
-      } else {
-        // popup fue bloqueada; abrir en misma ventana para celular (o puedes usar _self)
-        window.open(url, '_blank');
+        // Llamamos la función; si no pasamos uid utiliza el usuario autenticado
+        const res = await mod.calculateAndSaveHandicap();
+        console.log('Resultado cálculo handicap:', res);
+
+        if (!res.ok && res.missing) {
+          // Si faltan tarjetas, abrir el formulario para completarlas
+          // Puedes abrir en nueva ventana o en modal. Aquí abrimos otra ventana.
+          window.open('tarjetas_form.html', '_blank');
+          alert(`Faltan ${res.missing} tarjetas para calcular el handicap. Se abrirá el formulario.`);
+          return;
+        }
+
+        if (res.ok && res.saved) {
+          // actualizar valor visible en el input del perfil (si la página está abierta)
+          const handInput = document.getElementById('handicap');
+          if (handInput) handInput.value = res.handicap;
+          alert(`Handicap calculado y guardado: ${res.handicapSigned || res.handicap}`);
+        } else if (res.ok) {
+          alert(`Handicap calculado: ${res.handicapSigned || res.handicap}`);
+        } else {
+          alert('No se pudo calcular el handicap: ' + (res.message || 'Error'));
+        }
+      } catch (err) {
+        console.error('Error ejecutando calculateAndSaveHandicap:', err);
+        alert('Ocurrió un error al calcular el handicap. Revisa la consola.');
       }
-      // avisar al usuario
-      alert(`Faltan ${res.missing} tarjetas para calcular el handicap. Se abrirá el formulario.`);
-      return;
-    }
-
-    // Si no faltan tarjetas y abrimos popup inicialmente, cerrarla porque no se necesita
-    if (popup && !popup.closed) {
-      try { popup.close(); } catch (e) { /* noop */ }
-    }
-
-    // Si resultado OK actualizar UI local
-    if (res.ok && res.saved) {
-      const handInput = document.getElementById('handicap');
-      if (handInput) handInput.value = res.handicap;
-      alert(`Handicap calculado y guardado: ${res.handicapSigned || res.handicap}`);
-    } else if (res.ok) {
-      alert(`Handicap calculado: ${res.handicapSigned || res.handicap}`);
-    } else {
-      alert('No se pudo calcular el handicap: ' + (res.message || 'Error'));
-    }
-  } catch (err) {
-    console.error('Error ejecutando calculateAndSaveHandicap:', err);
-    // Si abrimos popup y ocurrió error, cerrarlo para no dejar ventana en blanco
-    if (popup && !popup.closed) try { popup.close(); } catch(e){}
-    alert('Ocurrió un error al calcular el handicap. Revisa la consola.');
-  }
-});
-
+    });
 
     document.getElementById('profileForm').addEventListener('submit', async (e) => {
       e.preventDefault();
