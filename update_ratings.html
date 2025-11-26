@@ -1,10 +1,57 @@
 <!DOCTYPE html>
-<html>
+<html lang="es">
 <head>
-  <title>Actualizar Ratings</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Actualizar Ratings - Golftrix</title>
 </head>
 <body>
-  <script type="module" src="update_ratings.js"></script>
-  <h2>Actualizando ratings... revisa la consola</h2>
+
+  <h2>Actualizar Ratings del Campo</h2>
+  <p>Documento: <strong>club_de_golf_las_fuentes</strong></p>
+
+  <button id="btnActualizar">Agregar Ratings</button>
+
+  <!-- Firebase SDK -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.2/firebase-app.js";
+    import { getFirestore, doc, updateDoc } from "https://www.gstatic.com/firebasejs/10.7.2/firebase-firestore.js";
+
+    // 🔥 TU CONFIGURACIÓN DE FIREBASE
+    const firebaseConfig = {
+      apiKey: "TU_API_KEY",
+      authDomain: "TU_AUTH_DOMAIN",
+      projectId: "TU_PROJECT_ID",
+      storageBucket: "TU_STORAGE_BUCKET",
+      messagingSenderId: "TU_SENDER_ID",
+      appId: "TU_APP_ID"
+    };
+
+    // Inicializar Firebase y Firestore
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+
+    // Referencia al documento del campo
+    const campoRef = doc(db, "camposGolf", "club_de_golf_las_fuentes");
+
+    // Función para actualizar campos
+    async function agregarRatings() {
+      try {
+        await updateDoc(campoRef, {
+          rating_azules: 65.2,
+          rating_blancas: 63.2,
+          raiting_rojas: 65.4
+        });
+
+        alert("Ratings agregados correctamente al documento.");
+      } catch (error) {
+        console.error("Error al actualizar:", error);
+        alert("Hubo un error, revisa la consola.");
+      }
+    }
+
+    document.getElementById("btnActualizar").addEventListener("click", agregarRatings);
+  </script>
+
 </body>
 </html>
