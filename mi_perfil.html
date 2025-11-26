@@ -152,6 +152,48 @@
     font-weight: bold;
   }
 
+  /* ======= Estilos para el select Salida (borde / contorno gradiente verde) ======= */
+  select#salida {
+    width: 100%;
+    padding: 12px;
+    border: 3px solid transparent;
+    border-radius: 10px;
+    background-color: #fdfdfd;
+    font-size: 16px;
+    font-family: 'Orbitron', sans-serif;
+    font-weight: bold;
+    color: transparent;
+    background-image: linear-gradient(90deg, #007f00, #00cc44);
+    -webkit-background-clip: text;
+    background-clip: text;
+    outline: none;
+    cursor: pointer;
+    transition: all 0.25s ease;
+    appearance: none;
+    background-origin: border-box;
+    /* borde gradiente verde */
+    border-image: linear-gradient(90deg, #007f00, #00cc44) 1;
+    box-shadow: inset 0 0 0 1px rgba(0,0,0,0.02);
+  }
+
+  /* efecto hover similar al select genero */
+  select#salida:hover {
+    box-shadow: 0 0 12px rgba(0, 255, 136, 0.45), 0 0 20px rgba(0, 204, 68, 0.25);
+  }
+
+  select#salida:focus {
+    border-color: transparent;
+    border-image: linear-gradient(90deg, #007f00, #00cc44);
+    box-shadow: 0 0 15px rgba(0, 204, 68, 0.6);
+  }
+
+  /* Opciones dentro del select salida */
+  select#salida option {
+    background-color: #ffffff;
+    color: #007f00;
+    font-family: 'Orbitron', sans-serif;
+    font-weight: bold;
+  }
 
 
     button {
@@ -291,6 +333,15 @@
         </button>
       </div>
 
+      <!-- ======= NUEVO: Campo Salida (insertado debajo de Handicap) ======= -->
+      <label>Salida</label>
+      <select id="salida">
+        <option value="">Selecciona tu salida</option>
+        <option value="Azul">Azul</option>
+        <option value="Blanca">Blanca</option>
+        <option value="Roja">Roja</option>
+      </select>
+      <!-- ======= FIN Campo Salida ======= -->
 
       <label>Grupo</label>
       <input type="text" id="grupo" readonly />
@@ -364,6 +415,8 @@
 
       // Cargar género si existe
       document.getElementById('genero').value = data.genero || '';
+      // Cargar salida si existe
+      document.getElementById('salida').value = data.salida || '';
     }
 else {
           console.log("❌ Documento no existe aún.");
@@ -463,14 +516,18 @@ else {
       const userRef = doc(db, "users", currentUserId);
 
       try {
-        const genero = document.getElementById('genero').value;
+              const genero = document.getElementById('genero').value;
+              const salida = document.getElementById('salida').value;
+              
 
-        const updates = { 
-          name, 
-          lastname, 
-          handicap,
-          genero // 👈 también guardamos el género
-        };
+              const updates = { 
+                name, 
+                lastname, 
+                handicap,
+                genero, // 👈 también guardamos el género
+                salida  // 👈 guardamos la salida seleccionada
+              };
+
 
 
         console.log("📌 Guardando en Firestore:", updates);
