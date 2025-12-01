@@ -115,62 +115,107 @@ async function computeHandicapForUid(uid) {
     return { ok: false, handicap: null, message: `Faltan ${missing} tarjetas completas.`, missing, openForm: true };
   }
 
-  // Solo trabajar con tarjetas que tengan parCampo válido (número)
-  const validCards = cards.filter(c => typeof c.parCampo === 'number' && Number.isFinite(c.parCampo));
+  // -----------------------------------------------
+  // NUEVA LÓGICA DEL HANDICAP (HOYO X HOYO + RATING)
+  // -----------------------------------------------
 
-  if (validCards.length < 10) {
-    // Si algunas de las últimas 10 no tienen parCampo, informar que faltan tarjetas válidas
-    const missingValid = 10 - validCards.length;
-    return { ok: false, handicap: null, message: `Faltan ${missingValid} tarjetas con par de campo válido.`, missing: missingValid, openForm: true };
+  // Para cada tarjeta debemos:
+  // 1. Obtener campoId → cargar documento del campo
+  // 2. Aplicar máximo por hoyo = parHoyo + 2
+  // 3. Sumar 18 hoyos ajustados
+  // 4. Restar rating según salida ("rojas", "blancas", "azules")
+
+  // Pre-cargar todos los campos que aparezcan en las 10 tarjetas
+  const campoIdsUnicos = [...new Set(cards.map(c => c.raw.campoId))];
+  const camposMap = {};
+
+  for (const cid of campoIdsUnicos) {
+    if (!cid) continue;
+    const ref = doc(db, "camposGolf", cid);
+    const snapCampo = await getDoc(ref);
+    if (snapCampo.exists()) {
+      camposMap[cid] = snapCampo.data();
+    }
   }
 
-  // calcular diferencias (total - parCampo) para cada tarjeta (pueden ser negativas)
-  const diffs = validCards.map(c => {
-    return {
+  // Verificar que todas las tarjetas tengan campo válido con paresHoyo y ratings
+  for (const c of cards) {
+    const campo = camposMap[c.raw.campoId];
+    if (!campo || !Array.isArray(campo.paresHoyo) || campo.paresHoyo.length < 18) {
+      return { ok: false, handicap: null, message: `El campo de la tarjeta ${c.id} no tiene información válida de pares.` };
+    }
+    const salida = c.raw.salida;
+    if (!["rojas", "blancas", "azules"].includes(salida)) {
+      return { ok: false, handicap: null, message: `La tarjeta ${c.id} no tiene salida válida.` };
+    }
+    if (campo[`rating_${salida}`] == null) {
+      return { ok: false, handicap: null, message: `El campo para la tarjeta ${c.id} no tiene rating para la salida ${salida}.` };
+    }
+  }
+
+  // Calcular diferencia nueva por tarjeta
+  const diffs = [];
+
+  for (const c of cards) {
+    const campo = camposMap[c.raw.campoId];
+    const salida = c.raw.salida;
+    const rating = Number(campo[`rating_${salida}`]);
+
+    // preparar mapa hoyo → golpes reales
+    const mapGolpes = new Map();
+    for (const h of c.raw.scores) {
+      mapGolpes.set(h.hoyo, Number(h.golpes) || 0);
+    }
+
+    // sumar 18 hoyos ajustados
+    let totalAjustado = 0;
+    for (let h = 1; h <= 18; h++) {
+      const golpes = mapGolpes.get(h) || 0;
+      const par = Number(campo.paresHoyo[h - 1]) || 0;
+      const maxPermitido = par + 2;
+      const golpeAjustado = Math.min(golpes, maxPermitido);
+      totalAjustado += golpeAjustado;
+    }
+
+    const diff = totalAjustado - rating;
+
+    diffs.push({
       id: c.id,
-      diff: Number(c.total) - Number(c.parCampo),
+      diff,
       createdAtMillis: c.createdAtMillis
-    };
-  });
+    });
+  }
 
   // ordenar por createdAtMillis desc ya se hizo en fetch; pero mantenemos orden relativo
   // construir array de solo diffs (en el mismo orden temporal)
   const diffValues = diffs.map(d => d.diff);
 
-  // encontrar index de max y min (por valor numérico) — descartar solo una instancia de cada
-  let maxIndex = 0, minIndex = 0;
-  for (let i = 1; i < diffValues.length; i++) {
-    if (diffValues[i] > diffValues[maxIndex]) maxIndex = i;
-    if (diffValues[i] < diffValues[minIndex]) minIndex = i;
+  // -----------------------------------------------
+  // DESCARTAR 2 DIFERENCIAS MÁS ALTAS Y 2 MÁS BAJAS
+  // -----------------------------------------------
+
+  const sortedDiffs = diffs.map(d => d.diff).sort((a, b) => a - b);
+
+  // Necesitamos exactamente 10 diferencias
+  if (sortedDiffs.length !== 10) {
+    return { ok: false, handicap: null, message: `Error interno: no hay 10 diferencias.` };
   }
 
-  // construir arreglo con 8 diffs restantes (descartando una max y una min)
-  const remaining = [];
-  for (let i = 0; i < diffValues.length; i++) {
-    if (i === maxIndex) { maxIndex = -1; continue; } // skip first max
-    if (i === minIndex) { minIndex = -1; continue; } // skip first min
-    remaining.push(diffValues[i]);
+  // descartar 2 más bajas y 2 más altas
+  const remaining = sortedDiffs.slice(2, 10 - 2); // deja 6
+
+  if (remaining.length !== 6) {
+    return { ok: false, handicap: null, message: `Error interno: no quedan 6 tarjetas tras descartar.` };
   }
 
-  // En caso raro de que no tengamos 8 (por empates o lógica), utilizamos heurística alternativa
-  if (remaining.length !== 8) {
-    const sorted = diffValues.slice().sort((a,b)=>a-b);
-    const alt = sorted.slice(1, 9); // tomar del 2° al 9° (descartar min y max)
-    const avgAlt = alt.reduce((s,x)=>s+x,0)/alt.length;
-    const handicapAlt = Math.round(avgAlt);
-    // build signed string
-    const signStr = handicapAlt >= 0 ? `+${handicapAlt}` : `${handicapAlt}`;
-    return { ok: true, handicap: handicapAlt, handicapSigned: signStr, message: 'Calculado con heurística alternativa (empates).', missing: 0 };
+    const sum = remaining.reduce((s, x) => s + x, 0);
+    const avg = sum / remaining.length;
+    const rounded = Math.round(avg); // redondeo .5 hacia arriba
+
+    const handicapSigned = rounded >= 0 ? `+${rounded}` : `${rounded}`;
+
+    return { ok: true, handicap: rounded, handicapSigned, message: 'Handicap calculado correctamente.', missing: 0 };
   }
-
-  const sum = remaining.reduce((s, x) => s + x, 0);
-  const avg = sum / remaining.length;
-  const rounded = Math.round(avg); // redondeo .5 hacia arriba
-
-  const handicapSigned = rounded >= 0 ? `+${rounded}` : `${rounded}`;
-
-  return { ok: true, handicap: rounded, handicapSigned, message: 'Handicap calculado correctamente.', missing: 0 };
-}
 
 /**
  * Calcula y guarda el handicap en users/{uid}.handicap
