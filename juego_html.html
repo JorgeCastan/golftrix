@@ -256,6 +256,18 @@
         if (snap.size > 0) {
           tarjetaDocId = snap.docs[0].id;
         } else {
+          // obtener salida del usuario desde users/{uid}
+          let salidaUsuario = null;
+          try {
+            const userRef = doc(db, "users", uid);
+            const userSnap = await getDoc(userRef);
+            if (userSnap.exists()) {
+              salidaUsuario = userSnap.data().salida || null;
+            }
+          } catch (e) {
+            console.error("Error leyendo salida del usuario:", e);
+          }
+
           // crear tarjeta
           const newTarjeta = {
             juegoId,
@@ -265,11 +277,14 @@
             ownerUid: juego.ownerUid || null,
             createdAt: serverTimestamp(),
             estado: 'activa',
-            scores: [] // array de objetos { hoyo: number, golpes: number, createdAt: Timestamp }
+            salida: salidaUsuario, // <<--- NUEVO CAMPO
+            scores: [] // array de objetos
           };
+
           const added = await addDoc(tarjetasCol, newTarjeta);
           tarjetaDocId = added.id;
         }
+
 
        // 3) generar botón de tarjeta y botones de modos
         modosContainer.innerHTML = '';
