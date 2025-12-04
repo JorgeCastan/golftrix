@@ -490,81 +490,70 @@ onAuthStateChanged(auth, async (u) => {
 });
 </script>
 
+<!-- CONTENEDOR DONDE SE INYECTARÁ EL MENÚ -->
+<div id="menuContainer"></div>
+
 <script>
-  // Carga menu.html de forma robusta:
-  // - copia <link> y <style> al <head> para que los estilos se apliquen
-  // - clona (cloneNode(true)) el botón hamburguesa y el sidebar y los inserta en el DOM
-  // - luego importa menu.js para enlazar eventos
-  fetch('menu.html')
-    .then(res => res.text())
-    .then(html => {
-      const temp = document.createElement('div');
+  async function loadMenu() {
+    try {
+      const res = await fetch("menu.html");
+      const html = await res.text();
+
+      const temp = document.createElement("div");
       temp.innerHTML = html;
 
-      // 1) mover/copy estilos (links y style) al head si no existen
+      // 1) Mover estilos al <head> sin duplicar
       const head = document.head;
-      const styleEls = temp.querySelectorAll('link[rel="stylesheet"], style');
-      styleEls.forEach(el => {
-        // prevenir duplicados por href o contenido
-        if (el.tagName.toLowerCase() === 'link') {
-          const href = el.getAttribute('href');
-          if (href && !Array.from(document.querySelectorAll('link[rel="stylesheet"]')).some(l=>l.getAttribute('href')===href)) {
-            const cloneLink = el.cloneNode(true);
-            head.appendChild(cloneLink);
+      temp.querySelectorAll('link[rel="stylesheet"], style').forEach(el => {
+        if (el.tagName === "LINK") {
+          const href = el.getAttribute("href");
+          if (!document.querySelector(`link[href="${href}"]`)) {
+            head.appendChild(el.cloneNode(true));
           }
         } else {
-          // <style>
-          const cloneSt = el.cloneNode(true);
-          head.appendChild(cloneSt);
+          head.appendChild(el.cloneNode(true));
         }
       });
 
-      // 2) encontrar y clonar botón hamburguesa y sidebar
-      const hamburgerBtn = temp.querySelector('#hamburger') || temp.querySelector('.hamburger');
-      const sidebarMenu = temp.querySelector('#sidebarMenu') || temp.querySelector('.sidebar-mobile') || temp.querySelector('.sidebar');
-
-      const container = document.getElementById('menuContainer');
-
-      if (hamburgerBtn && container) {
-        // clonar, para no remover el contenido original del HTML en caso de ser usado en otros lugares
-        const hbClone = hamburgerBtn.cloneNode(true);
-        // Si el botón hamburguesa tiene atributos inline que referencian rutas relativas, conviene dejarlos tal cual.
-        container.appendChild(hbClone);
+      // 2) Insertar botón hamburguesa en el contenedor
+      const ham = temp.querySelector("#hamburger") || temp.querySelector(".hamburger");
+      if (ham) {
+        document.getElementById("menuContainer").appendChild(ham.cloneNode(true));
       } else {
-        console.warn('Menu: no se encontró botón hamburguesa en menu.html');
+        console.warn("⚠ No se encontró #hamburger en menu.html");
       }
 
-      if (sidebarMenu) {
-        // clonar sidebar y añadir al body si no existe ya (por id)
-        const id = sidebarMenu.id;
-        if (id && document.getElementById(id)) {
-          // ya existe, no clonar
-        } else {
-          const sbClone = sidebarMenu.cloneNode(true);
-          document.body.appendChild(sbClone);
+      // 3) Insertar sidebar en el body si no existe
+      const sidebar = temp.querySelector("#sidebarMenu");
+      if (sidebar) {
+        if (!document.querySelector("#sidebarMenu")) {
+          document.body.appendChild(sidebar.cloneNode(true));
         }
       } else {
-        console.warn('Menu: no se encontró sidebar en menu.html');
+        console.warn("⚠ No se encontró #sidebarMenu en menu.html");
       }
 
-      // 3) Importar la lógica (menu.js). Espera un tick para asegurar que DOM se haya actualizado.
-      // Se usa setTimeout 0 para dar oportunidad al navegador de procesar el append.
-      setTimeout(() => {
-        import('./menu.js').catch(err => console.error('Error importando menu.js', err));
-      }, 0);
-    })
-    .catch(err => {
-      console.error('Error cargando menu.html', err);
-    });
+      // 4) Cargar la lógica del menú
+      import("./menu.js").catch(err => console.error("Error importando menu.js:", err));
+
+    } catch (error) {
+      console.error("Error cargando menu.html:", error);
+    }
+  }
+
+  loadMenu();
 </script>
 
 <script>
-  // Handler para que el logo lleve al dashboard
-  const logo = document.getElementById('logo');
+  // LOGO → Dashboard
+  const logo = document.getElementById("logo");
   if (logo) {
-    logo.addEventListener('click', () => { window.location.href = 'dashboard.html'; });
+    logo.addEventListener("click", () => {
+      window.location.href = "dashboard.html";
+    });
   }
 </script>
+
 
 
 </body>
