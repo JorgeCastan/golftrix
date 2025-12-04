@@ -20,72 +20,55 @@ body {
 }
 
 /* NUEVO: HEADER ESTILO GOLFTRIX */
-header {
-  background: linear-gradient(90deg, #007f00, #00cc44);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  position: relative;
-  padding: 20px 40px;
-  color: white;
-  height: 80px;
-}
+  header {
+      background: linear-gradient(90deg, #007f00, #00cc44);
+      display: flex;
+      align-items: center;
+      justify-content: center; /* Para centrar el título horizontalmente */
+      position: relative;
+      padding: 20px 40px;
+      color: white;
+      height: 80px; /* para dar altura fija */
+    }
 
-/* Contenedor del menú hamburguesa (izquierda) */
-#menuContainer {
-  position: absolute;
-  left: 20px;
-  top: 50%;
-  transform: translateY(-50%);
-  z-index: 100;
-}
+    /* Título centrado absoluto */
+    header h1 {
+      font-size: 2rem;
+      margin: 0;
+      position: absolute;
+      left: 50%;
+      transform: translateX(-50%);
+    }
 
-/* Título centrado */
-header h1 {
-  font-size: 2rem;
-  margin: 0;
-  text-align: center;
-}
-
-/* Logo a la derecha */
-header img {
-  height: 100px;
-  position: absolute;
-  right: 20px;
-  cursor: pointer;
-}
+    /* Logo a la derecha, grande */
+    header img {
+      height: 100px;
+      position: absolute;
+      right: 20px;
+      cursor: pointer;
+    }
 
 /* Ajustes para móvil */
 @media (max-width: 768px) {
   header {
-    flex-direction: row;
-    height: 80px;
-    padding: 0 15px;
-    position: relative;
-  }
-
-  #menuContainer {
-    position: relative;
-    left: 0;
-    transform: none;
-    order: 1;
-  }
-
-  header h1 {
-    position: relative;
-    left: 0;
-    transform: none;
-    order: 2;
-    flex-grow: 1;
-    text-align: center;
-    font-size: 1.5rem;
+    flex-direction: column;
+    height: auto;
+    padding: 20px;
+    position: static;
   }
 
   header img {
-    position: relative;
-    right: 0;
+    position: static;
     height: 60px;
-    order: 3;
+    order: 1;
+    margin-bottom: 10px;
+  }
+
+  header h1 {
+    position: static;
+    order: 2;
+    transform: none;
+    font-size: 1.8rem;
   }
 }
 
