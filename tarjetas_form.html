@@ -5,13 +5,96 @@
 <meta name="viewport" content="width=device-width,initial-scale=1" />
 <title>Completar Tarjetas - Golftrix</title>
 <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@700&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="menu.css" />
 <style>
 /* Reutiliza estilos similares a tarjeta.html */
-/* Body sin padding para evitar espacio superior y laterales en header */
-body { font-family:'Orbitron',sans-serif; margin:0; padding:0; background: #f6f6f6; color:#111; }
+body { 
+  font-family:'Orbitron',sans-serif; 
+  margin:0; 
+  padding:0;  /* CAMBIADO: quitar padding general */
+  background: #f6f6f6; 
+  color:#111;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
 
-/* Contenedor principal con padding interno */
-.container { max-width:1000px; margin:0 auto; padding:12px; }
+/* NUEVO: HEADER ESTILO GOLFTRIX */
+header {
+  background: linear-gradient(90deg, #007f00, #00cc44);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  padding: 20px 40px;
+  color: white;
+  height: 80px;
+}
+
+/* Contenedor del menú hamburguesa (izquierda) */
+#menuContainer {
+  position: absolute;
+  left: 20px;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 100;
+}
+
+/* Título centrado */
+header h1 {
+  font-size: 2rem;
+  margin: 0;
+  text-align: center;
+}
+
+/* Logo a la derecha */
+header img {
+  height: 100px;
+  position: absolute;
+  right: 20px;
+  cursor: pointer;
+}
+
+/* Ajustes para móvil */
+@media (max-width: 768px) {
+  header {
+    flex-direction: row;
+    height: 80px;
+    padding: 0 15px;
+    position: relative;
+  }
+
+  #menuContainer {
+    position: relative;
+    left: 0;
+    transform: none;
+    order: 1;
+  }
+
+  header h1 {
+    position: relative;
+    left: 0;
+    transform: none;
+    order: 2;
+    flex-grow: 1;
+    text-align: center;
+    font-size: 1.5rem;
+  }
+
+  header img {
+    position: relative;
+    right: 0;
+    height: 60px;
+    order: 3;
+  }
+}
+
+.container { 
+  max-width:1000px; 
+  margin:0 auto; 
+  padding: 20px 12px; /* AGREGAR padding aquí en vez de en body */
+  flex: 1;
+}
 
 /* Modal */
 .modal-overlay {
@@ -58,75 +141,14 @@ h2 { margin:0 0 10px 0; color:#005600; text-align:center; }
 
 /* small note */
 .small { font-size:0.88rem; color:#666; }
-
-/* --- Header / menu (copiado de tu tarjeta de referencia) --- */
-header {
-  background: linear-gradient(90deg, #007f00, #00cc44);
-  display: flex;
-  align-items: center;
-  justify-content: center; /* título centrado */
-  position: relative;
-  padding: 14px 20px;
-  color: white;
-  height: 80px;
-}
-
-header h1 {
-  font-size: 1.6rem;
-  margin: 0;
-  position: absolute;
-  left: 50%;
-  transform: translateX(-50%);
-}
-
-header img#logo {
-  height: 72px;
-  position: absolute;
-  right: 18px;
-  cursor: pointer;
-}
-
-/* contenedor donde se insertará el botón hamburguesa */
-#menuContainer { display:inline-block; margin-left:10px; position: absolute; left: 18px; }
-
-/* Responsive: en móvil colocar logo y título en columna */
-@media (max-width:768px) {
-  header {
-    flex-direction: column;
-    height: auto;
-    padding: 10px;
-    position: static;
-  }
-  header img#logo {
-    position: static;
-    height: 48px;
-    order: 1;
-    margin-bottom: 8px;
-  }
-  header h1 {
-    position: static;
-    transform: none;
-    font-size: 1.25rem;
-    order: 2;
-  }
-}
-
-
 </style>
 </head>
 <body>
-
-<header>
-  <!-- aquí se insertará el botón hamburguesa (viene de menu.html) -->
-  <div id="menuContainer"></div>
-
-  <h1>Completar Tarjetas</h1>
-
-  <!-- Logo: clic va al dashboard -->
-  <img src="logo_golftrix.png" alt="Logo" id="logo" />
+  <header>
+    <div id="menuContainer"></div>
+    <h1>Completar Tarjetas - Golftrix</h1>
+    <img src="logo_golftrix.png" alt="Logo" id="logo" />
 </header>
-
-
 <div class="container">
   <div style="text-align:center; margin-bottom:8px;">
     <button id="openModal" class="btn save">Completar tarjetas faltantes / Calcular Handicap</button>
@@ -165,6 +187,10 @@ header img#logo {
   </div>
 </div>
 
+<footer style="background: #000; color: white; text-align: center; padding: 15px;">
+  &copy; 2025 Golftrix. Todos los derechos reservados.
+</footer>
+
 <script>
 function getQueryParam(n){ const u=new URL(location.href); return u.searchParams.get(n); }
 </script>
@@ -188,6 +214,12 @@ import {
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
 const auth = getAuth(app);
+
+// Agregar evento click al logo para ir al dashboard
+const logo = document.getElementById('logo');
+if (logo) {
+  logo.addEventListener('click', () => window.location.href = 'dashboard.html');
+}
 
 // DOM
 const openModalBtn = document.getElementById('openModal');
@@ -490,45 +522,37 @@ onAuthStateChanged(auth, async (u) => {
 });
 </script>
 
-<!-- CONTENEDOR DONDE SE INYECTARÁ EL MENÚ -->
-<div id="menuContainer"></div>
-
-<!-- Cargar menú -->
 <script>
-document.addEventListener("DOMContentLoaded", () => {
-  fetch("menu.html")
-    .then(r => r.text())
+  // Carga menu.html, extrae botón hamburguesa y sidebar, los inserta y luego carga la lógica (menu.js)
+  fetch('menu.html')
+    .then(res => res.text())
     .then(html => {
-      document.getElementById("menuContainer").innerHTML = html;
+      const temp = document.createElement('div');
+      temp.innerHTML = html;
 
-      // Necesario porque el menú usa funciones JS
-      const script = document.createElement("script");
-      script.src = "menu.js";
-      script.onload = () => {
-        if (typeof initMenu === "function") {
-          initMenu(); // inicializa el menú
-        } else {
-          console.error("⚠️ initMenu() no existe en menu.js");
-        }
-      };
-      document.body.appendChild(script);
+      // buscar botón hamburguesa (por id o por clase)
+      const hamburgerBtn = temp.querySelector('#hamburger') || temp.querySelector('.hamburger');
+      // buscar sidebar (por id o clase)
+      const sidebarMenu = temp.querySelector('#sidebarMenu') || temp.querySelector('.sidebar-mobile') || temp.querySelector('.sidebar');
+
+      // coloca el botón hamburger dentro del header (en #menuContainer)
+      const container = document.getElementById('menuContainer');
+      if (hamburgerBtn && container) {
+        container.appendChild(hamburgerBtn);
+      }
+
+      // coloca el sidebar al final del body (fuera del header) para que su posicionamiento fijo funcione
+      if (sidebarMenu) {
+        document.body.appendChild(sidebarMenu);
+      }
+
+      // ahora que los nodos están en el DOM, carga la lógica del menú
+      import('./menu.js').catch(err => console.error('Error importando menu.js', err));
     })
-    .catch(err => console.error("Error cargando el menú:", err));
-});
-</script>
-
-
-<script>
-  // LOGO → Dashboard
-  const logo = document.getElementById("logo");
-  if (logo) {
-    logo.addEventListener("click", () => {
-      window.location.href = "dashboard.html";
+    .catch(err => {
+      console.error('Error cargando menu.html', err);
     });
-  }
 </script>
-
-
 
 </body>
 </html>
