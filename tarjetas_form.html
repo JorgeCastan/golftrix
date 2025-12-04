@@ -493,56 +493,30 @@ onAuthStateChanged(auth, async (u) => {
 <!-- CONTENEDOR DONDE SE INYECTARÁ EL MENÚ -->
 <div id="menuContainer"></div>
 
+<!-- Cargar menú -->
 <script>
-  async function loadMenu() {
-    try {
-      const res = await fetch("menu.html");
-      const html = await res.text();
+document.addEventListener("DOMContentLoaded", () => {
+  fetch("menu.html")
+    .then(r => r.text())
+    .then(html => {
+      document.getElementById("menuContainer").innerHTML = html;
 
-      const temp = document.createElement("div");
-      temp.innerHTML = html;
-
-      // 1) Mover estilos al <head> sin duplicar
-      const head = document.head;
-      temp.querySelectorAll('link[rel="stylesheet"], style').forEach(el => {
-        if (el.tagName === "LINK") {
-          const href = el.getAttribute("href");
-          if (!document.querySelector(`link[href="${href}"]`)) {
-            head.appendChild(el.cloneNode(true));
-          }
+      // Necesario porque el menú usa funciones JS
+      const script = document.createElement("script");
+      script.src = "menu.js";
+      script.onload = () => {
+        if (typeof initMenu === "function") {
+          initMenu(); // inicializa el menú
         } else {
-          head.appendChild(el.cloneNode(true));
+          console.error("⚠️ initMenu() no existe en menu.js");
         }
-      });
-
-      // 2) Insertar botón hamburguesa en el contenedor
-      const ham = temp.querySelector("#hamburger") || temp.querySelector(".hamburger");
-      if (ham) {
-        document.getElementById("menuContainer").appendChild(ham.cloneNode(true));
-      } else {
-        console.warn("⚠ No se encontró #hamburger en menu.html");
-      }
-
-      // 3) Insertar sidebar en el body si no existe
-      const sidebar = temp.querySelector("#sidebarMenu");
-      if (sidebar) {
-        if (!document.querySelector("#sidebarMenu")) {
-          document.body.appendChild(sidebar.cloneNode(true));
-        }
-      } else {
-        console.warn("⚠ No se encontró #sidebarMenu en menu.html");
-      }
-
-      // 4) Cargar la lógica del menú
-      import("./menu.js").catch(err => console.error("Error importando menu.js:", err));
-
-    } catch (error) {
-      console.error("Error cargando menu.html:", error);
-    }
-  }
-
-  loadMenu();
+      };
+      document.body.appendChild(script);
+    })
+    .catch(err => console.error("Error cargando el menú:", err));
+});
 </script>
+
 
 <script>
   // LOGO → Dashboard
