@@ -55,9 +55,75 @@ h2 { margin:0 0 10px 0; color:#005600; text-align:center; }
 
 /* small note */
 .small { font-size:0.88rem; color:#666; }
+
+/* --- Header / menu (copiado de tu tarjeta de referencia) --- */
+header {
+  background: linear-gradient(90deg, #007f00, #00cc44);
+  display: flex;
+  align-items: center;
+  justify-content: center; /* título centrado */
+  position: relative;
+  padding: 14px 20px;
+  color: white;
+  height: 80px;
+}
+
+header h1 {
+  font-size: 1.6rem;
+  margin: 0;
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+header img#logo {
+  height: 72px;
+  position: absolute;
+  right: 18px;
+  cursor: pointer;
+}
+
+/* contenedor donde se insertará el botón hamburguesa */
+#menuContainer { display:inline-block; margin-left:10px; position: absolute; left: 18px; }
+
+/* Responsive: en móvil colocar logo y título en columna */
+@media (max-width:768px) {
+  header {
+    flex-direction: column;
+    height: auto;
+    padding: 10px;
+    position: static;
+  }
+  header img#logo {
+    position: static;
+    height: 48px;
+    order: 1;
+    margin-bottom: 8px;
+  }
+  header h1 {
+    position: static;
+    transform: none;
+    font-size: 1.25rem;
+    order: 2;
+  }
+}
+
+
 </style>
 </head>
 <body>
+
+<header>
+  <!-- aquí se insertará el botón hamburguesa (viene de menu.html) -->
+  <div id="menuContainer"></div>
+
+  <h1>Completar Tarjetas</h1>
+
+  <!-- Logo: clic va al dashboard -->
+  <img src="logo_golftrix.png" alt="Logo" id="logo" />
+</header>
+
+
 <div class="container">
   <div style="text-align:center; margin-bottom:8px;">
     <button id="openModal" class="btn save">Completar tarjetas faltantes / Calcular Handicap</button>
@@ -420,5 +486,47 @@ onAuthStateChanged(auth, async (u) => {
   }
 });
 </script>
+
+<script>
+  // Carga menu.html, extrae botón hamburguesa y sidebar, los inserta y luego carga la lógica (menu.js)
+  fetch('menu.html')
+    .then(res => res.text())
+    .then(html => {
+      const temp = document.createElement('div');
+      temp.innerHTML = html;
+
+      // buscar botón hamburguesa (por id o por clase)
+      const hamburgerBtn = temp.querySelector('#hamburger') || temp.querySelector('.hamburger');
+      // buscar sidebar (por id o clase)
+      const sidebarMenu = temp.querySelector('#sidebarMenu') || temp.querySelector('.sidebar-mobile') || temp.querySelector('.sidebar');
+
+      // coloca el botón hamburger dentro del header (en #menuContainer)
+      const container = document.getElementById('menuContainer');
+      if (hamburgerBtn && container) {
+        container.appendChild(hamburgerBtn);
+      }
+
+      // coloca el sidebar al final del body (para posicionamiento)
+      if (sidebarMenu) {
+        document.body.appendChild(sidebarMenu);
+      }
+
+      // ahora que los nodos están en el DOM, carga la lógica del menú
+      import('./menu.js').catch(err => console.error('Error importando menu.js', err));
+    })
+    .catch(err => {
+      console.error('Error cargando menu.html', err);
+    });
+</script>
+
+<script>
+  // Handler para que el logo lleve al dashboard
+  const logo = document.getElementById('logo');
+  if (logo) {
+    logo.addEventListener('click', () => { window.location.href = 'dashboard.html'; });
+  }
+</script>
+
+
 </body>
 </html>
