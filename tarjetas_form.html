@@ -8,35 +8,6 @@
 <style>
 /* Reutiliza estilos similares a tarjeta.html */
 body { font-family:'Orbitron',sans-serif; margin:0; padding:12px; background: #f6f6f6; color:#111; }
-
-header {
-      background: linear-gradient(90deg, #007f00, #00cc44);
-      display: flex;
-      align-items: center;
-      justify-content: center; /* Para centrar el título horizontalmente */
-      position: relative;
-      padding: 20px 40px;
-      color: white;
-      height: 80px; /* para dar altura fija */
-}
-
-    /* Título centrado absoluto */
-header h1 {
-      font-size: 2rem;
-      margin: 0;
-      position: absolute;
-      left: 50%;
-      transform: translateX(-50%);
-}
-
-    /* Logo a la derecha, grande */
-header img {
-      height: 100px;
-      position: absolute;
-      right: 20px;
-      cursor: pointer;
-}
-
 .container { max-width:1000px; margin:0 auto; }
 
 /* Modal */
@@ -87,16 +58,6 @@ h2 { margin:0 0 10px 0; color:#005600; text-align:center; }
 </style>
 </head>
 <body>
-
-<header>
-  <!-- aquí se insertará el botón hamburguesa (viene de menu.html) -->
-  <div id="menuContainer" style="display:inline-block; margin-left:10px;"></div>
-
-  <h1>Completar tarjetas faltantes</h1>
-
-  <img src="logo_golftrix.png" alt="Logo" id="logo" />
-</header>
-
 <div class="container">
   <div style="text-align:center; margin-bottom:8px;">
     <button id="openModal" class="btn save">Completar tarjetas faltantes / Calcular Handicap</button>
@@ -459,40 +420,5 @@ onAuthStateChanged(auth, async (u) => {
   }
 });
 </script>
-
-<script>
-  // Carga menu.html, extrae botón hamburguesa y sidebar, los inserta y luego carga la lógica (menu.js)
-  fetch('menu.html')
-    .then(res => res.text())
-    .then(html => {
-      const temp = document.createElement('div');
-      temp.innerHTML = html;
-
-      // buscar botón hamburguesa (por id o por clase)
-      const hamburgerBtn = temp.querySelector('#hamburger') || temp.querySelector('.hamburger');
-      // buscar sidebar (por id o clase)
-      const sidebarMenu = temp.querySelector('#sidebarMenu') || temp.querySelector('.sidebar-mobile') || temp.querySelector('.sidebar');
-
-      // coloca el botón hamburger dentro del header (en #menuContainer)
-      const container = document.getElementById('menuContainer');
-      if (hamburgerBtn && container) {
-        // si había un nodo igual en el DOM, evitar duplicar: remove original (opcional)
-        container.appendChild(hamburgerBtn);
-      }
-
-      // coloca el sidebar al final del body (fuera del header) para que su posicionamiento fijo funcione
-      if (sidebarMenu) {
-        document.body.appendChild(sidebarMenu);
-      }
-
-      // ahora que los nodos están en el DOM, carga la lógica del menú
-      import('./menu.js').catch(err => console.error('Error importando menu.js', err));
-    })
-    .catch(err => {
-      console.error('Error cargando menu.html', err);
-    });
-</script>
-
-
 </body>
 </html>
