@@ -7,8 +7,11 @@
 <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@700&display=swap" rel="stylesheet" />
 <style>
 /* Reutiliza estilos similares a tarjeta.html */
-body { font-family:'Orbitron',sans-serif; margin:0; padding:12px; background: #f6f6f6; color:#111; }
-.container { max-width:1000px; margin:0 auto; }
+/* Body sin padding para evitar espacio superior y laterales en header */
+body { font-family:'Orbitron',sans-serif; margin:0; padding:0; background: #f6f6f6; color:#111; }
+
+/* Contenedor principal con padding interno */
+.container { max-width:1000px; margin:0 auto; padding:12px; }
 
 /* Modal */
 .modal-overlay {
@@ -488,31 +491,67 @@ onAuthStateChanged(auth, async (u) => {
 </script>
 
 <script>
-  // Carga menu.html, extrae botón hamburguesa y sidebar, los inserta y luego carga la lógica (menu.js)
+  // Carga menu.html de forma robusta:
+  // - copia <link> y <style> al <head> para que los estilos se apliquen
+  // - clona (cloneNode(true)) el botón hamburguesa y el sidebar y los inserta en el DOM
+  // - luego importa menu.js para enlazar eventos
   fetch('menu.html')
     .then(res => res.text())
     .then(html => {
       const temp = document.createElement('div');
       temp.innerHTML = html;
 
-      // buscar botón hamburguesa (por id o por clase)
+      // 1) mover/copy estilos (links y style) al head si no existen
+      const head = document.head;
+      const styleEls = temp.querySelectorAll('link[rel="stylesheet"], style');
+      styleEls.forEach(el => {
+        // prevenir duplicados por href o contenido
+        if (el.tagName.toLowerCase() === 'link') {
+          const href = el.getAttribute('href');
+          if (href && !Array.from(document.querySelectorAll('link[rel="stylesheet"]')).some(l=>l.getAttribute('href')===href)) {
+            const cloneLink = el.cloneNode(true);
+            head.appendChild(cloneLink);
+          }
+        } else {
+          // <style>
+          const cloneSt = el.cloneNode(true);
+          head.appendChild(cloneSt);
+        }
+      });
+
+      // 2) encontrar y clonar botón hamburguesa y sidebar
       const hamburgerBtn = temp.querySelector('#hamburger') || temp.querySelector('.hamburger');
-      // buscar sidebar (por id o clase)
       const sidebarMenu = temp.querySelector('#sidebarMenu') || temp.querySelector('.sidebar-mobile') || temp.querySelector('.sidebar');
 
-      // coloca el botón hamburger dentro del header (en #menuContainer)
       const container = document.getElementById('menuContainer');
+
       if (hamburgerBtn && container) {
-        container.appendChild(hamburgerBtn);
+        // clonar, para no remover el contenido original del HTML en caso de ser usado en otros lugares
+        const hbClone = hamburgerBtn.cloneNode(true);
+        // Si el botón hamburguesa tiene atributos inline que referencian rutas relativas, conviene dejarlos tal cual.
+        container.appendChild(hbClone);
+      } else {
+        console.warn('Menu: no se encontró botón hamburguesa en menu.html');
       }
 
-      // coloca el sidebar al final del body (para posicionamiento)
       if (sidebarMenu) {
-        document.body.appendChild(sidebarMenu);
+        // clonar sidebar y añadir al body si no existe ya (por id)
+        const id = sidebarMenu.id;
+        if (id && document.getElementById(id)) {
+          // ya existe, no clonar
+        } else {
+          const sbClone = sidebarMenu.cloneNode(true);
+          document.body.appendChild(sbClone);
+        }
+      } else {
+        console.warn('Menu: no se encontró sidebar en menu.html');
       }
 
-      // ahora que los nodos están en el DOM, carga la lógica del menú
-      import('./menu.js').catch(err => console.error('Error importando menu.js', err));
+      // 3) Importar la lógica (menu.js). Espera un tick para asegurar que DOM se haya actualizado.
+      // Se usa setTimeout 0 para dar oportunidad al navegador de procesar el append.
+      setTimeout(() => {
+        import('./menu.js').catch(err => console.error('Error importando menu.js', err));
+      }, 0);
     })
     .catch(err => {
       console.error('Error cargando menu.html', err);
