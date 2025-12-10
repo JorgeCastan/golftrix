@@ -6,6 +6,7 @@
 <title>Completar Tarjetas - Golftrix</title>
 <link rel="icon" href="logo_golftrix.png" type="image/png" />
 <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@700&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 <link rel="stylesheet" href="menu.css" />
 <style>
 /* Reutiliza estilos similares a tarjeta.html */
@@ -125,6 +126,52 @@ h2 { margin:0 0 10px 0; color:#005600; text-align:center; }
 
 /* small note */
 .small { font-size:0.88rem; color:#666; }
+/* Estilos para el flujo paso a paso */
+#currentCardTitle {
+  color: #005600;
+  margin-bottom: 5px;
+}
+
+#progressText {
+  color: #666;
+  font-style: italic;
+}
+
+.btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Mejorar visualización de inputs */
+input[type="date"], select {
+  font-family: 'Orbitron', sans-serif;
+  border: 1px solid #ccc;
+  transition: border-color 0.3s;
+}
+
+input[type="date"]:focus, select:focus {
+  border-color: #007f00;
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(0, 127, 0, 0.2);
+}
+
+/* Estilo para mensajes */
+#resultMsg {
+  padding: 10px;
+  border-radius: 8px;
+  background-color: #f8f9fa;
+  min-height: 40px;
+}
+
+/* Animación suave entre tarjetas */
+.card {
+  animation: fadeIn 0.5s ease-out;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
 </style>
 </head>
 <body>
@@ -134,43 +181,41 @@ h2 { margin:0 0 10px 0; color:#005600; text-align:center; }
     <img src="logo_golftrix.png" alt="Logo" id="logo" />
 </header>
 <div class="container">
-  <!-- La UI ahora se mostrará automáticamente; no hace falta botón -->
-  <div style="text-align:center; margin-bottom:8px;">
-    <!-- Mensaje opcional: instrucciones -->
-    <div class="small">Completa las tarjetas solicitadas. Usa Siguiente / Atrás para navegar. En la última tarjeta presiona Guardar.</div>
+  <!-- Estado y progreso -->
+  <div id="statusLine" class="small" style="text-align: center; margin-bottom: 15px;"></div>
+  
+  <div style="text-align: center; margin-bottom: 15px;">
+    <div id="missingBadge" class="badge" style="display: none; margin: 0 auto;"></div>
   </div>
-</div>
 
-<!-- Modal (hidden initially) -->
-<div id="modalRoot" style="display:none;" class="modal-overlay" role="dialog" aria-modal="true">
-  <div class="modal">
-    <div class="top-row">
-      <h2>Completar Tarjetas para Handicap</h2>
-      <div><button id="closeModal" class="btn cancel">Cerrar</button></div>
-    </div>
-
-    <div id="statusLine" class="small">Consultando tarjetas...</div>
-
-    <div style="margin-top:8px;">
-      <div id="missingBadge" class="badge" style="display:none;"></div>
-      <div class="small" style="margin:6px 0;">Selecciona la cantidad de tarjetas a llenar:</div>
-      <div id="countButtons" class="select-count"></div>
-    </div>
-
-    <div style="margin-top:10px;">
-      <label class="small">Selecciona campo</label>
-      <select id="campoSelect" class="select"></select>
-    </div>
-
-    <div id="cardsContainer" class="cards-list"></div>
-
-    <div style="display:flex; gap:8px; justify-content:center; margin-top:12px;">
-      <button id="prevBtn" class="btn cancel" type="button" style="display:none;">Atrás</button>
-      <button id="nextBtn" class="btn save" type="button">Siguiente</button>
-    </div>
-
-    <div id="resultMsg" style="margin-top:12px;" class="small"></div>
+  <!-- Indicador de tarjeta actual -->
+  <div style="text-align: center; margin-bottom: 20px;">
+    <h3 id="currentCardTitle">Tarjeta 1 de <span id="totalCards">0</span></h3>
+    <div class="small" id="progressText">Completa los datos de la tarjeta</div>
   </div>
+
+  <!-- Formulario de tarjeta actual (solo una visible) -->
+  <div id="currentCardContainer">
+    <!-- Los inputs se generarán aquí dinámicamente -->
+  </div>
+
+  <!-- Navegación -->
+  <div style="display: flex; gap: 15px; justify-content: center; margin-top: 30px;">
+    <button id="prevBtn" class="btn cancel" style="display: none;">
+      <i class="fas fa-arrow-left"></i> Atrás
+    </button>
+    
+    <button id="nextBtn" class="btn save">
+      Siguiente <i class="fas fa-arrow-right"></i>
+    </button>
+    
+    <button id="saveFinalBtn" class="btn save" style="display: none;">
+      <i class="fas fa-save"></i> Guardar y Calcular Handicap
+    </button>
+  </div>
+
+  <!-- Mensajes de resultado -->
+  <div id="resultMsg" style="margin-top: 20px; text-align: center;" class="small"></div>
 </div>
 
 <footer style="background: #000; color: white; text-align: center; padding: 15px;">
@@ -207,33 +252,24 @@ if (logo) {
   logo.addEventListener('click', () => window.location.href = 'dashboard.html');
 }
 
-// DOM
-const openModalBtn = document.getElementById('openModal');
-const modalRoot = document.getElementById('modalRoot');
-const closeModalBtn = document.getElementById('closeModal');
-const countButtons = document.getElementById('countButtons');
-const campoSelect = document.getElementById('campoSelect');
-const cardsContainer = document.getElementById('cardsContainer');
-const saveCardsBtn = document.getElementById('saveCardsBtn');
-const cancelBtn = document.getElementById('cancelBtn');
+let campos = []; // lista de camposGolf
+// VARIABLES NUEVAS PARA EL FLUJO POR PASOS
+let currentCardIndex = 0; // Índice de tarjeta actual (0-based)
+let maxCardsToFill = 0;   // Número de tarjetas a llenar
+let tempEntries = [];     // Datos de todas las tarjetas
+let salidaOptions = ['Blancas', 'Azules', 'Rojas']; // Opciones de salida
+
+// Referencias DOM NUEVAS
+const currentCardContainer = document.getElementById('currentCardContainer');
+const currentCardTitle = document.getElementById('currentCardTitle');
+const totalCardsSpan = document.getElementById('totalCards');
+const progressText = document.getElementById('progressText');
+const prevBtn = document.getElementById('prevBtn');
+const nextBtn = document.getElementById('nextBtn');
+const saveFinalBtn = document.getElementById('saveFinalBtn');
 const missingBadge = document.getElementById('missingBadge');
 const statusLine = document.getElementById('statusLine');
 const resultMsg = document.getElementById('resultMsg');
-
-let currentUserUid = null;
-let availableCardsCount = 0;
-let missingCount = 0;
-// selectedCount ya no controla la UI paginada; lo dejamos por compatibilidad pero no se usa para render
-let selectedCount = 0;
-let campos = []; // lista de camposGolf
-
-// flags para navegación por tarjetas
-let totalToFill = 0;     // cuántas tarjetas hay que rellenar (missingCount)
-let currentIndex = 0;    // índice de la tarjeta que se está editando (0-based)
-
-// estructura para mantener datos de input sin perderlos al cambiar tarjeta
-// será un array: tempEntries[i] = { fecha:'', campoId:'', salida:'Blancas'|'Azules'|'Rojas', scores: {1:val,...,18:val} }
-const tempEntries = [];
 
 function openModal() {
   modalRoot.style.display = 'flex';
@@ -282,199 +318,210 @@ async function countUserCompleteCards(uid) {
 }
 
 // genera botones de tarjeta 1..N
-// Ya no usamos los botones 1..N; esta función queda preservada pero vacía
 function renderCountButtons(maxMissing) {
-  // preservamos compatibilidad, pero la UI se controla con currentIndex/totalToFill y los botones Atrás/Siguiente
   countButtons.innerHTML = '';
+  for (let i = 1; i <= maxMissing; i++) {
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'count-btn';
+    btn.textContent = `Tarjeta ${i}`;
+    btn.dataset.index = i;
+    btn.addEventListener('click', () => {
+      selectedCount = i;
+      renderCardInputs();
+      // marcar seleccion
+      Array.from(countButtons.children).forEach(ch => ch.style.boxShadow = '');
+      btn.style.boxShadow = '0 4px 12px rgba(0,0,0,0.12)';
+    });
+    countButtons.appendChild(btn);
+  }
+  // seleccionar por defecto 1
+  if (maxMissing > 0) {
+    selectedCount = 1;
+    countButtons.firstChild.style.boxShadow = '0 4px 12px rgba(0,0,0,0.12)';
+  } else {
+    selectedCount = 0;
+  }
 }
 
-
-// render de inputs para N tarjetas (no borra datos previos)
-// Renderiza SOLO la tarjeta con índice `index` (0-based)
-function renderSingleCard(index) {
-  // asegurar entrada inicial
-  if (!tempEntries[index]) {
-    tempEntries[index] = { fecha: '', campoId: '', salida: '', scores: {} };
+// Renderiza solo la tarjeta actual
+function renderCurrentCard() {
+  const entry = tempEntries[currentCardIndex] || { fecha: '', campoId: '', salida: '', scores: {} };
+  
+  // Si es tarjeta 2 o superior, propagar valores de la anterior si están vacíos
+  if (currentCardIndex > 0) {
+    const prevEntry = tempEntries[currentCardIndex - 1];
+    if (!entry.fecha && prevEntry.fecha) entry.fecha = prevEntry.fecha;
+    if (!entry.campoId && prevEntry.campoId) entry.campoId = prevEntry.campoId;
+    if (!entry.salida && prevEntry.salida) entry.salida = prevEntry.salida;
   }
-  const entry = tempEntries[index];
-
-  // limpiar contenedor
-  cardsContainer.innerHTML = '';
-
-  // crear tarjeta
-  const cardDiv = document.createElement('div');
-  cardDiv.className = 'card';
-  cardDiv.innerHTML = `
-    <div style="display:flex; gap:8px; align-items:center; justify-content:space-between;">
-      <strong>Tarjeta ${index+1} de ${totalToFill}</strong>
-      <div class="small">Fecha: <input type="date" id="fecha-${index}" /></div>
-    </div>
-
-    <div style="margin-top:8px;">
-      <label class="small">Campo (opcional)</label>
-      <select id="campo-${index}" class="select"></select>
-    </div>
-
-    <div style="margin-top:8px;">
-      <label class="small">Salida</label>
-      <select id="salida-${index}" class="select">
-        <option value="">-- Selecciona salida --</option>
-        <option value="Blancas">Blancas</option>
-        <option value="Azules">Azules</option>
-        <option value="Rojas">Rojas</option>
-      </select>
-    </div>
-
-    <div style="margin-top:8px;">
-      <div class="hoyos-grid" id="grid-${index}"></div>
+  
+  currentCardContainer.innerHTML = `
+    <div class="card">
+      <div style="display:flex; gap:8px; align-items:center; justify-content:space-between; margin-bottom:15px;">
+        <strong>Tarjeta ${currentCardIndex + 1}</strong>
+        <div class="small">Fecha: <input type="date" id="fechaInput" value="${entry.fecha || ''}" /></div>
+      </div>
+      
+      <div style="margin-bottom:15px;">
+        <label class="small">Campo de golf</label>
+        <select id="campoSelectInput" class="select">
+          <option value="">-- Selecciona campo --</option>
+          ${campos.map(c => `<option value="${c.id}" ${entry.campoId === c.id ? 'selected' : ''}>${c.nombre}</option>`).join('')}
+        </select>
+      </div>
+      
+      <div style="margin-bottom:15px;">
+        <label class="small">Salida</label>
+        <select id="salidaSelectInput" class="select">
+          <option value="">-- Selecciona salida --</option>
+          ${salidaOptions.map(s => `<option value="${s}" ${entry.salida === s ? 'selected' : ''}>${s}</option>`).join('')}
+        </select>
+      </div>
+      
+      <div style="margin-top:20px;">
+        <div class="small" style="margin-bottom:10px; font-weight:bold; text-align:center;">
+          Ingresa los scores para los 18 hoyos:
+        </div>
+        <div class="hoyos-grid" id="hoyosGrid"></div>
+      </div>
     </div>
   `;
-
-  cardsContainer.appendChild(cardDiv);
-
-  // fecha
-  const fechaInput = cardDiv.querySelector(`#fecha-${index}`);
-  fechaInput.value = entry.fecha || '';
-  fechaInput.addEventListener('change', (e) => { tempEntries[index].fecha = e.target.value; });
-
-  // campo select
-  const campoSel = cardDiv.querySelector(`#campo-${index}`);
-  campoSel.innerHTML = '<option value="">-- Selecciona campo --</option>';
-  campos.forEach(c => {
-    const o = document.createElement('option');
-    o.value = c.id;
-    o.textContent = c.nombre;
-    campoSel.appendChild(o);
-  });
-  if (entry.campoId) campoSel.value = entry.campoId;
-  campoSel.addEventListener('change', (e) => { tempEntries[index].campoId = e.target.value; });
-
-  // salida select
-  const salidaSel = cardDiv.querySelector(`#salida-${index}`);
-  // si no hay valor y existe la primera tarjeta con salida, heredarla
-  if (!entry.salida && tempEntries[0] && tempEntries[0].salida) {
-    entry.salida = tempEntries[0].salida;
-  }
-  if (entry.salida) salidaSel.value = entry.salida;
-  salidaSel.addEventListener('change', (e) => {
-    tempEntries[index].salida = e.target.value;
-    // si index == 0, propagar a los siguientes que aún no tengan valor
-    if (index === 0) {
-      for (let i = 1; i < totalToFill; i++) {
-        if (!tempEntries[i]) tempEntries[i] = { fecha: '', campoId: '', salida: '', scores: {} };
-        if (!tempEntries[i].salida) tempEntries[i].salida = e.target.value;
-      }
-    }
-  });
-
-  // hoyos grid
-  const grid = cardDiv.querySelector(`#grid-${index}`);
+  
+  // Hoyos grid
+  const grid = document.getElementById('hoyosGrid');
   grid.innerHTML = '';
+  
   for (let i = 1; i <= 18; i++) {
-    const val = (entry.scores && typeof entry.scores[i] !== 'undefined') ? entry.scores[i] : '';
+    const val = entry.scores && typeof entry.scores[i] !== 'undefined' ? entry.scores[i] : '';
     const div = document.createElement('div');
     div.className = 'hoyo-card';
     div.innerHTML = `
       <label>Hoyo ${i}</label>
-      <input type="number" min="0" id="h-${index}-${i}" value="${val}" />
+      <input type="number" min="0" max="20" id="hoyo-${i}" value="${val}" />
     `;
     grid.appendChild(div);
-    const inp = div.querySelector(`#h-${index}-${i}`);
+    
+    const inp = div.querySelector('input');
     inp.addEventListener('input', (e) => {
       const v = e.target.value;
-      if (!tempEntries[index].scores) tempEntries[index].scores = {};
-      tempEntries[index].scores[i] = (v === '') ? undefined : Number(v);
+      tempEntries[currentCardIndex].scores[i] = v === '' ? undefined : Number(v);
     });
   }
-
-  // actualizar estado de botones de navegación
-  updateNavButtons();
+  
+  // Eventos para fecha y selects
+  document.getElementById('fechaInput').addEventListener('change', (e) => {
+    tempEntries[currentCardIndex].fecha = e.target.value;
+  });
+  
+  document.getElementById('campoSelectInput').addEventListener('change', (e) => {
+    tempEntries[currentCardIndex].campoId = e.target.value;
+  });
+  
+  document.getElementById('salidaSelectInput').addEventListener('change', (e) => {
+    tempEntries[currentCardIndex].salida = e.target.value;
+  });
+  
+  // Actualizar título
+  currentCardTitle.textContent = `Tarjeta ${currentCardIndex + 1} de ${maxCardsToFill}`;
 }
 
-function updateNavButtons() {
-  const prevBtn = document.getElementById('prevBtn');
-  const nextBtn = document.getElementById('nextBtn');
-
-  if (!prevBtn || !nextBtn) return;
-
-  prevBtn.style.display = (currentIndex > 0) ? 'inline-flex' : 'none';
-
-  // si estamos en la última tarjeta
-  if (currentIndex >= totalToFill - 1) {
-    nextBtn.textContent = 'Guardar';
+// Actualiza visibilidad y estado de botones de navegación
+function updateNavigationButtons() {
+  // Botón Atrás
+  prevBtn.style.display = currentCardIndex > 0 ? 'inline-block' : 'none';
+  
+  // Botón Siguiente vs Guardar Final
+  if (currentCardIndex === maxCardsToFill - 1) {
+    // Última tarjeta
+    nextBtn.style.display = 'none';
+    saveFinalBtn.style.display = 'inline-block';
+    progressText.textContent = 'Última tarjeta. Verifica los datos y guarda.';
   } else {
-    nextBtn.textContent = 'Siguiente';
+    // No es la última
+    nextBtn.style.display = 'inline-block';
+    saveFinalBtn.style.display = 'none';
+    progressText.textContent = `Completa los datos de la tarjeta ${currentCardIndex + 1}`;
   }
+  
+  // Validar si la tarjeta actual está completa
+  validateCurrentCard();
 }
 
-// navegar a la siguiente tarjeta (o guardar si es la última)
-async function nextCard() {
-  // validación básica: no permitir avanzar si faltan datos en la tarjeta actual
-  const e = tempEntries[currentIndex] || {};
-  // comprobar que los 18 hoyos estén completados (número) y fecha no vacía
-  let ok = true;
-  if (!e.fecha) ok = false;
-  for (let i = 1; i <= 18; i++) {
-    if (typeof e.scores?.[i] !== 'number' || Number.isNaN(e.scores[i])) { ok = false; break; }
+// Valida si la tarjeta actual tiene todos los datos necesarios
+function validateCurrentCard() {
+  const entry = tempEntries[currentCardIndex];
+  let isValid = true;
+  let message = '';
+  
+  // Validar fecha
+  if (!entry.fecha) {
+    isValid = false;
+    message = 'La fecha es requerida';
   }
-  if (!ok) {
-    resultMsg.textContent = `La tarjeta ${currentIndex+1} no está completa. Completa fecha y los 18 hoyos antes de continuar.`;
-    return;
+  
+  // Validar 18 hoyos
+  if (isValid) {
+    for (let i = 1; i <= 18; i++) {
+      if (typeof entry.scores[i] !== 'number' || Number.isNaN(entry.scores[i])) {
+        isValid = false;
+        message = `Falta el hoyo ${i}`;
+        break;
+      }
+    }
   }
-  resultMsg.textContent = '';
-
-  if (currentIndex < totalToFill - 1) {
-    currentIndex++;
-    renderSingleCard(currentIndex);
+  
+  // Actualizar estado del botón siguiente
+  nextBtn.disabled = !isValid;
+  saveFinalBtn.disabled = !isValid;
+  
+  // Mostrar mensaje de validación
+  if (!isValid && message) {
+    resultMsg.textContent = `⚠️ ${message}`;
+    resultMsg.style.color = '#d32f2f';
   } else {
-    // última tarjeta -> guardar todas
-    await saveAllCardsAndRecalc(currentUserUid);
+    resultMsg.textContent = '';
   }
+  
+  return isValid;
 }
-
-// volver a tarjeta anterior
-function prevCard() {
-  if (currentIndex > 0) {
-    currentIndex--;
-    renderSingleCard(currentIndex);
-  }
-}
-
-
 
 // guardar tarjetas creadas por el usuario en firestore
-// Guarda todas las tarjetas en tempEntries[0..totalToFill-1] y recalcula handicap
+// guardar todas las tarjetas creadas por el usuario en firestore
 async function saveAllCardsAndRecalc(uid) {
-  if (!uid) {
-    resultMsg.textContent = 'No hay usuario autenticado.';
-    return;
-  }
-  if (totalToFill <= 0) {
-    resultMsg.textContent = 'No hay tarjetas para guardar.';
-    return;
-  }
-
-  // Validación final (ya hicimos validación por tarjeta en nextCard, pero verificamos todo)
-  for (let t = 0; t < totalToFill; t++) {
+  resultMsg.textContent = 'Validando tarjetas...';
+  resultMsg.style.color = '#006400';
+  
+  // Validar todas las tarjetas
+  for (let t = 0; t < maxCardsToFill; t++) {
     const e = tempEntries[t];
-    if (!e || !e.fecha) {
-      resultMsg.textContent = `La tarjeta ${t+1} falta fecha u otros datos.`;
+    
+    // Validar fecha
+    if (!e.fecha) {
+      resultMsg.textContent = `La tarjeta ${t+1} no tiene fecha.`;
+      resultMsg.style.color = '#d32f2f';
       return;
     }
+    
+    // Validar 18 hoyos
     for (let i = 1; i <= 18; i++) {
-      if (typeof e.scores?.[i] !== 'number' || Number.isNaN(e.scores[i])) {
-        resultMsg.textContent = `La tarjeta ${t+1} no tiene el hoyo ${i} completado.`;
+      if (typeof e.scores[i] !== 'number' || Number.isNaN(e.scores[i])) {
+        resultMsg.textContent = `La tarjeta ${t+1} no tiene el hoyo ${i} completo.`;
+        resultMsg.style.color = '#d32f2f';
         return;
       }
     }
   }
 
   resultMsg.textContent = 'Guardando tarjetas...';
+  
+  // crear cada documento en collection 'tarjetas'
   const col = collection(db, 'tarjetas');
-
   try {
-    for (let t = 0; t < totalToFill; t++) {
+    for (let t = 0; t < maxCardsToFill; t++) {
       const e = tempEntries[t];
+      
+      // construir array scores
       const scoresArray = [];
       const nowMillis = Date.now();
       for (let i = 1; i <= 18; i++) {
@@ -485,12 +532,15 @@ async function saveAllCardsAndRecalc(uid) {
         });
       }
 
+      // Obtener nombre del campo
+      const campoNombre = campos.find(c => c.id === e.campoId)?.nombre || '';
+      
       const docPayload = {
         campoId: e.campoId || '',
-        campoNombre: (campos.find(c=>c.id===e.campoId)?.nombre) || '',
-        salida: e.salida || '',
+        campoNombre: campoNombre,
+        salida: e.salida || '', // NUEVO: campo de salida
         createdAt: e.fecha ? new Date(e.fecha) : serverTimestamp(),
-        createdAtMillis: e.fecha ? new Date(e.fecha).getTime() : nowMillis,
+        createdAtMillis: e.fecha ? new Date(e.fecha).getTime() : Date.now(),
         estado: 'activa',
         ownerUid: uid,
         userUid: uid,
@@ -501,82 +551,137 @@ async function saveAllCardsAndRecalc(uid) {
       await addDoc(col, docPayload);
     }
 
-    resultMsg.textContent = 'Tarjetas guardadas. Calculando handicap...';
+    resultMsg.textContent = `${maxCardsToFill} tarjetas guardadas. Calculando handicap...`;
 
+    // recalcular y guardar handicap
     const res = await calculateAndSaveHandicap(uid);
     if (res.ok && res.saved) {
-      resultMsg.textContent = `Handicap calculado y guardado: ${res.handicap}`;
+      resultMsg.textContent = `✅ Handicap calculado y guardado: ${res.handicap}`;
+      resultMsg.style.color = '#006400';
+      
+      // Opcional: redirigir después de 3 segundos
+      setTimeout(() => {
+        window.location.href = 'dashboard.html';
+      }, 3000);
+      
     } else if (res.ok && !res.saved) {
-      resultMsg.textContent = `Handicap calculado: ${res.handicap} (no se pudo guardar automáticamente).`;
+      resultMsg.textContent = `ℹ️ Handicap calculado: ${res.handicap} (no se pudo guardar automáticamente).`;
+      resultMsg.style.color = '#ff9800';
     } else {
       if (res.missing) {
-        resultMsg.textContent = `Aún faltan ${res.missing} tarjetas para calcular handicap.`;
+        resultMsg.textContent = `⚠️ Aún faltan ${res.missing} tarjetas para calcular handicap.`;
+        resultMsg.style.color = '#ff9800';
       } else {
-        resultMsg.textContent = `Error: ${res.message || 'No se pudo calcular el handicap.'}`;
+        resultMsg.textContent = `❌ Error: ${res.message || 'No se pudo calcular el handicap.'}`;
+        resultMsg.style.color = '#d32f2f';
       }
     }
-
+    
   } catch (err) {
     console.error('Error guardando tarjetas:', err);
-    resultMsg.textContent = 'Error guardando tarjetas. Revisa la consola.';
+    resultMsg.textContent = '❌ Error guardando tarjetas. Revisa la consola.';
+    resultMsg.style.color = '#d32f2f';
   }
 }
 
-// flujo inicial: contar tarjetas y mostrar missing
-async function prepareModalForUser(uid) {
+// flujo inicial: contar tarjetas y preparar vista
+async function prepareFormForUser(uid) {
   statusLine.textContent = 'Consultando tarjetas y campos...';
+  resultMsg.textContent = '';
+  
   await loadCampos();
   const count = await countUserCompleteCards(uid);
   availableCardsCount = count;
   missingCount = Math.max(0, 10 - availableCardsCount);
+  
+  // Mostrar estado
   missingBadge.style.display = missingCount > 0 ? 'inline-block' : 'none';
-  missingBadge.textContent = missingCount > 0 ? `Te hacen falta ${missingCount} tarjetas` : 'Tienes 10 o más tarjetas';
+  missingBadge.textContent = missingCount > 0 ? 
+    `Te hacen falta ${missingCount} tarjetas para calcular handicap` : 
+    'Tienes 10 o más tarjetas';
+  
   statusLine.textContent = `Tarjetas completas encontradas: ${availableCardsCount}`;
-
-  // preparar totalToFill (cuántas tarjetas faltan). Si no faltan, dejamos 1 por defecto para forzar recalculo
-  totalToFill = missingCount > 0 ? missingCount : 1;
-
-  // inicializar tempEntries vacías hasta totalToFill
-  for (let i = 0; i < totalToFill; i++) {
-    if (!tempEntries[i]) tempEntries[i] = { fecha: '', campoId: '', salida: '', scores: {} };
+  
+  // Determinar cuántas tarjetas mostrar
+  maxCardsToFill = missingCount > 0 ? missingCount : 1;
+  totalCardsSpan.textContent = maxCardsToFill;
+  
+  // Inicializar estructura de datos
+  tempEntries = [];
+  for (let i = 0; i < maxCardsToFill; i++) {
+    tempEntries[i] = { 
+      fecha: '', 
+      campoId: '', 
+      salida: '',  // NUEVO: campo de salida
+      scores: {} 
+    };
   }
-
-  // Mostrar la primera tarjeta directamente
-  currentIndex = 0;
-  modalRoot.style.display = 'flex'; // abrir la UI (antes dependía del botón)
-  renderSingleCard(currentIndex);
-  resultMsg.textContent = '';
+  
+  // Mostrar primera tarjeta
+  currentCardIndex = 0;
+  renderCurrentCard();
+  updateNavigationButtons();
 }
 
-// Eventos
-// Ya no usamos openModalBtn; en su lugar, cuando el usuario esté autenticado prepararemos y mostraremos la UI
-// (ver onAuthStateChanged al final del archivo).
+// Esta función reemplaza a prepareModalForUser
+// También eliminar la función openModal() y closeModal() ya que no usamos modal
 
-closeModalBtn.addEventListener('click', closeModal);
-cancelBtn.addEventListener('click', closeModal);
+// Eventos de navegación
+prevBtn.addEventListener('click', () => {
+  if (currentCardIndex > 0) {
+    currentCardIndex--;
+    renderCurrentCard();
+    updateNavigationButtons();
+  }
+});
 
-// Guardar tarjetas
-saveCardsBtn.addEventListener('click', async () => {
+nextBtn.addEventListener('click', () => {
+  if (validateCurrentCard()) {
+    if (currentCardIndex < maxCardsToFill - 1) {
+      currentCardIndex++;
+      renderCurrentCard();
+      updateNavigationButtons();
+    }
+  }
+});
+
+saveFinalBtn.addEventListener('click', async () => {
   if (!currentUserUid) {
     resultMsg.textContent = 'No hay usuario autenticado.';
     return;
   }
-  await saveNewCardsAndRecalc(currentUserUid);
+  
+  if (validateCurrentCard()) {
+    await saveAllCardsAndRecalc(currentUserUid);
+  }
+});
+
+// Al cargar la página, iniciar el formulario
+document.addEventListener('DOMContentLoaded', async () => {
+  const user = auth.currentUser;
+  if (!user) {
+    // Redirigir a login si no está autenticado
+    window.location.href = 'index.html';
+    return;
+  }
+  
+  currentUserUid = user.uid;
+  await prepareFormForUser(currentUserUid);
 });
 
 // Si el usuario no estaba autenticado al presionar abrir, actualizamos al hacer login
 onAuthStateChanged(auth, async (u) => {
   if (u) {
     currentUserUid = u.uid;
-    // preparar modal y mostrar la UI automaticamente
-    await prepareModalForUser(currentUserUid);
+    // Recargar el formulario si ya está en la página
+    if (document.readyState === 'complete') {
+      await prepareFormForUser(currentUserUid);
+    }
   } else {
     currentUserUid = null;
-    // cerrar modal si el usuario sale
-    modalRoot.style.display = 'none';
+    window.location.href = 'index.html';
   }
 });
-
 </script>
 
 <script>
@@ -609,16 +714,6 @@ onAuthStateChanged(auth, async (u) => {
     .catch(err => {
       console.error('Error cargando menu.html', err);
     });
-
-    // enlazar botones de navegación (Atrás / Siguiente)
-document.addEventListener('click', (e) => {
-  if (e.target && e.target.id === 'nextBtn') {
-    nextCard();
-  } else if (e.target && e.target.id === 'prevBtn') {
-    prevCard();
-  }
-});
-
 </script>
 
 </body>
