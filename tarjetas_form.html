@@ -134,8 +134,10 @@ h2 { margin:0 0 10px 0; color:#005600; text-align:center; }
     <img src="logo_golftrix.png" alt="Logo" id="logo" />
 </header>
 <div class="container">
+  <!-- La UI ahora se mostrará automáticamente; no hace falta botón -->
   <div style="text-align:center; margin-bottom:8px;">
-    <button id="openModal" class="btn save">Completar tarjetas faltantes / Calcular Handicap</button>
+    <!-- Mensaje opcional: instrucciones -->
+    <div class="small">Completa las tarjetas solicitadas. Usa Siguiente / Atrás para navegar. En la última tarjeta presiona Guardar.</div>
   </div>
 </div>
 
@@ -163,8 +165,8 @@ h2 { margin:0 0 10px 0; color:#005600; text-align:center; }
     <div id="cardsContainer" class="cards-list"></div>
 
     <div style="display:flex; gap:8px; justify-content:center; margin-top:12px;">
-      <button id="saveCardsBtn" class="btn save">Guardar tarjetas y calcular handicap</button>
-      <button id="cancelBtn" class="btn cancel">Cancelar</button>
+      <button id="prevBtn" class="btn cancel" type="button" style="display:none;">Atrás</button>
+      <button id="nextBtn" class="btn save" type="button">Siguiente</button>
     </div>
 
     <div id="resultMsg" style="margin-top:12px;" class="small"></div>
@@ -221,10 +223,16 @@ const resultMsg = document.getElementById('resultMsg');
 let currentUserUid = null;
 let availableCardsCount = 0;
 let missingCount = 0;
+// selectedCount ya no controla la UI paginada; lo dejamos por compatibilidad pero no se usa para render
 let selectedCount = 0;
 let campos = []; // lista de camposGolf
-// estructura para mantener datos de input sin perderlos al cambiar cantidad
-// será un array con length = maxNeeded (10) => each element tiene {fecha, campoId, scores: {1:val,...,18:val}}
+
+// flags para navegación por tarjetas
+let totalToFill = 0;     // cuántas tarjetas hay que rellenar (missingCount)
+let currentIndex = 0;    // índice de la tarjeta que se está editando (0-based)
+
+// estructura para mantener datos de input sin perderlos al cambiar tarjeta
+// será un array: tempEntries[i] = { fecha:'', campoId:'', salida:'Blancas'|'Azules'|'Rojas', scores: {1:val,...,18:val} }
 const tempEntries = [];
 
 function openModal() {
@@ -274,128 +282,199 @@ async function countUserCompleteCards(uid) {
 }
 
 // genera botones de tarjeta 1..N
+// Ya no usamos los botones 1..N; esta función queda preservada pero vacía
 function renderCountButtons(maxMissing) {
+  // preservamos compatibilidad, pero la UI se controla con currentIndex/totalToFill y los botones Atrás/Siguiente
   countButtons.innerHTML = '';
-  for (let i = 1; i <= maxMissing; i++) {
-    const btn = document.createElement('button');
-    btn.type = 'button';
-    btn.className = 'count-btn';
-    btn.textContent = `Tarjeta ${i}`;
-    btn.dataset.index = i;
-    btn.addEventListener('click', () => {
-      selectedCount = i;
-      renderCardInputs();
-      // marcar seleccion
-      Array.from(countButtons.children).forEach(ch => ch.style.boxShadow = '');
-      btn.style.boxShadow = '0 4px 12px rgba(0,0,0,0.12)';
-    });
-    countButtons.appendChild(btn);
-  }
-  // seleccionar por defecto 1
-  if (maxMissing > 0) {
-    selectedCount = 1;
-    countButtons.firstChild.style.boxShadow = '0 4px 12px rgba(0,0,0,0.12)';
-  } else {
-    selectedCount = 0;
-  }
 }
+
 
 // render de inputs para N tarjetas (no borra datos previos)
-function renderCardInputs() {
+// Renderiza SOLO la tarjeta con índice `index` (0-based)
+function renderSingleCard(index) {
+  // asegurar entrada inicial
+  if (!tempEntries[index]) {
+    tempEntries[index] = { fecha: '', campoId: '', salida: '', scores: {} };
+  }
+  const entry = tempEntries[index];
+
+  // limpiar contenedor
   cardsContainer.innerHTML = '';
-  for (let t = 0; t < selectedCount; t++) {
-    if (!tempEntries[t]) {
-      // inicializar con estructura vacia
-      tempEntries[t] = { fecha: '', campoId: '', scores: {} };
-    }
-    const entry = tempEntries[t];
 
-    const cardDiv = document.createElement('div');
-    cardDiv.className = 'card';
-    cardDiv.innerHTML = `
-      <div style="display:flex; gap:8px; align-items:center; justify-content:space-between;">
-        <strong>Tarjeta ${t+1}</strong>
-        <div class="small">Fecha: <input type="date" data-t="${t}" data-field="fecha" /></div>
-      </div>
-      <div style="margin-top:8px;">
-        <label class="small">Campo (opcional, si lo seleccionas se guardará en la tarjeta)</label>
-        <select data-t="${t}" data-field="campoId" class="select"></select>
-      </div>
-      <div style="margin-top:8px;">
-        <div class="hoyos-grid" id="grid-${t}"></div>
-      </div>
+  // crear tarjeta
+  const cardDiv = document.createElement('div');
+  cardDiv.className = 'card';
+  cardDiv.innerHTML = `
+    <div style="display:flex; gap:8px; align-items:center; justify-content:space-between;">
+      <strong>Tarjeta ${index+1} de ${totalToFill}</strong>
+      <div class="small">Fecha: <input type="date" id="fecha-${index}" /></div>
+    </div>
+
+    <div style="margin-top:8px;">
+      <label class="small">Campo (opcional)</label>
+      <select id="campo-${index}" class="select"></select>
+    </div>
+
+    <div style="margin-top:8px;">
+      <label class="small">Salida</label>
+      <select id="salida-${index}" class="select">
+        <option value="">-- Selecciona salida --</option>
+        <option value="Blancas">Blancas</option>
+        <option value="Azules">Azules</option>
+        <option value="Rojas">Rojas</option>
+      </select>
+    </div>
+
+    <div style="margin-top:8px;">
+      <div class="hoyos-grid" id="grid-${index}"></div>
+    </div>
+  `;
+
+  cardsContainer.appendChild(cardDiv);
+
+  // fecha
+  const fechaInput = cardDiv.querySelector(`#fecha-${index}`);
+  fechaInput.value = entry.fecha || '';
+  fechaInput.addEventListener('change', (e) => { tempEntries[index].fecha = e.target.value; });
+
+  // campo select
+  const campoSel = cardDiv.querySelector(`#campo-${index}`);
+  campoSel.innerHTML = '<option value="">-- Selecciona campo --</option>';
+  campos.forEach(c => {
+    const o = document.createElement('option');
+    o.value = c.id;
+    o.textContent = c.nombre;
+    campoSel.appendChild(o);
+  });
+  if (entry.campoId) campoSel.value = entry.campoId;
+  campoSel.addEventListener('change', (e) => { tempEntries[index].campoId = e.target.value; });
+
+  // salida select
+  const salidaSel = cardDiv.querySelector(`#salida-${index}`);
+  // si no hay valor y existe la primera tarjeta con salida, heredarla
+  if (!entry.salida && tempEntries[0] && tempEntries[0].salida) {
+    entry.salida = tempEntries[0].salida;
+  }
+  if (entry.salida) salidaSel.value = entry.salida;
+  salidaSel.addEventListener('change', (e) => {
+    tempEntries[index].salida = e.target.value;
+    // si index == 0, propagar a los siguientes que aún no tengan valor
+    if (index === 0) {
+      for (let i = 1; i < totalToFill; i++) {
+        if (!tempEntries[i]) tempEntries[i] = { fecha: '', campoId: '', salida: '', scores: {} };
+        if (!tempEntries[i].salida) tempEntries[i].salida = e.target.value;
+      }
+    }
+  });
+
+  // hoyos grid
+  const grid = cardDiv.querySelector(`#grid-${index}`);
+  grid.innerHTML = '';
+  for (let i = 1; i <= 18; i++) {
+    const val = (entry.scores && typeof entry.scores[i] !== 'undefined') ? entry.scores[i] : '';
+    const div = document.createElement('div');
+    div.className = 'hoyo-card';
+    div.innerHTML = `
+      <label>Hoyo ${i}</label>
+      <input type="number" min="0" id="h-${index}-${i}" value="${val}" />
     `;
-    cardsContainer.appendChild(cardDiv);
-
-    // fecha input
-    const fechaInput = cardDiv.querySelector('input[type="date"]');
-    fechaInput.value = entry.fecha || '';
-    fechaInput.addEventListener('change', (e) => {
-      tempEntries[t].fecha = e.target.value;
+    grid.appendChild(div);
+    const inp = div.querySelector(`#h-${index}-${i}`);
+    inp.addEventListener('input', (e) => {
+      const v = e.target.value;
+      if (!tempEntries[index].scores) tempEntries[index].scores = {};
+      tempEntries[index].scores[i] = (v === '') ? undefined : Number(v);
     });
+  }
 
-    // campo select
-    const sel = cardDiv.querySelector('select[data-field="campoId"]');
-    sel.innerHTML = '<option value="">-- Selecciona campo --</option>';
-    campos.forEach(c => {
-      const o = document.createElement('option');
-      o.value = c.id;
-      o.textContent = c.nombre;
-      if (entry.campoId === c.id) o.selected = true;
-      sel.appendChild(o);
-    });
-    sel.addEventListener('change', (e) => {
-      tempEntries[t].campoId = e.target.value;
-    });
+  // actualizar estado de botones de navegación
+  updateNavButtons();
+}
 
-    // hoyos grid
-    const grid = cardDiv.querySelector(`#grid-${t}`);
-    grid.innerHTML = '';
-    for (let i = 1; i <= 18; i++) {
-      const val = entry.scores && typeof entry.scores[i] !== 'undefined' ? entry.scores[i] : '';
-      const div = document.createElement('div');
-      div.className = 'hoyo-card';
-      div.innerHTML = `
-        <label>Hoyo ${i}</label>
-        <input type="number" min="0" data-t="${t}" data-hoyo="${i}" value="${val}" />
-      `;
-      grid.appendChild(div);
-      const inp = div.querySelector('input');
-      inp.addEventListener('input', (e) => {
-        const v = e.target.value;
-        tempEntries[t].scores[i] = v === '' ? undefined : Number(v);
-      });
-    }
+function updateNavButtons() {
+  const prevBtn = document.getElementById('prevBtn');
+  const nextBtn = document.getElementById('nextBtn');
+
+  if (!prevBtn || !nextBtn) return;
+
+  prevBtn.style.display = (currentIndex > 0) ? 'inline-flex' : 'none';
+
+  // si estamos en la última tarjeta
+  if (currentIndex >= totalToFill - 1) {
+    nextBtn.textContent = 'Guardar';
+  } else {
+    nextBtn.textContent = 'Siguiente';
   }
 }
 
-// guardar tarjetas creadas por el usuario en firestore
-async function saveNewCardsAndRecalc(uid) {
-  if (selectedCount <= 0) {
-    resultMsg.textContent = 'Selecciona al menos una tarjeta.';
+// navegar a la siguiente tarjeta (o guardar si es la última)
+async function nextCard() {
+  // validación básica: no permitir avanzar si faltan datos en la tarjeta actual
+  const e = tempEntries[currentIndex] || {};
+  // comprobar que los 18 hoyos estén completados (número) y fecha no vacía
+  let ok = true;
+  if (!e.fecha) ok = false;
+  for (let i = 1; i <= 18; i++) {
+    if (typeof e.scores?.[i] !== 'number' || Number.isNaN(e.scores[i])) { ok = false; break; }
+  }
+  if (!ok) {
+    resultMsg.textContent = `La tarjeta ${currentIndex+1} no está completa. Completa fecha y los 18 hoyos antes de continuar.`;
     return;
   }
-  // validaciones: cada tarjeta debe tener fecha y 18 hoyos completos (no vacíos)
-  for (let t = 0; t < selectedCount; t++) {
+  resultMsg.textContent = '';
+
+  if (currentIndex < totalToFill - 1) {
+    currentIndex++;
+    renderSingleCard(currentIndex);
+  } else {
+    // última tarjeta -> guardar todas
+    await saveAllCardsAndRecalc(currentUserUid);
+  }
+}
+
+// volver a tarjeta anterior
+function prevCard() {
+  if (currentIndex > 0) {
+    currentIndex--;
+    renderSingleCard(currentIndex);
+  }
+}
+
+
+
+// guardar tarjetas creadas por el usuario en firestore
+// Guarda todas las tarjetas en tempEntries[0..totalToFill-1] y recalcula handicap
+async function saveAllCardsAndRecalc(uid) {
+  if (!uid) {
+    resultMsg.textContent = 'No hay usuario autenticado.';
+    return;
+  }
+  if (totalToFill <= 0) {
+    resultMsg.textContent = 'No hay tarjetas para guardar.';
+    return;
+  }
+
+  // Validación final (ya hicimos validación por tarjeta en nextCard, pero verificamos todo)
+  for (let t = 0; t < totalToFill; t++) {
     const e = tempEntries[t];
-    // comprobar 18 hoyos presentes
-    let ok = true;
-    for (let i = 1; i <= 18; i++) {
-      if (typeof e.scores[i] !== 'number' || Number.isNaN(e.scores[i])) { ok = false; break; }
-    }
-    if (!ok) {
-      resultMsg.textContent = `La tarjeta ${t+1} no tiene los 18 hoyos completos.`;
+    if (!e || !e.fecha) {
+      resultMsg.textContent = `La tarjeta ${t+1} falta fecha u otros datos.`;
       return;
+    }
+    for (let i = 1; i <= 18; i++) {
+      if (typeof e.scores?.[i] !== 'number' || Number.isNaN(e.scores[i])) {
+        resultMsg.textContent = `La tarjeta ${t+1} no tiene el hoyo ${i} completado.`;
+        return;
+      }
     }
   }
 
   resultMsg.textContent = 'Guardando tarjetas...';
-  // crear cada documento en collection 'tarjetas'
   const col = collection(db, 'tarjetas');
+
   try {
-    for (let t = 0; t < selectedCount; t++) {
+    for (let t = 0; t < totalToFill; t++) {
       const e = tempEntries[t];
-      // construir array scores como en el ejemplo original
       const scoresArray = [];
       const nowMillis = Date.now();
       for (let i = 1; i <= 18; i++) {
@@ -409,8 +488,9 @@ async function saveNewCardsAndRecalc(uid) {
       const docPayload = {
         campoId: e.campoId || '',
         campoNombre: (campos.find(c=>c.id===e.campoId)?.nombre) || '',
+        salida: e.salida || '',
         createdAt: e.fecha ? new Date(e.fecha) : serverTimestamp(),
-        createdAtMillis: e.fecha ? new Date(e.fecha).getTime() : Date.now(),
+        createdAtMillis: e.fecha ? new Date(e.fecha).getTime() : nowMillis,
         estado: 'activa',
         ownerUid: uid,
         userUid: uid,
@@ -423,7 +503,6 @@ async function saveNewCardsAndRecalc(uid) {
 
     resultMsg.textContent = 'Tarjetas guardadas. Calculando handicap...';
 
-    // recalcular y guardar handicap
     const res = await calculateAndSaveHandicap(uid);
     if (res.ok && res.saved) {
       resultMsg.textContent = `Handicap calculado y guardado: ${res.handicap}`;
@@ -437,7 +516,6 @@ async function saveNewCardsAndRecalc(uid) {
       }
     }
 
-    // cerrar modal despues de exito (opcional): lo dejamos visible para feedback
   } catch (err) {
     console.error('Error guardando tarjetas:', err);
     resultMsg.textContent = 'Error guardando tarjetas. Revisa la consola.';
@@ -455,33 +533,24 @@ async function prepareModalForUser(uid) {
   missingBadge.textContent = missingCount > 0 ? `Te hacen falta ${missingCount} tarjetas` : 'Tienes 10 o más tarjetas';
   statusLine.textContent = `Tarjetas completas encontradas: ${availableCardsCount}`;
 
-  // preparar botones (max que puede llenar a la vez = missingCount)
-  // si missingCount == 0, el modal puede servir para forzar recalculo: ofrecer 0..10?
-  const maxMissing = missingCount > 0 ? missingCount : 0;
-  renderCountButtons(maxMissing);
+  // preparar totalToFill (cuántas tarjetas faltan). Si no faltan, dejamos 1 por defecto para forzar recalculo
+  totalToFill = missingCount > 0 ? missingCount : 1;
 
-  // inicializar tempEntries vacías hasta maxMissing
-  for (let i = 0; i < maxMissing; i++) {
-    if (!tempEntries[i]) tempEntries[i] = { fecha: '', campoId: '', scores: {} };
+  // inicializar tempEntries vacías hasta totalToFill
+  for (let i = 0; i < totalToFill; i++) {
+    if (!tempEntries[i]) tempEntries[i] = { fecha: '', campoId: '', salida: '', scores: {} };
   }
-  // limpiar container
-  cardsContainer.innerHTML = '';
+
+  // Mostrar la primera tarjeta directamente
+  currentIndex = 0;
+  modalRoot.style.display = 'flex'; // abrir la UI (antes dependía del botón)
+  renderSingleCard(currentIndex);
   resultMsg.textContent = '';
 }
 
 // Eventos
-openModalBtn.addEventListener('click', async () => {
-  const user = auth.currentUser;
-  if (!user) {
-    // esperar a autenticación
-    statusLine.textContent = 'Espera: debes iniciar sesión.';
-    openModal(); // abrir para mostrar mensaje de login
-    return;
-  }
-  currentUserUid = user.uid;
-  await prepareModalForUser(currentUserUid);
-  openModal();
-});
+// Ya no usamos openModalBtn; en su lugar, cuando el usuario esté autenticado prepararemos y mostraremos la UI
+// (ver onAuthStateChanged al final del archivo).
 
 closeModalBtn.addEventListener('click', closeModal);
 cancelBtn.addEventListener('click', closeModal);
@@ -499,11 +568,15 @@ saveCardsBtn.addEventListener('click', async () => {
 onAuthStateChanged(auth, async (u) => {
   if (u) {
     currentUserUid = u.uid;
-    // opcional: auto-prepare si modal abierto
+    // preparar modal y mostrar la UI automaticamente
+    await prepareModalForUser(currentUserUid);
   } else {
     currentUserUid = null;
+    // cerrar modal si el usuario sale
+    modalRoot.style.display = 'none';
   }
 });
+
 </script>
 
 <script>
@@ -536,6 +609,16 @@ onAuthStateChanged(auth, async (u) => {
     .catch(err => {
       console.error('Error cargando menu.html', err);
     });
+
+    // enlazar botones de navegación (Atrás / Siguiente)
+document.addEventListener('click', (e) => {
+  if (e.target && e.target.id === 'nextBtn') {
+    nextCard();
+  } else if (e.target && e.target.id === 'prevBtn') {
+    prevCard();
+  }
+});
+
 </script>
 
 </body>
