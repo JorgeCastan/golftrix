@@ -296,14 +296,23 @@ const resultMsg = document.getElementById('resultMsg');
 
 // cargar campos de golf
 async function loadCampos() {
-  campoSelect.innerHTML = '<option value="">Cargando campos...</option>';
-  const q = query(collection(db, 'camposGolf'), orderBy('nombre'));
-  const snap = await getDocs(q);
+  // Limpiar el array de campos primero
   campos = [];
-  snap.forEach(s => {
-    const d = s.data();
-    campos.push({ id: s.id, nombre: d.nombre });
-  });
+  
+  try {
+    const q = query(collection(db, 'camposGolf'), orderBy('nombre'));
+    const snap = await getDocs(q);
+    
+    snap.forEach(s => {
+      const d = s.data();
+      campos.push({ id: s.id, nombre: d.nombre || 'Sin nombre' });
+    });
+    
+    console.log(`Campos cargados: ${campos.length}`);
+  } catch (error) {
+    console.error('Error cargando campos:', error);
+    campos = []; // Asegurar que está vacío si hay error
+  }
 }
 
 // calcula cuántas tarjetas completas tiene el usuario
@@ -328,42 +337,63 @@ async function countUserCompleteCards(uid) {
 
 // flujo inicial: contar tarjetas y preparar vista
 async function prepareFormForUser(uid) {
-  statusLine.textContent = 'Consultando tarjetas y campos...';
-  resultMsg.textContent = '';
-  
-  await loadCampos();
-  const count = await countUserCompleteCards(uid);
-  availableCardsCount = count;
-  missingCount = Math.max(0, 10 - availableCardsCount);
-  
-  // Mostrar estado
-  missingBadge.style.display = missingCount > 0 ? 'inline-block' : 'none';
-  missingBadge.textContent = missingCount > 0 ? 
-    `Te hacen falta ${missingCount} tarjetas para calcular handicap` : 
-    'Tienes 10 o más tarjetas';
-  
-  statusLine.textContent = `Tarjetas completas encontradas: ${availableCardsCount}`;
-  
-  // Determinar cuántas tarjetas mostrar
-  maxCardsToFill = missingCount > 0 ? missingCount : 1;
-  totalCardsSpan.textContent = maxCardsToFill;
-  
-  // Inicializar estructura de datos
-  tempEntries = [];
-  for (let i = 0; i < maxCardsToFill; i++) {
-    tempEntries[i] = { 
-      fecha: '', 
-      campoId: '', 
-      salida: '',  // NUEVO: campo de salida
-      scores: {} 
-    };
+  try {
+    statusLine.textContent = 'Consultando tarjetas y campos...';
+    resultMsg.textContent = '';
+    
+    // Cargar campos primero
+    await loadCampos();
+    
+    // Contar tarjetas existentes
+    const count = await countUserCompleteCards(uid);
+    availableCardsCount = count;
+    missingCount = Math.max(0, 10 - availableCardsCount);
+    
+    // Mostrar estado
+    missingBadge.style.display = missingCount > 0 ? 'inline-block' : 'none';
+    missingBadge.textContent = missingCount > 0 ? 
+      `Te hacen falta ${missingCount} tarjetas para calcular handicap` : 
+      'Tienes 10 o más tarjetas';
+    
+    statusLine.textContent = `Tarjetas completas encontradas: ${availableCardsCount}`;
+    
+    // Determinar cuántas tarjetas mostrar
+    maxCardsToFill = missingCount > 0 ? missingCount : 1;
+    if (maxCardsToFill === 0) maxCardsToFill = 1; // Siempre mostrar al menos 1
+    
+    totalCardsSpan.textContent = maxCardsToFill;
+    
+    // Inicializar estructura de datos
+    tempEntries = [];
+    for (let i = 0; i < maxCardsToFill; i++) {
+      tempEntries[i] = { 
+        fecha: '', 
+        campoId: '', 
+        salida: '',  // NUEVO: campo de salida
+        scores: {} 
+      };
+    }
+    
+    // Mostrar primera tarjeta
+    currentCardIndex = 0;
+    renderCurrentCard();
+    updateNavigationButtons();
+    
+    // Verificar si hay campos disponibles
+    if (campos.length === 0) {
+      resultMsg.textContent = '⚠️ No hay campos de golf registrados. Contacta al administrador.';
+      resultMsg.style.color = '#ff9800';
+    }
+    
+  } catch (error) {
+    console.error('Error en prepareFormForUser:', error);
+    statusLine.textContent = 'Error cargando datos';
+    resultMsg.textContent = '❌ Error al cargar los datos. Intenta recargar la página.';
+    resultMsg.style.color = '#d32f2f';
   }
-  
-  // Mostrar primera tarjeta
-  currentCardIndex = 0;
-  renderCurrentCard();
-  updateNavigationButtons();
 }
+
+
 
 // Renderiza solo la tarjeta actual
 function renderCurrentCard() {
@@ -451,6 +481,42 @@ function renderCurrentCard() {
   
   // Actualizar título
   currentCardTitle.textContent = `Tarjeta ${currentCardIndex + 1} de ${maxCardsToFill}`;
+
+    // Adjuntar eventos después de renderizar
+  setTimeout(() => {
+    attachInputEvents();
+  }, 100);
+}
+
+// Función para adjuntar eventos a los inputs después de renderizar
+function attachInputEvents() {
+  // Eventos para fecha y selects - usar delegación de eventos
+  currentCardContainer.addEventListener('change', (e) => {
+    if (e.target.id === 'fechaInput') {
+      tempEntries[currentCardIndex].fecha = e.target.value;
+      validateCurrentCard();
+    }
+    
+    if (e.target.id === 'campoSelectInput') {
+      tempEntries[currentCardIndex].campoId = e.target.value;
+      validateCurrentCard();
+    }
+    
+    if (e.target.id === 'salidaSelectInput') {
+      tempEntries[currentCardIndex].salida = e.target.value;
+      validateCurrentCard();
+    }
+  });
+  
+  // Eventos para inputs de hoyos
+  currentCardContainer.addEventListener('input', (e) => {
+    if (e.target.id && e.target.id.startsWith('hoyo-')) {
+      const hoyoNum = parseInt(e.target.id.replace('hoyo-', ''));
+      const v = e.target.value;
+      tempEntries[currentCardIndex].scores[hoyoNum] = v === '' ? undefined : Number(v);
+      validateCurrentCard();
+    }
+  });
 }
 
 // Actualiza visibilidad y estado de botones de navegación
@@ -640,51 +706,86 @@ saveFinalBtn.addEventListener('click', async () => {
   }
 });
 
-// Al cargar la página, esperar a que Firebase verifique la sesión persistente
-document.addEventListener('DOMContentLoaded', async () => {
-  console.log('DOM loaded, checking auth...');
-  
-  // Esperar un momento para que Firebase cargue la sesión persistente
-  setTimeout(async () => {
-    const user = auth.currentUser;
-    
-    if (!user) {
-      console.log('No user found after delay, redirecting...');
-      // Esperar un poco más para estar seguro
-      setTimeout(() => {
-        window.location.href = 'index.html';
-      }, 500);
-      return;
-    }
-    
-    console.log('User authenticated:', user.uid);
-    currentUserUid = user.uid;
-    window.authInitialized = true; // Marcar que ya pasó la carga inicial
-    
-    await prepareFormForUser(currentUserUid);
-  }, 1000); // Esperar 1 segundo para que Firebase cargue la sesión
+// Eventos de navegación
+prevBtn.addEventListener('click', () => {
+  if (currentCardIndex > 0) {
+    currentCardIndex--;
+    renderCurrentCard();
+    updateNavigationButtons();
+  }
 });
 
-// Listener de autenticación - SOLO maneja cambios de estado DURANTE la sesión
-onAuthStateChanged(auth, async (u) => {
-  console.log('Auth state changed:', u ? 'User logged in' : 'No user');
-  
-  // Solo procesar si ya pasó la carga inicial
-  if (document.readyState === 'complete' && window.authInitialized) {
-    if (u) {
-      // Usuario se acaba de loguear DURANTE la sesión
-      currentUserUid = u.uid;
-      await prepareFormForUser(currentUserUid);
-    } else {
-      // Usuario cerró sesión DURANTE la sesión
-      currentUserUid = null;
-      // Solo redirigir si ya estábamos trabajando
-      if (currentCardIndex > 0 || tempEntries.length > 0) {
-        alert('Sesión cerrada. Serás redirigido al inicio.');
-        window.location.href = 'index.html';
-      }
+nextBtn.addEventListener('click', () => {
+  if (validateCurrentCard()) {
+    if (currentCardIndex < maxCardsToFill - 1) {
+      currentCardIndex++;
+      renderCurrentCard();
+      updateNavigationButtons();
     }
   }
+});
+
+saveFinalBtn.addEventListener('click', async () => {
+  if (!currentUserUid) {
+    resultMsg.textContent = 'No hay usuario autenticado.';
+    return;
+  }
+  
+  if (validateCurrentCard()) {
+    await saveAllCardsAndRecalc(currentUserUid);
+  }
+});
+
+// Función para iniciar la aplicación después de autenticación
+async function initApp() {
+  const user = auth.currentUser;
+  
+  if (!user) {
+    // No hay usuario, redirigir después de breve espera
+    setTimeout(() => {
+      window.location.href = 'index.html';
+    }, 1500);
+    return;
+  }
+  
+  currentUserUid = user.uid;
+  console.log('Usuario autenticado:', currentUserUid);
+  
+  // Iniciar el formulario
+  await prepareFormForUser(currentUserUid);
+}
+
+// Iniciar cuando el DOM esté listo
+document.addEventListener('DOMContentLoaded', () => {
+  console.log('DOM cargado, verificando autenticación...');
+  
+  // Usar onAuthStateChanged para manejar correctamente la autenticación persistente
+  onAuthStateChanged(auth, (user) => {
+    if (user) {
+      // Usuario autenticado
+      currentUserUid = user.uid;
+      
+      // Solo iniciar si no lo hemos hecho antes
+      if (!window.appInitialized) {
+        window.appInitialized = true;
+        initApp();
+      }
+    } else {
+      // No hay usuario, redirigir
+      console.log('No hay usuario autenticado, redirigiendo...');
+      setTimeout(() => {
+        window.location.href = 'index.html';
+      }, 1000);
+    }
+  });
+  
+  // Timeout de seguridad por si onAuthStateChanged no se dispara
+  setTimeout(() => {
+    if (!window.appInitialized && !currentUserUid) {
+      console.log('Timeout de autenticación, redirigiendo...');
+      window.location.href = 'index.html';
+    }
+  }, 3000);
 });
 </script>
 
