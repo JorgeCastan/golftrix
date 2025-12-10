@@ -640,30 +640,50 @@ saveFinalBtn.addEventListener('click', async () => {
   }
 });
 
-// Al cargar la página, iniciar el formulario
+// Al cargar la página, esperar a que Firebase verifique la sesión persistente
 document.addEventListener('DOMContentLoaded', async () => {
-  const user = auth.currentUser;
-  if (!user) {
-    // Redirigir a login si no está autenticado
-    window.location.href = 'index.html';
-    return;
-  }
+  console.log('DOM loaded, checking auth...');
   
-  currentUserUid = user.uid;
-  await prepareFormForUser(currentUserUid);
+  // Esperar un momento para que Firebase cargue la sesión persistente
+  setTimeout(async () => {
+    const user = auth.currentUser;
+    
+    if (!user) {
+      console.log('No user found after delay, redirecting...');
+      // Esperar un poco más para estar seguro
+      setTimeout(() => {
+        window.location.href = 'index.html';
+      }, 500);
+      return;
+    }
+    
+    console.log('User authenticated:', user.uid);
+    currentUserUid = user.uid;
+    window.authInitialized = true; // Marcar que ya pasó la carga inicial
+    
+    await prepareFormForUser(currentUserUid);
+  }, 1000); // Esperar 1 segundo para que Firebase cargue la sesión
 });
 
-// Si el usuario no estaba autenticado al presionar abrir, actualizamos al hacer login
+// Listener de autenticación - SOLO maneja cambios de estado DURANTE la sesión
 onAuthStateChanged(auth, async (u) => {
-  if (u) {
-    currentUserUid = u.uid;
-    // Recargar el formulario si ya está en la página
-    if (document.readyState === 'complete') {
+  console.log('Auth state changed:', u ? 'User logged in' : 'No user');
+  
+  // Solo procesar si ya pasó la carga inicial
+  if (document.readyState === 'complete' && window.authInitialized) {
+    if (u) {
+      // Usuario se acaba de loguear DURANTE la sesión
+      currentUserUid = u.uid;
       await prepareFormForUser(currentUserUid);
+    } else {
+      // Usuario cerró sesión DURANTE la sesión
+      currentUserUid = null;
+      // Solo redirigir si ya estábamos trabajando
+      if (currentCardIndex > 0 || tempEntries.length > 0) {
+        alert('Sesión cerrada. Serás redirigido al inicio.');
+        window.location.href = 'index.html';
+      }
     }
-  } else {
-    currentUserUid = null;
-    window.location.href = 'index.html';
   }
 });
 </script>
