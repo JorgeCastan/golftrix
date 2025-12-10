@@ -81,65 +81,48 @@ body {
   flex: 1;
 }
 
-/* Modal */
-.modal-overlay {
-  position: fixed; inset: 0; background: rgba(0,0,0,0.45);
-  display:flex; align-items:center; justify-content:center; z-index:1000;
-}
-.modal {
-  width: 100%; max-width: 980px; background:white; border-radius:12px; padding:14px;
-  box-shadow:0 8px 28px rgba(0,0,0,0.25); max-height:90vh; overflow:auto;
-}
-h2 { margin:0 0 10px 0; color:#005600; text-align:center; }
-
-/* grid principal */
-.top-row { display:flex; gap:10px; align-items:center; justify-content:space-between; margin-bottom:10px; }
+/* Estado y badges */
 .badge { background:#eaf9ea; color:#006400; padding:6px 10px; border-radius:10px; font-weight:800; }
 
-/* botones de seleccion de numero de tarjetas */
-.select-count { display:flex; gap:6px; flex-wrap:wrap; margin-bottom:8px; }
-.count-btn { padding:8px 12px; border-radius:8px; border:2px solid transparent; background:linear-gradient(90deg,#f0f0f0,#fff); cursor:pointer; font-weight:800; }
-
-/* campo select */
+/* Campo select */
 .field { margin-bottom:10px; }
 .select { width:100%; padding:8px; border-radius:8px; height:40px; }
 
-/* Tarjetas area */
-.cards-list { display:flex; flex-direction:column; gap:12px; }
-
-/* Cada tarjeta a crear */
-.card { background:#fafafa; padding:10px; border-radius:10px; }
+/* Tarjeta */
+.card { background:#fafafa; padding:20px; border-radius:12px; box-shadow:0 4px 12px rgba(0,0,0,0.08); }
 
 /* Hoyos grid: 2 columnas desktop, 1 en móvil */
-.hoyos-grid { display:grid; grid-template-columns: repeat(2, 1fr); gap:8px; }
+.hoyos-grid { display:grid; grid-template-columns: repeat(2, 1fr); gap:10px; margin-top:15px; }
 @media (max-width:700px) {
   .hoyos-grid { grid-template-columns: 1fr; }
 }
-.hoyo-card { background:#fff; padding:6px; border-radius:8px; box-shadow:0 2px 6px rgba(0,0,0,0.04); text-align:center; }
-.hoyo-card label { display:block; font-weight:700; margin-bottom:4px; font-size:0.85rem; }
-.hoyo-card input { width:100%; padding:6px; height:36px; border-radius:6px; text-align:center; }
+.hoyo-card { background:#fff; padding:10px; border-radius:8px; box-shadow:0 2px 6px rgba(0,0,0,0.04); text-align:center; border:1px solid #e0e0e0; }
+.hoyo-card label { display:block; font-weight:700; margin-bottom:6px; font-size:0.85rem; color:#333; }
+.hoyo-card input { width:100%; padding:8px; height:40px; border-radius:6px; text-align:center; border:1px solid #ccc; font-size:1rem; }
+.hoyo-card input:focus { border-color:#007f00; outline:none; box-shadow:0 0 0 2px rgba(0,127,0,0.2); }
 
 /* botones */
-.btn { padding:10px 12px; border-radius:10px; cursor:pointer; font-weight:800; border:none; }
+.btn { padding:12px 20px; border-radius:10px; cursor:pointer; font-weight:800; border:none; font-size:1rem; transition:all 0.3s; }
 .save { background: linear-gradient(90deg,#007f00,#00cc44); color:#fff; }
+.save:hover { background: linear-gradient(90deg,#006600,#00aa33); transform:translateY(-2px); box-shadow:0 4px 12px rgba(0,127,0,0.3); }
 .cancel { background:#eee; color:#222; }
+.cancel:hover { background:#ddd; transform:translateY(-2px); box-shadow:0 4px 12px rgba(0,0,0,0.1); }
+.btn:disabled { opacity:0.5; cursor:not-allowed; transform:none !important; box-shadow:none !important; }
 
 /* small note */
 .small { font-size:0.88rem; color:#666; }
+
 /* Estilos para el flujo paso a paso */
 #currentCardTitle {
   color: #005600;
   margin-bottom: 5px;
+  font-size: 1.5rem;
 }
 
 #progressText {
   color: #666;
   font-style: italic;
-}
-
-.btn:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
+  margin-bottom: 20px;
 }
 
 /* Mejorar visualización de inputs */
@@ -147,6 +130,7 @@ input[type="date"], select {
   font-family: 'Orbitron', sans-serif;
   border: 1px solid #ccc;
   transition: border-color 0.3s;
+  font-size: 0.95rem;
 }
 
 input[type="date"]:focus, select:focus {
@@ -157,10 +141,12 @@ input[type="date"]:focus, select:focus {
 
 /* Estilo para mensajes */
 #resultMsg {
-  padding: 10px;
+  padding: 12px;
   border-radius: 8px;
   background-color: #f8f9fa;
-  min-height: 40px;
+  min-height: 50px;
+  margin-top: 20px;
+  border-left: 4px solid #007f00;
 }
 
 /* Animación suave entre tarjetas */
@@ -171,6 +157,38 @@ input[type="date"]:focus, select:focus {
 @keyframes fadeIn {
   from { opacity: 0; transform: translateY(10px); }
   to { opacity: 1; transform: translateY(0); }
+}
+
+/* Navegación */
+.navigation-buttons {
+  display: flex;
+  gap: 15px;
+  justify-content: center;
+  margin-top: 30px;
+  flex-wrap: wrap;
+}
+
+.navigation-buttons .btn i {
+  margin: 0 5px;
+}
+
+/* Grid para fecha y selects */
+.form-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 15px;
+  margin-bottom: 20px;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+}
+
+.form-group label {
+  margin-bottom: 5px;
+  font-weight: 600;
+  color: #333;
 }
 </style>
 </head>
@@ -200,7 +218,7 @@ input[type="date"]:focus, select:focus {
   </div>
 
   <!-- Navegación -->
-  <div style="display: flex; gap: 15px; justify-content: center; margin-top: 30px;">
+  <div class="navigation-buttons">
     <button id="prevBtn" class="btn cancel" style="display: none;">
       <i class="fas fa-arrow-left"></i> Atrás
     </button>
@@ -252,7 +270,12 @@ if (logo) {
   logo.addEventListener('click', () => window.location.href = 'dashboard.html');
 }
 
+// DOM
+let currentUserUid = null;
+let availableCardsCount = 0;
+let missingCount = 0;
 let campos = []; // lista de camposGolf
+
 // VARIABLES NUEVAS PARA EL FLUJO POR PASOS
 let currentCardIndex = 0; // Índice de tarjeta actual (0-based)
 let maxCardsToFill = 0;   // Número de tarjetas a llenar
@@ -271,13 +294,6 @@ const missingBadge = document.getElementById('missingBadge');
 const statusLine = document.getElementById('statusLine');
 const resultMsg = document.getElementById('resultMsg');
 
-function openModal() {
-  modalRoot.style.display = 'flex';
-}
-function closeModal() {
-  modalRoot.style.display = 'none';
-}
-
 // cargar campos de golf
 async function loadCampos() {
   campoSelect.innerHTML = '<option value="">Cargando campos...</option>';
@@ -287,13 +303,6 @@ async function loadCampos() {
   snap.forEach(s => {
     const d = s.data();
     campos.push({ id: s.id, nombre: d.nombre });
-  });
-  campoSelect.innerHTML = '<option value="">-- Selecciona campo --</option>';
-  campos.forEach(c => {
-    const opt = document.createElement('option');
-    opt.value = c.id;
-    opt.textContent = c.nombre;
-    campoSelect.appendChild(opt);
   });
 }
 
@@ -317,31 +326,43 @@ async function countUserCompleteCards(uid) {
   return count;
 }
 
-// genera botones de tarjeta 1..N
-function renderCountButtons(maxMissing) {
-  countButtons.innerHTML = '';
-  for (let i = 1; i <= maxMissing; i++) {
-    const btn = document.createElement('button');
-    btn.type = 'button';
-    btn.className = 'count-btn';
-    btn.textContent = `Tarjeta ${i}`;
-    btn.dataset.index = i;
-    btn.addEventListener('click', () => {
-      selectedCount = i;
-      renderCardInputs();
-      // marcar seleccion
-      Array.from(countButtons.children).forEach(ch => ch.style.boxShadow = '');
-      btn.style.boxShadow = '0 4px 12px rgba(0,0,0,0.12)';
-    });
-    countButtons.appendChild(btn);
+// flujo inicial: contar tarjetas y preparar vista
+async function prepareFormForUser(uid) {
+  statusLine.textContent = 'Consultando tarjetas y campos...';
+  resultMsg.textContent = '';
+  
+  await loadCampos();
+  const count = await countUserCompleteCards(uid);
+  availableCardsCount = count;
+  missingCount = Math.max(0, 10 - availableCardsCount);
+  
+  // Mostrar estado
+  missingBadge.style.display = missingCount > 0 ? 'inline-block' : 'none';
+  missingBadge.textContent = missingCount > 0 ? 
+    `Te hacen falta ${missingCount} tarjetas para calcular handicap` : 
+    'Tienes 10 o más tarjetas';
+  
+  statusLine.textContent = `Tarjetas completas encontradas: ${availableCardsCount}`;
+  
+  // Determinar cuántas tarjetas mostrar
+  maxCardsToFill = missingCount > 0 ? missingCount : 1;
+  totalCardsSpan.textContent = maxCardsToFill;
+  
+  // Inicializar estructura de datos
+  tempEntries = [];
+  for (let i = 0; i < maxCardsToFill; i++) {
+    tempEntries[i] = { 
+      fecha: '', 
+      campoId: '', 
+      salida: '',  // NUEVO: campo de salida
+      scores: {} 
+    };
   }
-  // seleccionar por defecto 1
-  if (maxMissing > 0) {
-    selectedCount = 1;
-    countButtons.firstChild.style.boxShadow = '0 4px 12px rgba(0,0,0,0.12)';
-  } else {
-    selectedCount = 0;
-  }
+  
+  // Mostrar primera tarjeta
+  currentCardIndex = 0;
+  renderCurrentCard();
+  updateNavigationButtons();
 }
 
 // Renderiza solo la tarjeta actual
@@ -358,25 +379,27 @@ function renderCurrentCard() {
   
   currentCardContainer.innerHTML = `
     <div class="card">
-      <div style="display:flex; gap:8px; align-items:center; justify-content:space-between; margin-bottom:15px;">
-        <strong>Tarjeta ${currentCardIndex + 1}</strong>
-        <div class="small">Fecha: <input type="date" id="fechaInput" value="${entry.fecha || ''}" /></div>
-      </div>
-      
-      <div style="margin-bottom:15px;">
-        <label class="small">Campo de golf</label>
-        <select id="campoSelectInput" class="select">
-          <option value="">-- Selecciona campo --</option>
-          ${campos.map(c => `<option value="${c.id}" ${entry.campoId === c.id ? 'selected' : ''}>${c.nombre}</option>`).join('')}
-        </select>
-      </div>
-      
-      <div style="margin-bottom:15px;">
-        <label class="small">Salida</label>
-        <select id="salidaSelectInput" class="select">
-          <option value="">-- Selecciona salida --</option>
-          ${salidaOptions.map(s => `<option value="${s}" ${entry.salida === s ? 'selected' : ''}>${s}</option>`).join('')}
-        </select>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="small">Fecha</label>
+          <input type="date" id="fechaInput" value="${entry.fecha || ''}" class="select" />
+        </div>
+        
+        <div class="form-group">
+          <label class="small">Campo de golf</label>
+          <select id="campoSelectInput" class="select">
+            <option value="">-- Selecciona campo --</option>
+            ${campos.map(c => `<option value="${c.id}" ${entry.campoId === c.id ? 'selected' : ''}>${c.nombre}</option>`).join('')}
+          </select>
+        </div>
+        
+        <div class="form-group">
+          <label class="small">Salida</label>
+          <select id="salidaSelectInput" class="select">
+            <option value="">-- Selecciona salida --</option>
+            ${salidaOptions.map(s => `<option value="${s}" ${entry.salida === s ? 'selected' : ''}>${s}</option>`).join('')}
+          </select>
+        </div>
       </div>
       
       <div style="margin-top:20px;">
@@ -406,20 +429,24 @@ function renderCurrentCard() {
     inp.addEventListener('input', (e) => {
       const v = e.target.value;
       tempEntries[currentCardIndex].scores[i] = v === '' ? undefined : Number(v);
+      validateCurrentCard();
     });
   }
   
   // Eventos para fecha y selects
   document.getElementById('fechaInput').addEventListener('change', (e) => {
     tempEntries[currentCardIndex].fecha = e.target.value;
+    validateCurrentCard();
   });
   
   document.getElementById('campoSelectInput').addEventListener('change', (e) => {
     tempEntries[currentCardIndex].campoId = e.target.value;
+    validateCurrentCard();
   });
   
   document.getElementById('salidaSelectInput').addEventListener('change', (e) => {
     tempEntries[currentCardIndex].salida = e.target.value;
+    validateCurrentCard();
   });
   
   // Actualizar título
@@ -486,7 +513,6 @@ function validateCurrentCard() {
   return isValid;
 }
 
-// guardar tarjetas creadas por el usuario en firestore
 // guardar todas las tarjetas creadas por el usuario en firestore
 async function saveAllCardsAndRecalc(uid) {
   resultMsg.textContent = 'Validando tarjetas...';
@@ -583,48 +609,6 @@ async function saveAllCardsAndRecalc(uid) {
     resultMsg.style.color = '#d32f2f';
   }
 }
-
-// flujo inicial: contar tarjetas y preparar vista
-async function prepareFormForUser(uid) {
-  statusLine.textContent = 'Consultando tarjetas y campos...';
-  resultMsg.textContent = '';
-  
-  await loadCampos();
-  const count = await countUserCompleteCards(uid);
-  availableCardsCount = count;
-  missingCount = Math.max(0, 10 - availableCardsCount);
-  
-  // Mostrar estado
-  missingBadge.style.display = missingCount > 0 ? 'inline-block' : 'none';
-  missingBadge.textContent = missingCount > 0 ? 
-    `Te hacen falta ${missingCount} tarjetas para calcular handicap` : 
-    'Tienes 10 o más tarjetas';
-  
-  statusLine.textContent = `Tarjetas completas encontradas: ${availableCardsCount}`;
-  
-  // Determinar cuántas tarjetas mostrar
-  maxCardsToFill = missingCount > 0 ? missingCount : 1;
-  totalCardsSpan.textContent = maxCardsToFill;
-  
-  // Inicializar estructura de datos
-  tempEntries = [];
-  for (let i = 0; i < maxCardsToFill; i++) {
-    tempEntries[i] = { 
-      fecha: '', 
-      campoId: '', 
-      salida: '',  // NUEVO: campo de salida
-      scores: {} 
-    };
-  }
-  
-  // Mostrar primera tarjeta
-  currentCardIndex = 0;
-  renderCurrentCard();
-  updateNavigationButtons();
-}
-
-// Esta función reemplaza a prepareModalForUser
-// También eliminar la función openModal() y closeModal() ya que no usamos modal
 
 // Eventos de navegación
 prevBtn.addEventListener('click', () => {
