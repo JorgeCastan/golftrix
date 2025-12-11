@@ -441,9 +441,13 @@ function renderCurrentCard() {
     </div>
   `;
   
-  // Hoyos grid
+    // Hoyos grid
   const grid = document.getElementById('hoyosGrid');
   grid.innerHTML = '';
+  
+  // Usar event delegation para evitar múltiples event listeners
+  // Limpiar eventos previos primero
+  currentCardContainer.replaceWith(currentCardContainer.cloneNode(true));
   
   for (let i = 1; i <= 18; i++) {
     const val = entry.scores && typeof entry.scores[i] !== 'undefined' ? entry.scores[i] : '';
@@ -454,62 +458,53 @@ function renderCurrentCard() {
       <input type="number" min="0" max="20" id="hoyo-${i}" value="${val}" />
     `;
     grid.appendChild(div);
-    
-    const inp = div.querySelector('input');
-    inp.addEventListener('input', (e) => {
-      const v = e.target.value;
-      tempEntries[currentCardIndex].scores[i] = v === '' ? undefined : Number(v);
-      validateCurrentCard();
-    });
   }
   
-  // Eventos para fecha y selects
-  document.getElementById('fechaInput').addEventListener('change', (e) => {
-    tempEntries[currentCardIndex].fecha = e.target.value;
-    validateCurrentCard();
-  });
-  
-  document.getElementById('campoSelectInput').addEventListener('change', (e) => {
-    tempEntries[currentCardIndex].campoId = e.target.value;
-    validateCurrentCard();
-  });
-  
-  document.getElementById('salidaSelectInput').addEventListener('change', (e) => {
-    tempEntries[currentCardIndex].salida = e.target.value;
-    validateCurrentCard();
-  });
+  // Adjuntar eventos usando event delegation (UNA SOLA VEZ)
+  attachInputEvents();
   
   // Actualizar título
   currentCardTitle.textContent = `Tarjeta ${currentCardIndex + 1} de ${maxCardsToFill}`;
 
-    // Adjuntar eventos después de renderizar
-  setTimeout(() => {
-    attachInputEvents();
-  }, 100);
 }
 
 // Función para adjuntar eventos a los inputs después de renderizar
 function attachInputEvents() {
-  // Eventos para fecha y selects - usar delegación de eventos
-  currentCardContainer.addEventListener('change', (e) => {
-    if (e.target.id === 'fechaInput') {
+  // Remover event listeners previos para evitar duplicados
+  const newContainer = currentCardContainer.cloneNode(true);
+  currentCardContainer.parentNode.replaceChild(newContainer, currentCardContainer);
+  
+  // Ahora usar el nuevo container
+  const container = document.getElementById('currentCardContainer');
+  
+  // Eventos para fecha y selects
+  const fechaInput = container.querySelector('#fechaInput');
+  const campoSelect = container.querySelector('#campoSelectInput');
+  const salidaSelect = container.querySelector('#salidaSelectInput');
+  
+  if (fechaInput) {
+    fechaInput.addEventListener('change', (e) => {
       tempEntries[currentCardIndex].fecha = e.target.value;
       validateCurrentCard();
-    }
-    
-    if (e.target.id === 'campoSelectInput') {
+    });
+  }
+  
+  if (campoSelect) {
+    campoSelect.addEventListener('change', (e) => {
       tempEntries[currentCardIndex].campoId = e.target.value;
       validateCurrentCard();
-    }
-    
-    if (e.target.id === 'salidaSelectInput') {
+    });
+  }
+  
+  if (salidaSelect) {
+    salidaSelect.addEventListener('change', (e) => {
       tempEntries[currentCardIndex].salida = e.target.value;
       validateCurrentCard();
-    }
-  });
+    });
+  }
   
-  // Eventos para inputs de hoyos
-  currentCardContainer.addEventListener('input', (e) => {
+  // Eventos para inputs de hoyos usando event delegation en el container
+  container.addEventListener('input', (e) => {
     if (e.target.id && e.target.id.startsWith('hoyo-')) {
       const hoyoNum = parseInt(e.target.id.replace('hoyo-', ''));
       const v = e.target.value;
@@ -581,6 +576,10 @@ function validateCurrentCard() {
 
 // guardar todas las tarjetas creadas por el usuario en firestore
 async function saveAllCardsAndRecalc(uid) {
+  // Deshabilitar botón para evitar doble clic
+  saveFinalBtn.disabled = true;
+  saveFinalBtn.textContent = 'Guardando...';
+  
   resultMsg.textContent = 'Validando tarjetas...';
   resultMsg.style.color = '#006400';
   
@@ -592,6 +591,8 @@ async function saveAllCardsAndRecalc(uid) {
     if (!e.fecha) {
       resultMsg.textContent = `La tarjeta ${t+1} no tiene fecha.`;
       resultMsg.style.color = '#d32f2f';
+      saveFinalBtn.disabled = false;
+      saveFinalBtn.textContent = '<i class="fas fa-save"></i> Guardar y Calcular Handicap';
       return;
     }
     
@@ -600,6 +601,8 @@ async function saveAllCardsAndRecalc(uid) {
       if (typeof e.scores[i] !== 'number' || Number.isNaN(e.scores[i])) {
         resultMsg.textContent = `La tarjeta ${t+1} no tiene el hoyo ${i} completo.`;
         resultMsg.style.color = '#d32f2f';
+        saveFinalBtn.disabled = false;
+        saveFinalBtn.textContent = '<i class="fas fa-save"></i> Guardar y Calcular Handicap';
         return;
       }
     }
@@ -610,48 +613,65 @@ async function saveAllCardsAndRecalc(uid) {
   // crear cada documento en collection 'tarjetas'
   const col = collection(db, 'tarjetas');
   try {
+    // Contador para verificar cuántas se guardaron
+    let savedCount = 0;
+    
     for (let t = 0; t < maxCardsToFill; t++) {
       const e = tempEntries[t];
       
-      // construir array scores
+      // construir array scores con la estructura EXACTA que necesita handicap.js
       const scoresArray = [];
       const nowMillis = Date.now();
+      const updatedMillis = Date.now();
+      
       for (let i = 1; i <= 18; i++) {
         scoresArray.push({
           hoyo: i,
           golpes: Number(e.scores[i]),
-          createdAtMillis: nowMillis
+          createdAtMillis: nowMillis,
+          updatedAtMillis: updatedMillis  // IMPORTANTE: agregar este campo
         });
       }
 
       // Obtener nombre del campo
       const campoNombre = campos.find(c => c.id === e.campoId)?.nombre || '';
+
       
+
+      const fechaTimestamp = e.fecha ? new Date(e.fecha) : new Date();
+      
+      // Crear ID único para juego (puede ser 0 o un timestamp)
+      const juegoId = `juego_${Date.now()}_${t}`;
+      
+      // Estructura EXACTA según el ejemplo que proporcionaste
       const docPayload = {
         campoId: e.campoId || '',
         campoNombre: campoNombre,
-        salida: e.salida || '', // NUEVO: campo de salida
-        createdAt: e.fecha ? new Date(e.fecha) : serverTimestamp(),
-        createdAtMillis: e.fecha ? new Date(e.fecha).getTime() : Date.now(),
+        createdAt: serverTimestamp(),  // Usar serverTimestamp en lugar de Date
         estado: 'activa',
+        juegoId: juegoId,  // REQUERIDO por handicap.js
+        lastUpdated: serverTimestamp(),
         ownerUid: uid,
-        userUid: uid,
-        scores: scoresArray,
-        lastUpdated: serverTimestamp()
+        salida: e.salida || 'Blancas',  // Valor por defecto si está vacío
+        scores: scoresArray,  // Array con la estructura correcta
+        userUid: uid
       };
 
+      console.log(`Guardando tarjeta ${t+1}:`, docPayload);
       await addDoc(col, docPayload);
+      savedCount++;
     }
 
-    resultMsg.textContent = `${maxCardsToFill} tarjetas guardadas. Calculando handicap...`;
+    resultMsg.textContent = `${savedCount} tarjetas guardadas correctamente. Calculando handicap...`;
 
     // recalcular y guardar handicap
     const res = await calculateAndSaveHandicap(uid);
+    
     if (res.ok && res.saved) {
       resultMsg.textContent = `✅ Handicap calculado y guardado: ${res.handicap}`;
       resultMsg.style.color = '#006400';
       
-      // Opcional: redirigir después de 3 segundos
+      // Redirigir después de 3 segundos
       setTimeout(() => {
         window.location.href = 'dashboard.html';
       }, 3000);
@@ -659,6 +679,9 @@ async function saveAllCardsAndRecalc(uid) {
     } else if (res.ok && !res.saved) {
       resultMsg.textContent = `ℹ️ Handicap calculado: ${res.handicap} (no se pudo guardar automáticamente).`;
       resultMsg.style.color = '#ff9800';
+      // Rehabilitar botón
+      saveFinalBtn.disabled = false;
+      saveFinalBtn.innerHTML = '<i class="fas fa-save"></i> Guardar y Calcular Handicap';
     } else {
       if (res.missing) {
         resultMsg.textContent = `⚠️ Aún faltan ${res.missing} tarjetas para calcular handicap.`;
@@ -667,16 +690,26 @@ async function saveAllCardsAndRecalc(uid) {
         resultMsg.textContent = `❌ Error: ${res.message || 'No se pudo calcular el handicap.'}`;
         resultMsg.style.color = '#d32f2f';
       }
+      // Rehabilitar botón
+      saveFinalBtn.disabled = false;
+      saveFinalBtn.innerHTML = '<i class="fas fa-save"></i> Guardar y Calcular Handicap';
     }
     
   } catch (err) {
     console.error('Error guardando tarjetas:', err);
     resultMsg.textContent = '❌ Error guardando tarjetas. Revisa la consola.';
     resultMsg.style.color = '#d32f2f';
+    // Rehabilitar botón
+    saveFinalBtn.disabled = false;
+    saveFinalBtn.innerHTML = '<i class="fas fa-save"></i> Guardar y Calcular Handicap';
   }
 }
 
 // Eventos de navegación
+// Generar ID único para juego
+function generateJuegoId() {
+  return `juego_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+}
 prevBtn.addEventListener('click', () => {
   if (currentCardIndex > 0) {
     currentCardIndex--;
@@ -706,35 +739,7 @@ saveFinalBtn.addEventListener('click', async () => {
   }
 });
 
-// Eventos de navegación
-prevBtn.addEventListener('click', () => {
-  if (currentCardIndex > 0) {
-    currentCardIndex--;
-    renderCurrentCard();
-    updateNavigationButtons();
-  }
-});
 
-nextBtn.addEventListener('click', () => {
-  if (validateCurrentCard()) {
-    if (currentCardIndex < maxCardsToFill - 1) {
-      currentCardIndex++;
-      renderCurrentCard();
-      updateNavigationButtons();
-    }
-  }
-});
-
-saveFinalBtn.addEventListener('click', async () => {
-  if (!currentUserUid) {
-    resultMsg.textContent = 'No hay usuario autenticado.';
-    return;
-  }
-  
-  if (validateCurrentCard()) {
-    await saveAllCardsAndRecalc(currentUserUid);
-  }
-});
 
 // Función para iniciar la aplicación después de autenticación
 async function initApp() {
