@@ -63,41 +63,96 @@ function totalFromScores(scores) {
  */
 async function fetchLatestCompleteCards(uid, limitCount = 10) {
   const tarjetasCol = collection(db, 'tarjetas');
-  // query por ownerUid y orderBy createdAtMillis descendente
-  // Nota: Si no hay createdAtMillis en algunos documentos pueden no estar ordenados,
-  // pero intentamos la mejor heurística: obtenemos más documentos (limitCount*2) y filtramos.
-  const q = query(
-    tarjetasCol,
-    where('ownerUid', '==', uid),
-    orderBy('createdAtMillis', 'desc'),
-    limit(limitCount * 3) // traer más por si algunas no son válidas
+  
+  // PRIMERO: Intentar con createdAtMillis (para tarjetas nuevas)
+  try {
+    const q = query(
+      tarjetasCol,
+      where('ownerUid', '==', uid),
+      orderBy('createdAtMillis', 'desc'),
+      limit(limitCount * 3)
+    );
+    const snap = await getDocs(q);
+    const cards = [];
+    
+    snap.forEach(docSnap => {
+      const data = docSnap.data();
+      if (hasComplete18(data.scores)) {
+        // Obtener la fecha más confiable
+        let fechaMillis;
+        if (data.createdAtMillis) {
+          // Si tiene createdAtMillis, usarlo
+          fechaMillis = data.createdAtMillis;
+        } else if (data.createdAt && data.createdAt.toMillis) {
+          // Si no, usar createdAt (timestamp de Firebase)
+          fechaMillis = data.createdAt.toMillis();
+        } else if (data.scores && data.scores.length > 0 && data.scores[0].createdAtMillis) {
+          // Si no, usar el primer score (para tarjetas del juego)
+          fechaMillis = data.scores[0].createdAtMillis;
+        } else {
+          // Fallback: usar 0 (serán las últimas en ordenar)
+          fechaMillis = 0;
+        }
+        
+        cards.push({
+          id: docSnap.id,
+          total: totalFromScores(data.scores),
+          createdAtMillis: fechaMillis,
+          raw: data
+        });
+      }
+    });
+    
+    // Si ya tenemos suficientes tarjetas con createdAtMillis, retornar
+    if (cards.length >= limitCount) {
+      cards.sort((a, b) => b.createdAtMillis - a.createdAtMillis);
+      return cards.slice(0, limitCount);
+    }
+  } catch (error) {
+    // Si hay error en la query (probablemente porque algunos docs no tienen createdAtMillis),
+    // continuamos con el método alternativo
+    console.log('Query con createdAtMillis falló, intentando método alternativo...');
+  }
+  
+  // SEGUNDO: Método alternativo - traer todas y filtrar
+  const tarjetasCol2 = collection(db, 'tarjetas');
+  const q2 = query(
+    tarjetasCol2,
+    where('ownerUid', '==', uid)
   );
-
-  const snap = await getDocs(q);
-  const cards = [];
-  snap.forEach(docSnap => {
+  
+  const snap2 = await getDocs(q2);
+  const allCards = [];
+  
+  snap2.forEach(docSnap => {
     const data = docSnap.data();
     if (hasComplete18(data.scores)) {
-      // total y fecha
-      const total = totalFromScores(data.scores);
-      // try get createdAtMillis else try createdAt (timestamp) else fallback 0
-      const createdAtMillis = data.createdAtMillis
-        || (data.createdAt && data.createdAt.toMillis && data.createdAt.toMillis())
-        || 0;
-      cards.push({
+      // Obtener la fecha más confiable (misma lógica que arriba)
+      let fechaMillis;
+      if (data.createdAtMillis) {
+        fechaMillis = data.createdAtMillis;
+      } else if (data.createdAt && data.createdAt.toMillis) {
+        fechaMillis = data.createdAt.toMillis();
+      } else if (data.scores && data.scores.length > 0 && data.scores[0].createdAtMillis) {
+        fechaMillis = data.scores[0].createdAtMillis;
+      } else {
+        fechaMillis = 0;
+      }
+      
+      allCards.push({
         id: docSnap.id,
-        total,
-        createdAtMillis,
+        total: totalFromScores(data.scores),
+        createdAtMillis: fechaMillis,
         raw: data
       });
     }
   });
-
-  // ordenar por createdAtMillis desc (por si no estava ordenado)
-  cards.sort((a, b) => b.createdAtMillis - a.createdAtMillis);
-
-  // devolver máximo limitCount
-  return cards.slice(0, limitCount);
+  
+  // Ordenar por fecha descendente
+  allCards.sort((a, b) => b.createdAtMillis - a.createdAtMillis);
+  
+  // Devolver las más recientes
+  return allCards.slice(0, limitCount);
 }
 
 /**
@@ -139,27 +194,30 @@ async function computeHandicapForUid(uid) {
   }
 
   // Verificar que todas las tarjetas tengan campo válido con paresHoyo y ratings
+  // Primero verificar todas las tarjetas
   for (const c of cards) {
     const campo = camposMap[c.raw.campoId];
     if (!campo || !Array.isArray(campo.paresHoyo) || campo.paresHoyo.length < 18) {
       return { ok: false, handicap: null, message: `El campo de la tarjeta ${c.id} no tiene información válida de pares.` };
     }
     const salida = c.raw.salida;
-    if (!["rojas", "blancas", "azules"].includes(salida)) {
+    const salidaLower = salida ? salida.toLowerCase() : '';
+    if (!["rojas", "blancas", "azules"].includes(salidaLower)) {
       return { ok: false, handicap: null, message: `La tarjeta ${c.id} no tiene salida válida.` };
     }
-    if (campo[`rating_${salida}`] == null) {
-      return { ok: false, handicap: null, message: `El campo para la tarjeta ${c.id} no tiene rating para la salida ${salida}.` };
+    if (campo[`rating_${salidaLower}`] == null) {
+      return { ok: false, handicap: null, message: `El campo para la tarjeta ${c.id} no tiene rating para la salida ${salidaLower}.` };
     }
+    // Guardar salidaLower en el objeto raw para usarlo después
+    c.raw.salidaLower = salidaLower;
   }
-
   // Calcular diferencia nueva por tarjeta
   const diffs = [];
 
   for (const c of cards) {
     const campo = camposMap[c.raw.campoId];
-    const salida = c.raw.salida;
-    const rating = Number(campo[`rating_${salida}`]);
+        const salidaLower = c.raw.salidaLower || (c.raw.salida ? c.raw.salida.toLowerCase() : 'blancas');
+    const rating = Number(campo[`rating_${salidaLower}`]);
 
     // preparar mapa hoyo → golpes reales
     const mapGolpes = new Map();
