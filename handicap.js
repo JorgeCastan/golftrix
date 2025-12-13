@@ -59,33 +59,87 @@ function totalFromScores(scores) {
 
 /**
  * Recupera las últimas tarjetas completas del usuario (máximo `limitCount`, por defecto 10).
- * Busca por ownerUid y ordena por createdAt desc (timestamp Firebase).
+ * Busca por ownerUid y ordered by createdAtMillis desc.
  */
 async function fetchLatestCompleteCards(uid, limitCount = 10) {
   const tarjetasCol = collection(db, 'tarjetas');
   
-  // SOLUCIÓN SIMPLE: Usar createdAt que SIEMPRE existe
-  // Ordenamos por createdAt descendente (Firestore Timestamp)
-  const q = query(
-    tarjetasCol,
-    where('ownerUid', '==', uid),
-    orderBy('createdAt', 'desc'),
-    limit(limitCount * 2) // Traer un poco más por si algunas no son válidas
-  );
-
-  const snap = await getDocs(q);
-  const cards = [];
+  // PRIMERO: Intentar con createdAtMillis (para tarjetas nuevas)
+  try {
+    const q = query(
+      tarjetasCol,
+      where('ownerUid', '==', uid),
+      orderBy('createdAtMillis', 'desc'),
+      limit(limitCount * 3)
+    );
+    const snap = await getDocs(q);
+    const cards = [];
+    
+    snap.forEach(docSnap => {
+      const data = docSnap.data();
+      if (hasComplete18(data.scores)) {
+        // Obtener la fecha más confiable
+        let fechaMillis;
+        if (data.createdAtMillis) {
+          // Si tiene createdAtMillis, usarlo
+          fechaMillis = data.createdAtMillis;
+        } else if (data.createdAt && data.createdAt.toMillis) {
+          // Si no, usar createdAt (timestamp de Firebase)
+          fechaMillis = data.createdAt.toMillis();
+        } else if (data.scores && data.scores.length > 0 && data.scores[0].createdAtMillis) {
+          // Si no, usar el primer score (para tarjetas del juego)
+          fechaMillis = data.scores[0].createdAtMillis;
+        } else {
+          // Fallback: usar 0 (serán las últimas en ordenar)
+          fechaMillis = 0;
+        }
+        
+        cards.push({
+          id: docSnap.id,
+          total: totalFromScores(data.scores),
+          createdAtMillis: fechaMillis,
+          raw: data
+        });
+      }
+    });
+    
+    // Si ya tenemos suficientes tarjetas con createdAtMillis, retornar
+    if (cards.length >= limitCount) {
+      cards.sort((a, b) => b.createdAtMillis - a.createdAtMillis);
+      return cards.slice(0, limitCount);
+    }
+  } catch (error) {
+    // Si hay error en la query (probablemente porque algunos docs no tienen createdAtMillis),
+    // continuamos con el método alternativo
+    console.log('Query con createdAtMillis falló, intentando método alternativo...');
+  }
   
-  snap.forEach(docSnap => {
+  // SEGUNDO: Método alternativo - traer todas y filtrar
+  const tarjetasCol2 = collection(db, 'tarjetas');
+  const q2 = query(
+    tarjetasCol2,
+    where('ownerUid', '==', uid)
+  );
+  
+  const snap2 = await getDocs(q2);
+  const allCards = [];
+  
+  snap2.forEach(docSnap => {
     const data = docSnap.data();
     if (hasComplete18(data.scores)) {
-      // Usar createdAt siempre disponible
-      let fechaMillis = 0;
-      if (data.createdAt && data.createdAt.toMillis) {
+      // Obtener la fecha más confiable (misma lógica que arriba)
+      let fechaMillis;
+      if (data.createdAtMillis) {
+        fechaMillis = data.createdAtMillis;
+      } else if (data.createdAt && data.createdAt.toMillis) {
         fechaMillis = data.createdAt.toMillis();
+      } else if (data.scores && data.scores.length > 0 && data.scores[0].createdAtMillis) {
+        fechaMillis = data.scores[0].createdAtMillis;
+      } else {
+        fechaMillis = 0;
       }
       
-      cards.push({
+      allCards.push({
         id: docSnap.id,
         total: totalFromScores(data.scores),
         createdAtMillis: fechaMillis,
@@ -94,11 +148,11 @@ async function fetchLatestCompleteCards(uid, limitCount = 10) {
     }
   });
   
-  // Ya están ordenadas por createdAt desc, pero por seguridad ordenamos
-  cards.sort((a, b) => b.createdAtMillis - a.createdAtMillis);
+  // Ordenar por fecha descendente
+  allCards.sort((a, b) => b.createdAtMillis - a.createdAtMillis);
   
-  // Devolver máximo limitCount
-  return cards.slice(0, limitCount);
+  // Devolver las más recientes
+  return allCards.slice(0, limitCount);
 }
 
 /**
