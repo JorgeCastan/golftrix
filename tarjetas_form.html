@@ -363,6 +363,34 @@ function generateJuegoId() {
   return `juego_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 }
 
+// Función para parsear fecha del input (YYYY-MM-DD) a objeto Date
+function parseFechaInput(fechaStr) {
+  if (!fechaStr) return new Date();
+  
+  try {
+    // El input date devuelve formato YYYY-MM-DD
+    const partes = fechaStr.split('-');
+    if (partes.length !== 3) return new Date();
+    
+    const año = parseInt(partes[0]);
+    const mes = parseInt(partes[1]) - 1; // Meses en JS son 0-indexed
+    const dia = parseInt(partes[2]);
+    
+    // Crear fecha con hora específica (14:00 = 2 PM México)
+    // Usamos UTC para evitar problemas de zona horaria
+    const fechaUTC = new Date(Date.UTC(año, mes, dia, 14, 0, 0));
+    
+    // Convertir a hora local México (ya que Date.UTC crea en UTC)
+    const fechaLocal = new Date(fechaUTC);
+    
+    console.log(`Fecha parseada: Input=${fechaStr}, Output=${fechaLocal}`);
+    return fechaLocal;
+  } catch (error) {
+    console.error('Error parseando fecha:', error);
+    return new Date();
+  }
+}
+
 // cargar campos de golf
 async function loadCampos() {
   // Limpiar el array de campos primero
@@ -721,24 +749,13 @@ async function saveAllCardsAndRecalc(uid) {
       // Crear ID único para juego
       const juegoId = generateJuegoId();
       
-      // Crear fecha con hora específica (2 PM México = UTC-6)
-      let fechaConHora;
-      try {
-        // Parsear la fecha del input y agregar hora 14:00:00 (2 PM) hora México
-        const fechaDate = new Date(e.fecha);
-        // Ajustar a hora 14:00 (2 PM) y zona horaria México (UTC-6)
-        fechaDate.setHours(14, 0, 0, 0);
-        
-        // Crear timestamp para Firestore
-        fechaConHora = new Date(fechaDate);
-        
-        console.log(`Fecha formateada para tarjeta ${t+1}:`, fechaConHora);
-      } catch (error) {
-        console.error('Error formateando fecha:', error);
-        // Si hay error, usar fecha actual con hora 14:00
-        fechaConHora = new Date();
-        fechaConHora.setHours(14, 0, 0, 0);
-      }
+      // Crear fecha usando la función de parseo correcta
+      let fechaConHora = parseFechaInput(e.fecha);
+      
+      // Asegurar que tenga la hora 14:00 (2 PM) por si acaso
+      fechaConHora.setHours(14, 0, 0, 0);
+      
+      console.log(`Fecha para tarjeta ${t+1}: Input=${e.fecha}, Guardada=${fechaConHora}`);
 
       // Estructura EXACTA según el ejemplo que proporcionaste
       const docPayload = {
