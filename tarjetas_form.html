@@ -82,7 +82,16 @@ body {
 }
 
 /* Estado y badges */
-.badge { background:#eaf9ea; color:#006400; padding:6px 10px; border-radius:10px; font-weight:800; }
+.badge { 
+  background: linear-gradient(90deg, #eaf9ea, #f0fff0); 
+  color: #007f00; 
+  padding: 8px 15px; 
+  border-radius: 10px; 
+  font-weight: 800; 
+  font-family: 'Orbitron', sans-serif;
+  border: 1px solid #007f00;
+  box-shadow: 0 2px 5px rgba(0,127,0,0.1);
+}
 
 /* Campo select */
 .field { margin-bottom:10px; }
@@ -97,14 +106,51 @@ body {
   .hoyos-grid { grid-template-columns: 1fr; }
 }
 .hoyo-card { background:#fff; padding:10px; border-radius:8px; box-shadow:0 2px 6px rgba(0,0,0,0.04); text-align:center; border:1px solid #e0e0e0; }
-.hoyo-card label { display:block; font-weight:700; margin-bottom:6px; font-size:0.85rem; color:#333; }
-.hoyo-card input { width:100%; padding:8px; height:40px; border-radius:6px; text-align:center; border:1px solid #ccc; font-size:1rem; }
-.hoyo-card input:focus { border-color:#007f00; outline:none; box-shadow:0 0 0 2px rgba(0,127,0,0.2); }
+.hoyo-card label { 
+  display:block; 
+  font-weight:700; 
+  margin-bottom:6px; 
+  font-size:0.85rem; 
+  color: #007f00;
+  font-family: 'Orbitron', sans-serif;
+  background: linear-gradient(90deg, #007f00, #00cc44);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+.hoyo-card input { 
+  width:100%; 
+  padding:8px; 
+  height:40px; 
+  border-radius:6px; 
+  text-align:center; 
+  border:2px solid #007f00; 
+  font-size:1rem; 
+  font-family: 'Orbitron', sans-serif;
+  color: #111;
+  background-color: #fff;
+  transition: all 0.3s ease;
+}
+.hoyo-card input:focus { 
+  border-color: #00cc44; 
+  outline:none; 
+  box-shadow:0 0 0 3px rgba(0,204,68,0.3); 
+  background-color: #f8fff8;
+}
 
 /* botones */
 .btn { padding:12px 20px; border-radius:10px; cursor:pointer; font-weight:800; border:none; font-size:1rem; transition:all 0.3s; }
-.save { background: linear-gradient(90deg,#007f00,#00cc44); color:#fff; }
-.save:hover { background: linear-gradient(90deg,#006600,#00aa33); transform:translateY(-2px); box-shadow:0 4px 12px rgba(0,127,0,0.3); }
+.save { 
+  background: linear-gradient(90deg,#007f00,#00cc44); 
+  color:#fff; 
+  font-family: 'Orbitron', sans-serif;
+  border: none;
+}
+.save:hover { 
+  background: linear-gradient(90deg,#006600,#00aa33); 
+  transform:translateY(-2px); 
+  box-shadow:0 4px 15px rgba(0,127,0,0.4); 
+}
 .cancel { background:#eee; color:#222; }
 .cancel:hover { background:#ddd; transform:translateY(-2px); box-shadow:0 4px 12px rgba(0,0,0,0.1); }
 .btn:disabled { opacity:0.5; cursor:not-allowed; transform:none !important; box-shadow:none !important; }
@@ -114,9 +160,15 @@ body {
 
 /* Estilos para el flujo paso a paso */
 #currentCardTitle {
-  color: #005600;
-  margin-bottom: 5px;
-  font-size: 1.5rem;
+  margin-bottom: 10px;
+  font-size: 1.6rem;
+  font-family: 'Orbitron', sans-serif;
+  font-weight: 700;
+  background: linear-gradient(90deg, #007f00, #00cc44);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  text-shadow: 0 2px 4px rgba(0,127,0,0.1);
 }
 
 #progressText {
@@ -128,15 +180,19 @@ body {
 /* Mejorar visualización de inputs */
 input[type="date"], select {
   font-family: 'Orbitron', sans-serif;
-  border: 1px solid #ccc;
-  transition: border-color 0.3s;
+  border: 2px solid #007f00;
+  transition: all 0.3s ease;
   font-size: 0.95rem;
+  color: #111;
+  background-color: #fff;
+  padding: 10px;
 }
 
 input[type="date"]:focus, select:focus {
-  border-color: #007f00;
+  border-color: #00cc44;
   outline: none;
-  box-shadow: 0 0 0 2px rgba(0, 127, 0, 0.2);
+  box-shadow: 0 0 0 3px rgba(0, 204, 68, 0.3);
+  background-color: #f8fff8;
 }
 
 /* Estilo para mensajes */
@@ -186,9 +242,17 @@ input[type="date"]:focus, select:focus {
 }
 
 .form-group label {
-  margin-bottom: 5px;
-  font-weight: 600;
-  color: #333;
+  margin-bottom: 8px;
+  font-weight: 700;
+  font-family: 'Orbitron', sans-serif;
+  color: #007f00;
+  font-size: 0.9rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  background: linear-gradient(90deg, #007f00, #00cc44);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
 }
 </style>
 </head>
@@ -657,14 +721,34 @@ async function saveAllCardsAndRecalc(uid) {
       // Crear ID único para juego
       const juegoId = generateJuegoId();
       
+      // Crear fecha con hora específica (2 PM México = UTC-6)
+      let fechaConHora;
+      try {
+        // Parsear la fecha del input y agregar hora 14:00:00 (2 PM) hora México
+        const fechaDate = new Date(e.fecha);
+        // Ajustar a hora 14:00 (2 PM) y zona horaria México (UTC-6)
+        fechaDate.setHours(14, 0, 0, 0);
+        
+        // Crear timestamp para Firestore
+        fechaConHora = new Date(fechaDate);
+        
+        console.log(`Fecha formateada para tarjeta ${t+1}:`, fechaConHora);
+      } catch (error) {
+        console.error('Error formateando fecha:', error);
+        // Si hay error, usar fecha actual con hora 14:00
+        fechaConHora = new Date();
+        fechaConHora.setHours(14, 0, 0, 0);
+      }
+
       // Estructura EXACTA según el ejemplo que proporcionaste
       const docPayload = {
         campoId: e.campoId || '',
         campoNombre: campoNombre,
-        createdAt: serverTimestamp(),  // Usar serverTimestamp
+        createdAt: fechaConHora,  // Usar fecha del formulario con hora 2 PM
+        createdAtMillis: fechaConHora.getTime(),  // Timestamp en milisegundos
         estado: 'activa',
         juegoId: juegoId,  // REQUERIDO por handicap.js
-        lastUpdated: serverTimestamp(),
+        lastUpdated: fechaConHora,  // Usar misma fecha que createdAt
         ownerUid: uid,
         salida: e.salida || 'Blancas',  // Valor por defecto si está vacío
         scores: scoresArray,  // Array con la estructura correcta
