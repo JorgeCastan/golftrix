@@ -64,16 +64,15 @@ function totalFromScores(scores) {
 async function fetchLatestCompleteCards(uid, limitCount = 10) {
   const tarjetasCol = collection(db, 'tarjetas');
   
-  // Query usando SOLO createdAt que TODAS las tarjetas tienen
+  // Query SOLO por ownerUid (sin orderBy para evitar índice compuesto)
   const q = query(
     tarjetasCol,
-    where('ownerUid', '==', uid),
-    orderBy('createdAt', 'desc'),  // Ordenamos por createdAt directamente
-    limit(limitCount * 2)  // Traer algunas extras por si algunas no son completas
+    where('ownerUid', '==', uid)
+    // NO usar orderBy aquí - lo haremos manualmente después
   );
   
   const snap = await getDocs(q);
-  const cards = [];
+  const allCards = [];
   
   snap.forEach(docSnap => {
     const data = docSnap.data();
@@ -83,23 +82,20 @@ async function fetchLatestCompleteCards(uid, limitCount = 10) {
         ? data.createdAt.toMillis() 
         : 0;
       
-      cards.push({
+      allCards.push({
         id: docSnap.id,
         total: totalFromScores(data.scores),
-        createdAtMillis: fechaMillis,  // Mantenemos el campo para compatibilidad
+        createdAtMillis: fechaMillis,
         raw: data
       });
     }
   });
   
-  // Si tenemos suficientes tarjetas completas, retornar las primeras limitCount
-  if (cards.length >= limitCount) {
-    return cards.slice(0, limitCount);
-  }
+  // Ordenar manualmente por fecha descendente (más reciente primero)
+  allCards.sort((a, b) => b.createdAtMillis - a.createdAtMillis);
   
-  // Si no tenemos suficientes con la query ordenada, necesitamos buscar más
-  // pero todas las tarjetas ya están ordenadas por createdAt desc
-  return cards;  // Retornamos las que tengamos (serán las más recientes)
+  // Devolver las primeras limitCount (las más recientes)
+  return allCards.slice(0, limitCount);
 }
 
 /**
