@@ -170,7 +170,7 @@ const authInst = getAuth(app);
 let currentTarjeta = null;
 
 // Render de los hoyos
-function renderHoyoInputs(scores) {
+function renderHoyoInputs(scores, completada = false) {
   hoyosContainer.innerHTML = '';
   for (let i = 1; i <= 18; i++) {
     const golpes = scores?.find(s => s.hoyo === i)?.golpes || '';
@@ -178,10 +178,40 @@ function renderHoyoInputs(scores) {
     div.className = 'hoyo-card';
     div.innerHTML = `
       <label for="hoyo${i}">Hoyo ${i}</label>
-      <input type="number" id="hoyo${i}" min="0" value="${golpes}" />
+      <input type="number" id="hoyo${i}" min="0" value="${golpes}" ${completada ? 'readonly' : ''} />
     `;
     hoyosContainer.appendChild(div);
   }
+  
+  // Si está completada, deshabilitar botones de guardado
+  if (completada) {
+    const botonesGuardar = document.querySelectorAll('button.save, #guardarTop');
+    botonesGuardar.forEach(boton => {
+      boton.disabled = true;
+      boton.style.opacity = '0.5';
+      boton.style.cursor = 'not-allowed';
+    });
+  }
+}
+
+// Verificar si todos los 18 hoyos tienen valores numéricos
+function verificarCompletitudTarjeta() {
+  let todosCompletados = true;
+  let hoyosCompletados = 0;
+  
+  for (let i = 1; i <= 18; i++) {
+    const input = document.getElementById(`hoyo${i}`);
+    if (input) {
+      const valor = input.value.trim();
+      if (valor !== '' && !isNaN(parseInt(valor, 10))) {
+        hoyosCompletados++;
+      } else {
+        todosCompletados = false;
+      }
+    }
+  }
+  
+  return { todosCompletados, hoyosCompletados };
 }
 
 // Cargar tarjeta desde Firestore
@@ -195,18 +225,51 @@ async function cargarTarjeta() {
     }
     const data = snap.data();
     currentTarjeta = data;
-    metaEl.textContent = `Campo: ${data.campoNombre || 'N/A'} | Juego: ${data.juegoId || ''}`;
-    renderHoyoInputs(data.scores || []);
+    
+    // Mostrar estado de completitud en el meta
+    const estadoCompletada = data.completada ? " (COMPLETADA - Solo lectura)" : " (En edición)";
+    metaEl.textContent = `Campo: ${data.campoNombre || 'N/A'} | Juego: ${data.juegoId || ''}${estadoCompletada}`;
+    
+    renderHoyoInputs(data.scores || [], data.completada);
   } catch(err) {
     console.error('Error cargando tarjeta', err);
     metaEl.textContent = 'Error cargando tarjeta';
   }
 }
 
-// Guardar la tarjeta (uno o todos los hoyos)
 // Guardar la tarjeta (uno o varios hoyos) — REEMPLAZAR todo el bloque actual
 tarjetaForm.addEventListener('submit', async (e) => {
   e.preventDefault();
+  
+  // Verificar si la tarjeta ya está completada (no permitir editar)
+  if (currentTarjeta?.completada) {
+    alert('Esta tarjeta ya está completada y no se puede editar.');
+    return;
+  }
+  
+  // Verificar completitud de todos los hoyos
+  const { todosCompletados, hoyosCompletados } = verificarCompletitudTarjeta();
+  
+  // Si faltan hoyos por completar, proceder con guardado normal
+  if (!todosCompletados) {
+    // Guardado normal (sin confirmación especial)
+    await guardarTarjeta(false); // false = no está completando todos los hoyos
+    return;
+  }
+  
+  // Si TODOS los hoyos están completos, mostrar confirmación
+  const confirmar = confirm(`⚠️ ADVERTENCIA\n\nHas completado los 18 hoyos (${hoyosCompletados}/18).\n\n¿Estás seguro de guardar la tarjeta?\n\nUna vez guardada, NO podrás editarla nuevamente.\n\n¿Continuar con el guardado definitivo?`);
+  
+  if (!confirmar) {
+    return; // El usuario canceló
+  }
+  
+  // Guardar como completada
+  await guardarTarjeta(true);
+});
+
+// Función auxiliar para guardar la tarjeta
+async function guardarTarjeta(completarTarjeta = false) {
   try {
     // Clonamos las scores actuales como base (si existen)
     let updatedScores = currentTarjeta?.scores ? [...currentTarjeta.scores] : [];
@@ -239,21 +302,52 @@ tarjetaForm.addEventListener('submit', async (e) => {
       }
     }
 
-    // Guardamos el array (con timestamps numéricos dentro) y actualizamos lastUpdated con serverTimestamp fuera del array
-    const tref = doc(db, 'tarjetas', tarjetaId);
-    await updateDoc(tref, {
+    // Preparar datos para actualizar
+    const updateData = {
       scores: updatedScores,
-      lastUpdated: serverTimestamp() // serverTimestamp SÓLO en campo top-level
-    });
+      lastUpdated: serverTimestamp()
+    };
+    
+    // Si estamos completando la tarjeta, agregar campo completada
+    if (completarTarjeta) {
+      updateData.completada = true;
+      updateData.fechaCompletada = serverTimestamp();
+    }
 
-    // recargar la tarjeta desde Firestore para reflejar datos actualizados
+    // Guardar en Firestore
+    const tref = doc(db, 'tarjetas', tarjetaId);
+    await updateDoc(tref, updateData);
+
+    // Si se completó la tarjeta, ejecutar handicap.js
+    if (completarTarjeta) {
+      try {
+        // Importar y ejecutar handicap.js
+        const { ejecutarCalculoHandicap } = await import('./handicap.js');
+        if (typeof ejecutarCalculoHandicap === 'function') {
+          await ejecutarCalculoHandicap();
+        } else {
+          console.log('Función ejecutarCalculoHandicap no encontrada en handicap.js');
+        }
+      } catch (error) {
+        console.error('Error ejecutando handicap.js:', error);
+        // Continuar aunque falle el handicap, la tarjeta ya se guardó
+      }
+    }
+
+    // Recargar la tarjeta desde Firestore para reflejar datos actualizados
     await cargarTarjeta();
-    alert('Tarjeta guardada correctamente!');
+    
+    // Mostrar mensaje apropiado
+    if (completarTarjeta) {
+      alert('✅ Tarjeta guardada y COMPLETADA exitosamente!\n\nLa tarjeta ahora es de solo lectura y no se puede editar.\n\nSe ha actualizado tu handicap.');
+    } else {
+      alert('Tarjeta guardada correctamente!');
+    }
   } catch (err) {
     console.error('Error guardando tarjeta', err);
     alert('Error guardando tarjeta');
   }
-});
+}
 
 
 // Inicia cargando
