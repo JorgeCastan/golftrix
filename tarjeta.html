@@ -226,6 +226,15 @@ async function cargarTarjeta() {
     const data = snap.data();
     currentTarjeta = data;
     
+    // Asegurar que la tarjeta tenga los campos necesarios para handicap.js
+    if (!currentTarjeta.ownerUid) {
+      // Intentar obtener el UID del usuario actual
+      const user = authInst.currentUser;
+      if (user) {
+        currentTarjeta.ownerUid = user.uid;
+      }
+    }
+    
     // Mostrar estado de completitud en el meta
     const estadoCompletada = data.completada ? " (COMPLETADA - Solo lectura)" : " (En edición)";
     metaEl.textContent = `Campo: ${data.campoNombre || 'N/A'} | Juego: ${data.juegoId || ''}${estadoCompletada}`;
@@ -312,6 +321,19 @@ async function guardarTarjeta(completarTarjeta = false) {
     if (completarTarjeta) {
       updateData.completada = true;
       updateData.fechaCompletada = serverTimestamp();
+      
+      // Asegurar que la tarjeta tenga ownerUid para que handicap.js funcione
+      if (!currentTarjeta?.ownerUid) {
+        const user = authInst.currentUser;
+        if (user) {
+          updateData.ownerUid = user.uid;
+        }
+      }
+      
+      // Asegurar que la tarjeta tenga createdAt si no existe
+      if (!currentTarjeta?.createdAt) {
+        updateData.createdAt = serverTimestamp();
+      }
     }
 
     // Guardar en Firestore
@@ -321,12 +343,18 @@ async function guardarTarjeta(completarTarjeta = false) {
     // Si se completó la tarjeta, ejecutar handicap.js
     if (completarTarjeta) {
       try {
-        // Importar y ejecutar handicap.js
-        const { ejecutarCalculoHandicap } = await import('./handicap.js');
-        if (typeof ejecutarCalculoHandicap === 'function') {
-          await ejecutarCalculoHandicap();
+        // Importar y ejecutar handicap.js con la función correcta
+        const { calculateAndSaveHandicap } = await import('./handicap.js');
+        if (typeof calculateAndSaveHandicap === 'function') {
+          // Obtener el UID del usuario actual para pasarle a la función
+          const user = authInst.currentUser;
+          if (user) {
+            await calculateAndSaveHandicap(user.uid);
+          } else {
+            console.log('Usuario no autenticado al intentar calcular handicap');
+          }
         } else {
-          console.log('Función ejecutarCalculoHandicap no encontrada en handicap.js');
+          console.log('Función calculateAndSaveHandicap no encontrada en handicap.js');
         }
       } catch (error) {
         console.error('Error ejecutando handicap.js:', error);
