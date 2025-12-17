@@ -347,14 +347,21 @@
     const standings = await Promise.all(tarjetas.map(async (t) => {
       let userInfo = { nombre: t.userUid || 'desconocido', handicap: 0 };
 try {
-  // PRIMERO: Intentar obtener handicap desde la tarjeta (histórico)
-  // Si la tarjeta tiene un campo 'handicap' guardado al momento de creación, úsalo
+  // OBLIGATORIO: Obtener handicap DESDE LA TARJETA (histórico)
+  // Esto es CRÍTICO para mantener resultados consistentes en el tiempo
   if (t.handicap !== undefined && t.handicap !== null) {
-    // handicap guardado en la tarjeta
+    // handicap guardado en la tarjeta al momento de creación
     userInfo.handicap = (typeof t.handicap === 'number') ? t.handicap : (Number(t.handicap) || 0);
+  } else {
+    // Si la tarjeta NO tiene handicap guardado, es un problema
+    // Podemos usar 0 o mostrar un warning, pero NUNCA consultar el handicap actual
+    console.warn(`Tarjeta ${t.id} no tiene handicap histórico guardado. Usando 0.`);
+    userInfo.handicap = 0;
+    // Opcional: mostrar en UI que falta handicap histórico
+    // Esto es mejor que usar el handicap actual y alterar resultados históricos
   }
   
-  // Luego obtener nombre del usuario (pero handicap ya lo tenemos de la tarjeta)
+  // Obtener nombre del usuario (solo para mostrar)
   if (t.userUid && !userCache[t.userUid]) {
     const uref = doc(db, 'users', t.userUid);
     const usnap = await getDoc(uref);
@@ -367,11 +374,8 @@ try {
     const fullName = [first, last].filter(Boolean).join(' ').trim();
     userInfo.nombre = fullName || t.userUid;
     
-    // Solo usar handicap de users si NO existe en la tarjeta
-    if (t.handicap === undefined || t.handicap === null) {
-      // Fallback: usar handicap actual del usuario
-      userInfo.handicap = (typeof ud.handicap === 'number') ? ud.handicap : (Number(ud.handicap) || 0);
-    }
+    // IMPORTANTE: NO usar handicap de users NUNCA para cálculos históricos
+    // El handicap ya se estableció arriba desde la tarjeta (o 0 si no existe)
     
     // Compactar nombre solo si estamos en móvil
     if (window.innerWidth <= 768) {
@@ -386,6 +390,7 @@ try {
   }
 } catch (e) {
   console.warn('No se pudo cargar usuario', t.userUid, e);
+  // Aún si falla la carga del usuario, el handicap ya está establecido desde la tarjeta
 }
 
       // obtener pares
