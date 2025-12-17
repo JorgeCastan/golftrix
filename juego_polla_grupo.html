@@ -347,19 +347,28 @@
     const standings = await Promise.all(tarjetas.map(async (t) => {
       let userInfo = { nombre: t.userUid || 'desconocido', handicap: 0 };
 try {
-  // PRIMERO: Intentar obtener handicap desde la tarjeta (histórico)
-  // Si la tarjeta tiene un campo 'handicap' guardado al momento de creación, úsalo
-  if (t.handicap !== undefined && t.handicap !== null) {
-    // handicap guardado en la tarjeta
-    userInfo.handicap = (typeof t.handicap === 'number') ? t.handicap : (Number(t.handicap) || 0);
+  // 1. OBTENER HANDICAP EXCLUSIVAMENTE DE LA TARJETA (HISTÓRICO)
+  // Verificar diferentes posibles nombres de campo donde podría estar el handicap
+  const handicapDeTarjeta = t.handicap ?? t.playerHandicap ?? t.handicapJugador ?? t.handicapDelJugador;
+  
+  if (handicapDeTarjeta !== undefined && handicapDeTarjeta !== null) {
+    // handicap guardado en la tarjeta al momento de creación
+    userInfo.handicap = (typeof handicapDeTarjeta === 'number') 
+      ? handicapDeTarjeta 
+      : (Number(handicapDeTarjeta) || 0);
+  } else {
+    // Si NO hay handicap en la tarjeta, usar 0 y mostrar advertencia
+    console.warn(`Tarjeta ${t.id} no tiene handicap histórico guardado. Usando 0.`);
+    userInfo.handicap = 0;
   }
   
-  // Luego obtener nombre del usuario (pero handicap ya lo tenemos de la tarjeta)
+  // 2. OBTENER NOMBRE DEL USUARIO (SOLO PARA MOSTRAR, NO PARA HANDICAP)
   if (t.userUid && !userCache[t.userUid]) {
     const uref = doc(db, 'users', t.userUid);
     const usnap = await getDoc(uref);
     userCache[t.userUid] = usnap.exists() ? usnap.data() : null;
   }
+  
   if (userCache[t.userUid]) {
     const ud = userCache[t.userUid];
     const first = ud.name ?? ud.nombre ?? ud.firstName ?? ud.firstname ?? '';
@@ -367,11 +376,8 @@ try {
     const fullName = [first, last].filter(Boolean).join(' ').trim();
     userInfo.nombre = fullName || t.userUid;
     
-    // Solo usar handicap de users si NO existe en la tarjeta
-    if (t.handicap === undefined || t.handicap === null) {
-      // Fallback: usar handicap actual del usuario
-      userInfo.handicap = (typeof ud.handicap === 'number') ? ud.handicap : (Number(ud.handicap) || 0);
-    }
+    // NOTA: NO USAMOS EL HANDICAP DEL USUARIO ACTUAL NUNCA
+    // El handicap ya fue establecido arriba desde la tarjeta
     
     // Compactar nombre solo si estamos en móvil
     if (window.innerWidth <= 768) {
@@ -386,6 +392,7 @@ try {
   }
 } catch (e) {
   console.warn('No se pudo cargar usuario', t.userUid, e);
+  // Si hay error cargando usuario, el handicap YA ESTÁ ESTABLECIDO desde la tarjeta
 }
 
       // obtener pares
