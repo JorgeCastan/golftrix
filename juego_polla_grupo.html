@@ -358,8 +358,9 @@
           const last  = ud.lastName ?? ud.apellido ?? ud.lastname ?? ud.apellidoPaterno ?? '';
           const fullName = [first, last].filter(Boolean).join(' ').trim();
           userInfo.nombre = fullName || t.userUid;
-          // important: handicap puede ser string en tu ejemplo -> parsearlo
-          userInfo.handicap = (typeof ud.handicap === 'number') ? ud.handicap : (Number(ud.handicap) || 0);
+          // Nuevo: usar handicap guardado si existe en tarjeta, sino tomar el de usuario
+          userInfo.handicap = (typeof t.handicap === 'number') ? t.handicap :
+                    ((typeof ud.handicap === 'number') ? ud.handicap : (Number(ud.handicap) || 0));
           // Compactar nombre solo si estamos en móvil
           if (window.innerWidth <= 768) {
             const parts = (userInfo.nombre || '').split(' ');
@@ -435,11 +436,12 @@
       userUid: s.userUid,
       nombre: s.nombre,
       initials: s.initials,
-      handicap: s.handicap,
+      handicap: s.handicap, // ✅ ya incluye handicap
       total: s.total,
       adjusted: s.adjusted,
       golpesArr: s.golpesArr
     }));
+
 
     return { standings, summaryForSave };
   }
@@ -513,7 +515,6 @@
     const n = standings.length;
     if (n === 0 || !pricePerPlayer) return;
 
-    const winnerUid = standings[0].userUid;
     const userStanding = standings.find(s => s.userUid === uid);
     if (!userStanding) {
       miSaldoEl.textContent = `No estás participando en las tarjetas con hoyos. Saldo: -${pricePerPlayer} (no participas)`;
@@ -522,12 +523,25 @@
       return;
     }
 
-    const isWinner = (userStanding.userUid === winnerUid);
-    let saldo = isWinner ? pricePerPlayer * (n-1) : -pricePerPlayer;
-    miSaldoEl.textContent = `Saldo actual: ${saldo >= 0 ? '+' : ''}${saldo}`;
+    // Nuevo: detectar ganadores empatados
+    const minAdjusted = Math.min(...standings.map(s => s.adjusted));
+    const winners = standings.filter(s => s.adjusted === minAdjusted);
+    const numWinners = winners.length;
+    const isWinner = winners.some(s => s.userUid === uid);
+
+    let saldo;
+    if (isWinner) {
+      // Cada ganador recibe la parte proporcional del premio
+      saldo = (pricePerPlayer * (n - numWinners)) / numWinners;
+    } else {
+      saldo = -pricePerPlayer;
+    }
+
+    miSaldoEl.textContent = `Saldo actual: ${saldo >= 0 ? '+' : ''}${saldo.toFixed(2)}`;
     miSaldoEl.style.color = saldo >= 0 ? 'green' : 'red';
     miSaldoEl.style.fontWeight = '800';
-  }
+}
+
 
 
   async function guardarPollaState(pricePerPlayer, standingsSummary) {
