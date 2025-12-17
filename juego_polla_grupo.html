@@ -346,36 +346,47 @@
     const userCache = {};
     const standings = await Promise.all(tarjetas.map(async (t) => {
       let userInfo = { nombre: t.userUid || 'desconocido', handicap: 0 };
-      try {
-        if (t.userUid && !userCache[t.userUid]) {
-          const uref = doc(db, 'users', t.userUid);
-          const usnap = await getDoc(uref);
-          userCache[t.userUid] = usnap.exists() ? usnap.data() : null;
-        }
-        if (userCache[t.userUid]) {
-          const ud = userCache[t.userUid];
-          const first = ud.name ?? ud.nombre ?? ud.firstName ?? ud.firstname ?? '';
-          const last  = ud.lastName ?? ud.apellido ?? ud.lastname ?? ud.apellidoPaterno ?? '';
-          const fullName = [first, last].filter(Boolean).join(' ').trim();
-          userInfo.nombre = fullName || t.userUid;
-          // Nuevo: usar handicap guardado si existe en tarjeta, sino tomar el de usuario
-          userInfo.handicap = (typeof t.handicap === 'number') ? t.handicap :
-                    ((typeof ud.handicap === 'number') ? ud.handicap : (Number(ud.handicap) || 0));
-          // Compactar nombre solo si estamos en móvil
-          if (window.innerWidth <= 768) {
-            const parts = (userInfo.nombre || '').split(' ');
-            if (parts.length >= 3) {
-              // Ej: Jorge Castan Soto -> Jorge C. S.
-              userInfo.nombre = `${parts[0]} ${parts[1][0]}. ${parts[2][0]}.`;
-            } else if (parts.length === 2) {
-              userInfo.nombre = `${parts[0]} ${parts[1][0]}.`;
-            }
-          }
-
-        }
-      } catch (e) {
-        console.warn('No se pudo cargar usuario', t.userUid, e);
+try {
+  // PRIMERO: Intentar obtener handicap desde la tarjeta (histórico)
+  // Si la tarjeta tiene un campo 'handicap' guardado al momento de creación, úsalo
+  if (t.handicap !== undefined && t.handicap !== null) {
+    // handicap guardado en la tarjeta
+    userInfo.handicap = (typeof t.handicap === 'number') ? t.handicap : (Number(t.handicap) || 0);
+  }
+  
+  // Luego obtener nombre del usuario (pero handicap ya lo tenemos de la tarjeta)
+  if (t.userUid && !userCache[t.userUid]) {
+    const uref = doc(db, 'users', t.userUid);
+    const usnap = await getDoc(uref);
+    userCache[t.userUid] = usnap.exists() ? usnap.data() : null;
+  }
+  if (userCache[t.userUid]) {
+    const ud = userCache[t.userUid];
+    const first = ud.name ?? ud.nombre ?? ud.firstName ?? ud.firstname ?? '';
+    const last  = ud.lastName ?? ud.apellido ?? ud.lastname ?? ud.apellidoPaterno ?? '';
+    const fullName = [first, last].filter(Boolean).join(' ').trim();
+    userInfo.nombre = fullName || t.userUid;
+    
+    // Solo usar handicap de users si NO existe en la tarjeta
+    if (t.handicap === undefined || t.handicap === null) {
+      // Fallback: usar handicap actual del usuario
+      userInfo.handicap = (typeof ud.handicap === 'number') ? ud.handicap : (Number(ud.handicap) || 0);
+    }
+    
+    // Compactar nombre solo si estamos en móvil
+    if (window.innerWidth <= 768) {
+      const parts = (userInfo.nombre || '').split(' ');
+      if (parts.length >= 3) {
+        // Ej: Jorge Castan Soto -> Jorge C. S.
+        userInfo.nombre = `${parts[0]} ${parts[1][0]}. ${parts[2][0]}.`;
+      } else if (parts.length === 2) {
+        userInfo.nombre = `${parts[0]} ${parts[1][0]}.`;
       }
+    }
+  }
+} catch (e) {
+  console.warn('No se pudo cargar usuario', t.userUid, e);
+}
 
       // obtener pares
       let pares = null;
@@ -436,12 +447,11 @@
       userUid: s.userUid,
       nombre: s.nombre,
       initials: s.initials,
-      handicap: s.handicap, // ✅ ya incluye handicap
+      handicap: s.handicap,
       total: s.total,
       adjusted: s.adjusted,
       golpesArr: s.golpesArr
     }));
-
 
     return { standings, summaryForSave };
   }
@@ -507,41 +517,67 @@
     });
   }
 
-  function calcularYMostrarSaldo(standings, pricePerPlayer) {
-    miSaldoEl.textContent = '';
-    miSaldoEl.style.color = '';
-    if (!currentUser) return;
-    const uid = currentUser.uid;
-    const n = standings.length;
-    if (n === 0 || !pricePerPlayer) return;
+ function calcularYMostrarSaldo(standings, pricePerPlayer) {
+  miSaldoEl.textContent = '';
+  miSaldoEl.style.color = '';
+  if (!currentUser) return;
+  const uid = currentUser.uid;
+  const n = standings.length;
+  if (n === 0 || !pricePerPlayer) return;
 
-    const userStanding = standings.find(s => s.userUid === uid);
-    if (!userStanding) {
-      miSaldoEl.textContent = `No estás participando en las tarjetas con hoyos. Saldo: -${pricePerPlayer} (no participas)`;
-      miSaldoEl.style.color = 'red';
-      miSaldoEl.style.fontWeight = '800';
-      return;
-    }
-
-    // Nuevo: detectar ganadores empatados
-    const minAdjusted = Math.min(...standings.map(s => s.adjusted));
-    const winners = standings.filter(s => s.adjusted === minAdjusted);
-    const numWinners = winners.length;
-    const isWinner = winners.some(s => s.userUid === uid);
-
-    let saldo;
-    if (isWinner) {
-      // Cada ganador recibe la parte proporcional del premio
-      saldo = (pricePerPlayer * (n - numWinners)) / numWinners;
-    } else {
-      saldo = -pricePerPlayer;
-    }
-
-    miSaldoEl.textContent = `Saldo actual: ${saldo >= 0 ? '+' : ''}${saldo.toFixed(2)}`;
-    miSaldoEl.style.color = saldo >= 0 ? 'green' : 'red';
+  // 1. Identificar ganadores (puede haber empates)
+  const bestAdjusted = standings[0].adjusted;
+  const winners = standings.filter(s => s.adjusted === bestAdjusted);
+  const numWinners = winners.length;
+  
+  // 2. Encontrar al usuario actual en standings
+  const userStanding = standings.find(s => s.userUid === uid);
+  
+  if (!userStanding) {
+    miSaldoEl.textContent = `No estás participando en las tarjetas con hoyos. Saldo: -${pricePerPlayer} (no participas)`;
+    miSaldoEl.style.color = 'red';
     miSaldoEl.style.fontWeight = '800';
-}
+    return;
+  }
 
+  // 3. Calcular dinero total en juego
+  const totalPot = pricePerPlayer * n;
+  
+  // 4. Calcular pago por ganador (equitativo entre empates)
+  const prizePerWinner = totalPot / numWinners;
+  
+  // 5. Calcular saldo del usuario actual
+  let saldo;
+  const isWinner = winners.some(w => w.userUid === uid);
+  
+  if (isWinner) {
+    // Usuario es ganador (puede ser uno de varios empatados)
+    saldo = prizePerWinner - pricePerPlayer; // Gana prizePerWinner, pero pagó pricePerPlayer
+  } else {
+    // Usuario es perdedor
+    saldo = -pricePerPlayer; // Solo pierde su apuesta
+  }
+
+  // 6. Mostrar saldo con información de empates si aplica
+  let infoExtra = '';
+  if (numWinners > 1) {
+    infoExtra = ` (${numWinners} empatados)`;
+  }
+  
+  miSaldoEl.textContent = `Saldo actual: ${saldo >= 0 ? '+' : ''}${saldo}${infoExtra}`;
+  miSaldoEl.style.color = saldo >= 0 ? 'green' : 'red';
+  miSaldoEl.style.fontWeight = '800';
+  
+  // 7. (Opcional) Log para debugging
+  console.log(`Cálculo de saldo: 
+    - Jugadores: ${n}
+    - Precio por jugador: ${pricePerPlayer}
+    - Bote total: ${totalPot}
+    - Ganadores: ${numWinners}
+    - Premio por ganador: ${prizePerWinner}
+    - Usuario es ganador: ${isWinner}
+    - Saldo final: ${saldo}`);
+}
 
 
   async function guardarPollaState(pricePerPlayer, standingsSummary) {
