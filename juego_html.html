@@ -290,7 +290,7 @@
             campoId: juego.campoId || null,
             campoNombre: juego.campoNombre || null,
             userUid: uid,
-            ownerUid: juego.ownerUid || null,
+            ownerUid: uid,  // <--- CORREGIDO: usa el uid del usuario actual (dueño de la tarjeta)
             createdAt: serverTimestamp(),
             estado: 'activa',
             salida: salidaUsuario, // <<--- NUEVO CAMPO
