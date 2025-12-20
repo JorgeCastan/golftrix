@@ -1,0 +1,34 @@
+:root { --green-1:#007f00; --green-2:#00cc44; }
+  body { font-family:'Orbitron',sans-serif; padding:12px; background:#f6f6f6; color:#111; }
+  .card {
+        background:#fff;
+        border-radius:12px;
+        padding:12px;
+        box-shadow:0 6px 18px rgba(0,0,0,0.06);
+        margin-bottom:12px;
+        width:100%;
+        box-sizing:border-box;
+    }
+
+  h1 { margin:0 0 8px 0; color:var(--green-1); }
+  label{ font-weight:700; display:block; margin-bottom:6px; }
+  select,input[type=number]{ padding:8px; border-radius:8px; border:1px solid #ddd; width:100%; box-sizing:border-box; }
+  .row { display:flex; gap:12px; align-items:center; flex-wrap:wrap; }
+  .col { flex:1; min-width:200px; }
+  button.primary{ background:linear-gradient(90deg,var(--green-1),var(--green-2)); color:#fff; border:0; padding:8px 12px; border-radius:10px; cursor:pointer; font-weight:800; }
+  button.ghost{ background:transparent; border:1px solid #ddd; padding:8px 10px; border-radius:8px; cursor:pointer; }
+  .pairs-list{ display:flex; gap:8px; flex-wrap:wrap; margin-top:8px; }
+  .pair-pill{ padding:8px 10px; border-radius:10px; display:flex; gap:8px; align-items:center; color:#fff; font-weight:800; }
+  .badge { width:36px; height:36px; border-radius:50%; display:inline-flex; align-items:center; justify-content:center; background:#000; color:#fff; font-weight:800; border:3px solid transparent; }
+  table { width:100%; border-collapse:collapse; margin-top:8px; }
+  th,td { padding:6px; border:1px solid #eee; text-align:center; font-size:0.9rem; }
+  th.nameCol, td.nameCol { text-align:left; padding-left:10px; }
+  .hole-empty { background:#fafafa; color:#999; }
+  .score-less { color:green; font-weight:800; }
+  .score-more { color:red; font-weight:800; }
+  .neutral-bg { background:#f5f5f5; }
+  .result-pill { font-weight:900; padding:6px 8px; border-radius:8px; display:inline-block; min-width:56px; text-align:center; }
+  .saldo { font-weight:900; font-size:1.1rem; padding:8px; border-radius:8px; display:inline-block; }
+  .team-header { display:flex; gap:8px; align-items:center; font-weight:900; }
+  .tables-wrap { display:flex; gap:12px; flex-direction:column; }
+  @media (min-width:1000px){ .tables-grid{ display:grid; grid-template-columns:1fr 1fr; gap:12px; } }
