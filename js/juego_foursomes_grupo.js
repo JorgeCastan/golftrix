@@ -17,7 +17,13 @@
   const player2Select = document.getElementById('player2Select');
   const addPairBtn = document.getElementById('addPairBtn');
   const pairsList = document.getElementById('pairsList');
-  const priceInput = document.getElementById('priceInput');
+  // Reemplazar esta línea:
+// const priceInput = document.getElementById('priceInput');
+
+// Con estas 3 líneas:
+const priceFront9Input = document.getElementById('priceFront9');
+const priceBack9Input = document.getElementById('priceBack9');
+const priceGeneralInput = document.getElementById('priceGeneral');
   const startGameBtn = document.getElementById('startGameBtn');
   const refreshBtn = document.getElementById('refreshBtn');
   const gameArea = document.getElementById('gameArea');
@@ -282,35 +288,87 @@ startGameBtn.addEventListener("click", async () => {
     const foursomeRef = doc(db, "juego_foursomes", juegoId);
     const foursomeSnap = await getDoc(foursomeRef);
 
+    const prices = {
+      front9: Number(priceFront9Input.value) || 0,
+      back9: Number(priceBack9Input.value) || 0,
+      general: Number(priceGeneralInput.value) || 0
+    };
+
+    // Actualizar/crear documento
     if (foursomeSnap.exists()) {
-      const jfData = foursomeSnap.data();
-      pairs = Array.isArray(jfData?.pairs) ? jfData.pairs : [];
-      priceInput.value = jfData?.price || '';
+      // Actualizar precios si ya existe
+      await updateDoc(foursomeRef, {
+        prices,
+        pairs: pairs || [],
+        updatedAt: serverTimestamp()
+      });
     } else {
+      // Crear nuevo si no existe
       await setDoc(foursomeRef, {
         juegoId,
         grupoId,
-        price: priceInput.value || '',
+        prices,
         pairs: pairs || [],
         createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp()
       });
     }
 
-    // reasignar myPair
+    // Reasignar myPair
     if(currentUser){
       myPair = pairs.find(p => p.p1Uid === currentUser.uid || p.p2Uid === currentUser.uid) || null;
     }
 
+    // NO OCULTAR FORMULARIO - Solo mostrar área de juego
     gameArea.style.display = 'block';
-    document.querySelector('.card').style.display = 'none';
-    gameMeta.innerText = `Juego ${juegoId} — Precio por pareja ${priceInput.value} — Parejas: ${pairs.length}`;
+    
+    // Cambiar el texto del botón a "Actualizar Juego"
+    startGameBtn.textContent = 'Actualizar Juego';
+    
+    // Actualizar metadatos
+    gameMeta.innerHTML = `
+      <div>Juego ${juegoId}</div>
+      <div>Precios: Front9: $${prices.front9} | Back9: $${prices.back9} | General: $${prices.general}</div>
+      <div>Parejas: ${pairs.length}</div>
+    `;
 
-    await computeAndRenderAllMatchups(Number(priceInput.value), myPair);
+    await computeAndRenderAllMatchups(prices, myPair);
 
   } catch (err) {
-    console.error("Error al iniciar juego:", err);
+    console.error("Error al iniciar/actualizar juego:", err);
   }
 });
+
+// Función para actualizar precios sin recargar todo
+async function updatePrices() {
+  try {
+    const prices = {
+      front9: Number(priceFront9Input.value) || 0,
+      back9: Number(priceBack9Input.value) || 0,
+      general: Number(priceGeneralInput.value) || 0
+    };
+
+    const foursomeRef = doc(db, "juego_foursomes", juegoId);
+    await updateDoc(foursomeRef, {
+      prices,
+      updatedAt: serverTimestamp()
+    });
+
+    // Recalcular y renderizar
+    if (pairs.length > 0) {
+      await computeAndRenderAllMatchups(prices, myPair);
+    }
+
+    console.log("Precios actualizados en tiempo real");
+  } catch (err) {
+    console.error("Error actualizando precios:", err);
+  }
+}
+
+// Event listeners para cambios en precios
+priceFront9Input.addEventListener('change', updatePrices);
+priceBack9Input.addEventListener('change', updatePrices);
+priceGeneralInput.addEventListener('change', updatePrices);
 
 
   // ---------------------- Lógica de cálculo de matchups ----------------------
@@ -360,64 +418,89 @@ function getUserObj(uid) {
 }
 
   // compara 2 parejas: devuelve objeto con tabla por hoyo y suma de puntos por pareja (array [pointsA, pointsB])
-  async function computeMatchup(pairA, pairB, price) {
-    const pA1 = findTarjetaForUser(pairA.p1Uid);
-    const pA2 = findTarjetaForUser(pairA.p2Uid);
-    const pB1 = findTarjetaForUser(pairB.p1Uid);
-    const pB2 = findTarjetaForUser(pairB.p2Uid);
+async function computeMatchup(pairA, pairB, prices) {
+  const pA1 = findTarjetaForUser(pairA.p1Uid);
+  const pA2 = findTarjetaForUser(pairA.p2Uid);
+  const pB1 = findTarjetaForUser(pairB.p1Uid);
+  const pB2 = findTarjetaForUser(pairB.p2Uid);
 
-    const campoId = (pA1?.campoId || pA2?.campoId || pB1?.campoId || pB2?.campoId) || null;
-    const fieldInfo = await obtenerParYVentajas(campoId);
+  const campoId = (pA1?.campoId || pA2?.campoId || pB1?.campoId || pB2?.campoId) || null;
+  const fieldInfo = await obtenerParYVentajas(campoId);
 
-    const a1Arr = pA1 ? applyAdvantageToGolpesArray(buildGolpesArrFromTarjeta(pA1), getUserObj(pairA.p1Uid), fieldInfo) : new Array(18).fill(null);
-    const a2Arr = pA2 ? applyAdvantageToGolpesArray(buildGolpesArrFromTarjeta(pA2), getUserObj(pairA.p2Uid), fieldInfo) : new Array(18).fill(null);
-    const b1Arr = pB1 ? applyAdvantageToGolpesArray(buildGolpesArrFromTarjeta(pB1), getUserObj(pairB.p1Uid), fieldInfo) : new Array(18).fill(null);
-    const b2Arr = pB2 ? applyAdvantageToGolpesArray(buildGolpesArrFromTarjeta(pB2), getUserObj(pairB.p2Uid), fieldInfo) : new Array(18).fill(null);
+  const a1Arr = pA1 ? applyAdvantageToGolpesArray(buildGolpesArrFromTarjeta(pA1), getUserObj(pairA.p1Uid), fieldInfo) : new Array(18).fill(null);
+  const a2Arr = pA2 ? applyAdvantageToGolpesArray(buildGolpesArrFromTarjeta(pA2), getUserObj(pairA.p2Uid), fieldInfo) : new Array(18).fill(null);
+  const b1Arr = pB1 ? applyAdvantageToGolpesArray(buildGolpesArrFromTarjeta(pB1), getUserObj(pairB.p1Uid), fieldInfo) : new Array(18).fill(null);
+  const b2Arr = pB2 ? applyAdvantageToGolpesArray(buildGolpesArrFromTarjeta(pB2), getUserObj(pairB.p2Uid), fieldInfo) : new Array(18).fill(null);
 
-    const holes = [];
-    let totalA = 0, totalB = 0;
+  const holes = [];
+  let totalA = 0, totalB = 0;
+  let front9A = 0, front9B = 0;
+  let back9A = 0, back9B = 0;
 
-    for (let h = 0; h < 18; h++) {
-      const scoresA = [a1Arr[h], a2Arr[h]].filter(x=>typeof x==='number');
-      const scoresB = [b1Arr[h], b2Arr[h]].filter(x=>typeof x==='number');
+  for (let h = 0; h < 18; h++) {
+    const scoresA = [a1Arr[h], a2Arr[h]].filter(x=>typeof x==='number');
+    const scoresB = [b1Arr[h], b2Arr[h]].filter(x=>typeof x==='number');
 
-      let ptsA=0, ptsB=0;
+    let ptsA=0, ptsB=0;
 
-      if (scoresA.length && scoresB.length) {
-        const lowA = Math.min(...scoresA);
-        const highA = Math.max(...scoresA);
-        const lowB = Math.min(...scoresB);
-        const highB = Math.max(...scoresB);
+    if (scoresA.length && scoresB.length) {
+      const lowA = Math.min(...scoresA);
+      const highA = Math.max(...scoresA);
+      const lowB = Math.min(...scoresB);
+      const highB = Math.max(...scoresB);
 
-        if(lowA < lowB) ptsA++; else if(lowB < lowA) ptsB++;
-        if(highA < highB) ptsA++; else if(highB < highA) ptsB++;
-      }
-
-      totalA += ptsA;
-      totalB += ptsB;
-
-      holes.push({
-        players:[
-          { uid: pairA.p1Uid, name:getUserName(pairA.p1Uid), initials:getUserObj(pairA.p1Uid).initials, adj: a1Arr[h], teamColor: pairA.color },
-          { uid: pairA.p2Uid, name:getUserName(pairA.p2Uid), initials:getUserObj(pairA.p2Uid).initials, adj: a2Arr[h], teamColor: pairA.color },
-          { uid: pairB.p1Uid, name:getUserName(pairB.p1Uid), initials:getUserObj(pairB.p1Uid).initials, adj: b1Arr[h], teamColor: pairB.color },
-          { uid: pairB.p2Uid, name:getUserName(pairB.p2Uid), initials:getUserObj(pairB.p2Uid).initials, adj: b2Arr[h], teamColor: pairB.color },
-        ],
-        pointsA: ptsA,
-        pointsB: ptsB
-      });
+      if(lowA < lowB) ptsA++; else if(lowB < lowA) ptsB++;
+      if(highA < highB) ptsA++; else if(highB < highA) ptsB++;
     }
 
-    return {
-      pairA, pairB, holes,
-      totalPointsA: totalA,
-      totalPointsB: totalB,
-      saldo: totalA-totalB,
-      price
-    };
+    totalA += ptsA;
+    totalB += ptsB;
+
+    // Separar por segmentos
+    if (h < 9) { // Primeros 9 hoyos (0-8)
+      front9A += ptsA;
+      front9B += ptsB;
+    } else { // Segundos 9 hoyos (9-17)
+      back9A += ptsA;
+      back9B += ptsB;
+    }
+
+    holes.push({
+      players:[
+        { uid: pairA.p1Uid, name:getUserName(pairA.p1Uid), initials:getUserObj(pairA.p1Uid).initials, adj: a1Arr[h], teamColor: pairA.color },
+        { uid: pairA.p2Uid, name:getUserName(pairA.p2Uid), initials:getUserObj(pairA.p2Uid).initials, adj: a2Arr[h], teamColor: pairA.color },
+        { uid: pairB.p1Uid, name:getUserName(pairB.p1Uid), initials:getUserObj(pairB.p1Uid).initials, adj: b1Arr[h], teamColor: pairB.color },
+        { uid: pairB.p2Uid, name:getUserName(pairB.p2Uid), initials:getUserObj(pairB.p2Uid).initials, adj: b2Arr[h], teamColor: pairB.color },
+      ],
+      pointsA: ptsA,
+      pointsB: ptsB
+    });
   }
 
-  async function computeAndRenderAllMatchups(price, myPair) {
+  // Calcular dinero por segmentos
+  const dineroFront9 = (front9A - front9B) * (prices.front9 || 0);
+  const dineroBack9 = (back9A - back9B) * (prices.back9 || 0);
+  const dineroGeneral = (totalA > totalB ? 1 : (totalA < totalB ? -1 : 0)) * (prices.general || 0);
+  
+  // Dinero total por pareja (no dividido aún)
+  const dineroTotalPareja = dineroFront9 + dineroBack9 + dineroGeneral;
+
+  return {
+    pairA, pairB, holes,
+    totalPointsA: totalA,
+    totalPointsB: totalB,
+    front9A, front9B,
+    back9A, back9B,
+    dineroFront9,
+    dineroBack9,
+    dineroGeneral,
+    dineroTotalPareja,
+    saldo: totalA-totalB,
+    prices
+  };
+}
+
+  async function computeAndRenderAllMatchups(prices, myPair) {
   matchupsContainer.innerHTML = '';
 
   if(!pairs || pairs.length<2) return;
@@ -439,17 +522,23 @@ function getUserObj(uid) {
     }
   }
 
-  // calcular saldo total estimado del usuario actual
-  let totalSaldoUser = 0;
+  // Calcular saldo total estimado del usuario actual (en dinero, no puntos)
+  let totalSaldoUserDinero = 0;
+  let totalSaldoUserPuntos = 0;
+  
   matchups.forEach(r=>{
     if(currentUser){
       const uid = currentUser.uid;
       const userInA = r.pairA.p1Uid === uid || r.pairA.p2Uid === uid;
       const userInB = r.pairB.p1Uid === uid || r.pairB.p2Uid === uid;
-      let delta = 0;
-      if(userInA) delta = r.totalPointsA - r.totalPointsB;
-      else if(userInB) delta = r.totalPointsB - r.totalPointsA;
-      totalSaldoUser += delta;
+      
+      if(userInA) {
+        totalSaldoUserDinero += r.dineroTotalPareja / 2; // Dividir entre 2 jugadores
+        totalSaldoUserPuntos += (r.totalPointsA - r.totalPointsB);
+      } else if(userInB) {
+        totalSaldoUserDinero -= r.dineroTotalPareja / 2; // Negativo porque perdió
+        totalSaldoUserPuntos += (r.totalPointsB - r.totalPointsA);
+      }
     }
   });
 
@@ -462,13 +551,26 @@ function getUserObj(uid) {
     const header = document.createElement('div');
     header.className='team-header';
     header.innerHTML = `
-      <div style="display:flex;align-items:center;gap:8px;">
+      <div style="display:flex;align-items:center;gap:8px; flex-wrap:wrap;">
         <div style="width:18px;height:18px;border-radius:50%;background:${r.pairA.color};"></div>
-        Equipo A: ${getUserName(r.pairA.p1Uid)} & ${getUserName(r.pairA.p2Uid)} (Pts: ${r.totalPointsA})
+        <strong>Equipo A:</strong> ${getUserName(r.pairA.p1Uid)} & ${getUserName(r.pairA.p2Uid)}
+        <div style="margin-left:10px; font-size:0.9em;">
+          Pts: ${r.totalPointsA} | Front9: ${r.front9A} | Back9: ${r.back9A}
+        </div>
       </div>
-      <div style="display:flex;align-items:center;gap:8px;">
+      <div style="display:flex;align-items:center;gap:8px; flex-wrap:wrap; margin-top:5px;">
         <div style="width:18px;height:18px;border-radius:50%;background:${r.pairB.color};"></div>
-        Equipo B: ${getUserName(r.pairB.p1Uid)} & ${getUserName(r.pairB.p2Uid)} (Pts: ${r.totalPointsB})
+        <strong>Equipo B:</strong> ${getUserName(r.pairB.p1Uid)} & ${getUserName(r.pairB.p2Uid)}
+        <div style="margin-left:10px; font-size:0.9em;">
+          Pts: ${r.totalPointsB} | Front9: ${r.front9B} | Back9: ${r.back9B}
+        </div>
+      </div>
+      <div style="margin-top:5px; padding:5px; background:#f0f0f0; border-radius:5px;">
+        <strong>Dinero:</strong> 
+        Front9: $${r.dineroFront9} | 
+        Back9: $${r.dineroBack9} | 
+        General: $${r.dineroGeneral} |
+        <strong>Total Pareja: $${r.dineroTotalPareja}</strong> ($${r.dineroTotalPareja/2} por jugador)
       </div>
     `;
     tableBlock.appendChild(header);
@@ -552,10 +654,16 @@ function getUserObj(uid) {
     matchupsContainer.appendChild(tableBlock);
   }
 
-  miSaldoEl.textContent = `Saldo total estimado: ${totalSaldoUser>=0?'+':''}${totalSaldoUser}`;
-  miSaldoEl.style.background = totalSaldoUser>=0?'linear-gradient(90deg,#e6ffe6,#ddffdd)':'linear-gradient(90deg,#ffe6e6,#ffdede)';
-  miSaldoEl.style.color = totalSaldoUser>=0?'green':'red';
-  miSaldoEl.style.padding='8px';
+  const signoDinero = totalSaldoUserDinero >= 0 ? '+' : '';
+  const signoPuntos = totalSaldoUserPuntos >= 0 ? '+' : '';
+  
+  miSaldoEl.innerHTML = `
+    <div><strong>Saldo estimado:</strong> ${signoDinero}$${totalSaldoUserDinero.toFixed(2)} MXN</div>
+    <div style="font-size:0.9em; margin-top:3px;">Puntos: ${signoPuntos}${totalSaldoUserPuntos}</div>
+  `;
+  miSaldoEl.style.background = totalSaldoUserDinero>=0?'linear-gradient(90deg,#e6ffe6,#ddffdd)':'linear-gradient(90deg,#ffe6e6,#ffdede)';
+  miSaldoEl.style.color = totalSaldoUserDinero>=0?'green':'red';
+  miSaldoEl.style.padding='10px';
 }
 
 
@@ -573,19 +681,35 @@ function getUserObj(uid) {
         const jfData = jfSnap.data();
         grupoId = jfData?.grupoId || grupoId;
         pairs = Array.isArray(jfData?.pairs) ? jfData.pairs : [];
-        priceInput.value = jfData?.price || '';
+        
+        // Cargar precios (nueva estructura)
+        const prices = jfData?.prices || { front9: 0, back9: 0, general: 0 };
+        priceFront9Input.value = prices.front9 || 0;
+        priceBack9Input.value = prices.back9 || 0;
+        priceGeneralInput.value = prices.general || 0;
+        
         renderPairsList();
 
-        // asignar myPair solo si currentUser existe
+        // Asignar myPair solo si currentUser existe
         if(currentUser){
           myPair = pairs.find(p => p.p1Uid === currentUser.uid || p.p2Uid === currentUser.uid) || null;
         }
 
-        if(pairs.length>0 && priceInput.value && myPair){
+        if(pairs.length > 0) {
           gameArea.style.display = 'block';
-          document.querySelector('.card').style.display = 'none'; // ocultar form
-          gameMeta.innerText = `Juego ${juegoId} — Precio por pareja ${priceInput.value} — Parejas: ${pairs.length}`;
-          await computeAndRenderAllMatchups(Number(priceInput.value), myPair);
+          // NO OCULTAR FORMULARIO - Solo mostrar área de juego
+          startGameBtn.textContent = 'Actualizar Juego';
+          
+          // Actualizar metadatos
+          gameMeta.innerHTML = `
+            <div>Juego ${juegoId}</div>
+            <div>Precios: Front9: $${prices.front9} | Back9: $${prices.back9} | General: $${prices.general}</div>
+            <div>Parejas: ${pairs.length}</div>
+          `;
+          
+          if (myPair) {
+            await computeAndRenderAllMatchups(prices, myPair);
+          }
         }
 
       } else {
@@ -608,4 +732,52 @@ function getUserObj(uid) {
     }
     await initAll();
   });
+
+// Función para guardar automáticamente cambios en parejas
+function autoSavePairs() {
+  if (pairs.length > 0 && juegoId) {
+    const foursomeRef = doc(db, "juego_foursomes", juegoId);
+    
+    // Solo actualizar si el documento existe
+    getDoc(foursomeRef).then(snap => {
+      if (snap.exists()) {
+        const prices = {
+          front9: Number(priceFront9Input.value) || 0,
+          back9: Number(priceBack9Input.value) || 0,
+          general: Number(priceGeneralInput.value) || 0
+        };
+        
+        updateDoc(foursomeRef, {
+          pairs: pairs,
+          prices: prices,
+          updatedAt: serverTimestamp()
+        }).then(() => {
+          console.log("Parejas guardadas automáticamente");
+        });
+      }
+    });
+  }
+}
+
+// Llamar autoSavePairs después de modificar parejas
+addPairBtn.addEventListener('click', () => {
+  const p1 = player1Select.value;
+  const p2 = player2Select.value;
+  if(!p1 || !p2){ alert('Selecciona ambos jugadores'); return; }
+  if(p1===p2){ if(!confirm('Has escogido el mismo usuario dos veces. Confirmar pareja igual?')) return; }
+  const color = randColor();
+  pairs.push({
+      id: 'pair_'+Date.now()+'_'+Math.floor(Math.random()*9999),
+      p1Uid: p1,
+      p2Uid: p2,
+      color
+  });
+
+  renderPairsList();
+  autoSavePairs(); // ← AGREGAR ESTA LÍNEA
+});
+
+// También al eliminar parejas
+// Modificar el evento click en renderPairsList
+// Agregar autoSavePairs() después de pairs.splice
 
