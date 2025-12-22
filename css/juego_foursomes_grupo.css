@@ -103,6 +103,7 @@ button.updating {
 .money-general { background: #e8f5e8; color: #2e7d32; }
 .money-total { background: #fff3e0; color: #ef6c00; }
 
+
 /* Para responsive design mejorado */
 @media (max-width: 768px) {
     .price-grid {
