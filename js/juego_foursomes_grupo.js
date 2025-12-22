@@ -244,7 +244,11 @@ async function loadUsers() {
         <button data-idx="${idx}" style="margin-left:8px;background:transparent;border:0;color:#fff;cursor:pointer;font-weight:900">X</button>
       `;
       pairsList.appendChild(pill);
-      pill.querySelector('button').addEventListener('click', ()=> { pairs.splice(idx,1); renderPairsList(); });
+           pill.querySelector('button').addEventListener('click', ()=> { 
+        pairs.splice(idx,1); 
+        renderPairsList();
+        autoSavePairs(); // ← AGREGAR ESTA LÍNEA
+      });
     });
   }
 
@@ -276,6 +280,7 @@ async function loadUsers() {
     });
 
     renderPairsList();
+    autoSavePairs(); // ← AGREGAR ESTA LÍNEA
   });
 
   refreshBtn.addEventListener('click', async ()=>{ await initAll(); });
@@ -511,11 +516,11 @@ async function computeMatchup(pairA, pairB, prices) {
 
   for(const p of matchupPairs){
     if(myPair){
-      matchups.push(await computeMatchup(myPair, p, price));
+      matchups.push(await computeMatchup(myPair, p, prices)); // ← CORRECTO: usa prices
     } else {
       for(let i=0;i<pairs.length;i++){
         for(let j=i+1;j<pairs.length;j++){
-          matchups.push(await computeMatchup(pairs[i], pairs[j], price));
+          matchups.push(await computeMatchup(pairs[i], pairs[j], prices)); // ← CORRECTO: usa prices
         }
       }
       break;
@@ -759,23 +764,7 @@ function autoSavePairs() {
   }
 }
 
-// Llamar autoSavePairs después de modificar parejas
-addPairBtn.addEventListener('click', () => {
-  const p1 = player1Select.value;
-  const p2 = player2Select.value;
-  if(!p1 || !p2){ alert('Selecciona ambos jugadores'); return; }
-  if(p1===p2){ if(!confirm('Has escogido el mismo usuario dos veces. Confirmar pareja igual?')) return; }
-  const color = randColor();
-  pairs.push({
-      id: 'pair_'+Date.now()+'_'+Math.floor(Math.random()*9999),
-      p1Uid: p1,
-      p2Uid: p2,
-      color
-  });
 
-  renderPairsList();
-  autoSavePairs(); // ← AGREGAR ESTA LÍNEA
-});
 
 // También al eliminar parejas
 // Modificar el evento click en renderPairsList
