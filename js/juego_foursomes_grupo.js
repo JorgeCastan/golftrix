@@ -205,18 +205,24 @@ async function loadUsers() {
       if (!csnap.exists()) { camposCache[campoId] = { pares:null, vantM:null, vantF:null }; return camposCache[campoId]; }
       const cdata = csnap.data();
       const pares = Array.isArray(cdata.paresHoyo) ? cdata.paresHoyo : (Array.isArray(cdata.pares_hoyo)?cdata.pares_hoyo:null);
-      // detect possible keys for ventajas por genero (tolerante)
+      // detect possible keys for ventajas por genero (tolerante) - CORREGIDO
       const vantM = Array.isArray(cdata.ventajasM) ? cdata.ventajasM
                     : Array.isArray(cdata.ventajas_m) ? cdata.ventajas_m
                     : Array.isArray(cdata.ventajasMale) ? cdata.ventajasMale
                     : Array.isArray(cdata.advantagesMale) ? cdata.advantagesMale
                     : Array.isArray(cdata.ventajasHombre) ? cdata.ventajasHombre
+                    : Array.isArray(cdata.masculino) ? cdata.masculino  // ← NUEVO: clave "masculino"
+                    : Array.isArray(cdata.hombres) ? cdata.hombres      // ← NUEVO: clave "hombres"
+                    : Array.isArray(cdata.male) ? cdata.male            // ← NUEVO: clave "male"
                     : null;
       const vantF = Array.isArray(cdata.ventajasF) ? cdata.ventajasF
                     : Array.isArray(cdata.ventajas_f) ? cdata.ventajas_f
                     : Array.isArray(cdata.ventajasFemale) ? cdata.ventajasFemale
                     : Array.isArray(cdata.advantagesFemale) ? cdata.advantagesFemale
                     : Array.isArray(cdata.ventajasMujer) ? cdata.ventajasMujer
+                    : Array.isArray(cdata.femenino) ? cdata.femenino    // ← NUEVO: clave "femenino"
+                    : Array.isArray(cdata.mujeres) ? cdata.mujeres      // ← NUEVO: clave "mujeres"
+                    : Array.isArray(cdata.female) ? cdata.female        // ← NUEVO: clave "female"
                     : null;
       camposCache[campoId] = { pares, vantM, vantF };
       return camposCache[campoId];
@@ -402,22 +408,37 @@ priceGeneralInput.addEventListener('change', updatePrices);
 
   // aplica ventaja: devuelve golpes ajustados (sin alterar tarjeta)
   function applyAdvantageToGolpesArray(golpesArr, userData, fieldVentajas) {
-    // fieldVentajas: { vantM, vantF } arrays or null
-    const result = new Array(18).fill(null);
-    for(let i=0;i<18;i++){
-      const raw = golpesArr[i];
-      if (typeof raw !== 'number') { result[i] = null; continue; }
-      let adj = raw;
-      const gender = genderOfUser(userData);
-      const handicap = userData.handicap || 0;
-      const vantArr = (gender === 'M') ? fieldVentajas.vantM : fieldVentajas.vantF;
-      const v = Array.isArray(vantArr) ? (Number(vantArr[i]) || 0) : 0;
-      // si handicap >= v entonces se resta 1 punto
-      if (v && handicap >= v) adj = adj - 1;
-      result[i] = adj;
+  // fieldVentajas: { vantM, vantF } arrays or null
+  const result = new Array(18).fill(null);
+  
+  for(let i=0;i<18;i++){
+    const raw = golpesArr[i];
+    if (typeof raw !== 'number') { 
+      result[i] = null; 
+      continue; 
     }
-    return result;
+    
+    let adj = raw;
+    const gender = genderOfUser(userData);
+    const handicap = userData.handicap || 0;
+    
+    // Obtener array de ventajas según género
+    const vantArr = (gender === 'M') ? fieldVentajas.vantM : fieldVentajas.vantF;
+    
+    if (Array.isArray(vantArr) && i < vantArr.length) {
+      const ventajaParaEsteHoyo = Number(vantArr[i]) || 0;
+      
+      // LÓGICA: Si el handicap del usuario es IGUAL O MAYOR a la ventaja para este hoyo
+      // se le resta 1 golpe (recibe un stroke de ventaja)
+      if (handicap >= ventajaParaEsteHoyo) {
+        adj = adj - 1; // Restar 1 golpe (ventaja)
+      }
+    }
+    
+    result[i] = adj;
   }
+  return result;
+}
 function getUserObj(uid) {
   return allUsers.find(u=>u.id===uid) || { handicap:0, gender:'M' };
 }
@@ -443,24 +464,40 @@ async function computeMatchup(pairA, pairB, prices) {
   let back9A = 0, back9B = 0;
 
   for (let h = 0; h < 18; h++) {
-    const scoresA = [a1Arr[h], a2Arr[h]].filter(x=>typeof x==='number');
-    const scoresB = [b1Arr[h], b2Arr[h]].filter(x=>typeof x==='number');
+  const scoresA = [a1Arr[h], a2Arr[h]].filter(x=>typeof x==='number');
+  const scoresB = [b1Arr[h], b2Arr[h]].filter(x=>typeof x==='number');
 
-    let ptsA=0, ptsB=0;
+  let ptsA=0, ptsB=0;
 
-    if (scoresA.length && scoresB.length) {
-      const lowA = Math.min(...scoresA);
-      const highA = Math.max(...scoresA);
-      const lowB = Math.min(...scoresB);
-      const highB = Math.max(...scoresB);
+  if (scoresA.length && scoresB.length) {
+    const lowA = Math.min(...scoresA);
+    const highA = Math.max(...scoresA);
+    const lowB = Math.min(...scoresB);
+    const highB = Math.max(...scoresB);
 
-      if(lowA < lowB) ptsA++; else if(lowB < lowA) ptsB++;
-      if(highA < highB) ptsA++; else if(highB < highA) ptsB++;
+    // LÓGICA CORREGIDA: 1 punto al ganador, -1 al perdedor
+    if (lowA < lowB) {
+      ptsA += 1;  // Pareja A gana el mejor vs mejor
+      ptsB -= 1;  // Pareja B pierde
+    } else if (lowB < lowA) {
+      ptsB += 1;  // Pareja B gana el mejor vs mejor
+      ptsA -= 1;  // Pareja A pierde
     }
+    // Si empatan: 0 puntos para ambos
 
-    totalA += ptsA;
-    totalB += ptsB;
+    if (highA < highB) {
+      ptsA += 1;  // Pareja A gana el peor vs peor
+      ptsB -= 1;  // Pareja B pierde
+    } else if (highB < highA) {
+      ptsB += 1;  // Pareja B gana el peor vs peor
+      ptsA -= 1;  // Pareja A pierde
+    }
+    // Si empatan: 0 puntos para ambos
+  }
 
+  totalA += ptsA;
+  totalB += ptsB;
+ 
     // Separar por segmentos
     if (h < 9) { // Primeros 9 hoyos (0-8)
       front9A += ptsA;
@@ -482,13 +519,38 @@ async function computeMatchup(pairA, pairB, prices) {
     });
   }
 
-  // Calcular dinero por segmentos
-  const dineroFront9 = (front9A - front9B) * (prices.front9 || 0);
-  const dineroBack9 = (back9A - back9B) * (prices.back9 || 0);
-  const dineroGeneral = (totalA > totalB ? 1 : (totalA < totalB ? -1 : 0)) * (prices.general || 0);
-  
-  // Dinero total por pareja (no dividido aún)
+  // Calcular dinero por segmentos - CORREGIDO
+  // Solo se gana/perde el precio completo, no multiplicado por diferencia
+  let dineroFront9 = 0;
+  let dineroBack9 = 0;
+  let dineroGeneral = 0;
+
+  if (front9A > front9B) {
+    dineroFront9 = prices.front9 || 0; // Pareja A gana Front9
+  } else if (front9B > front9A) {
+    dineroFront9 = -(prices.front9 || 0); // Pareja A pierde Front9 (negativo)
+  }
+  // Si empatan: 0
+
+  if (back9A > back9B) {
+    dineroBack9 = prices.back9 || 0; // Pareja A gana Back9
+  } else if (back9B > back9A) {
+    dineroBack9 = -(prices.back9 || 0); // Pareja A pierde Back9 (negativo)
+  }
+  // Si empatan: 0
+
+  if (totalA > totalB) {
+    dineroGeneral = prices.general || 0; // Pareja A gana General
+  } else if (totalB > totalA) {
+    dineroGeneral = -(prices.general || 0); // Pareja A pierde General (negativo)
+  }
+  // Si empatan: 0
+
+  // Dinero total por pareja (no dividido aún) - negativo si perdió
   const dineroTotalPareja = dineroFront9 + dineroBack9 + dineroGeneral;
+
+  // Dinero por jugador (mitad para cada uno)
+  const dineroPorJugador = dineroTotalPareja / 2;
 
   return {
     pairA, pairB, holes,
@@ -500,10 +562,11 @@ async function computeMatchup(pairA, pairB, prices) {
     dineroBack9,
     dineroGeneral,
     dineroTotalPareja,
+    dineroPorJugador,  // ← NUEVO: dinero por cada jugador
     saldo: totalA-totalB,
     prices
   };
-}
+  }
 
   async function computeAndRenderAllMatchups(prices, myPair) {
   matchupsContainer.innerHTML = '';
@@ -528,24 +591,24 @@ async function computeMatchup(pairA, pairB, prices) {
   }
 
   // Calcular saldo total estimado del usuario actual (en dinero, no puntos)
-  let totalSaldoUserDinero = 0;
-  let totalSaldoUserPuntos = 0;
-  
-  matchups.forEach(r=>{
-    if(currentUser){
-      const uid = currentUser.uid;
-      const userInA = r.pairA.p1Uid === uid || r.pairA.p2Uid === uid;
-      const userInB = r.pairB.p1Uid === uid || r.pairB.p2Uid === uid;
-      
-      if(userInA) {
-        totalSaldoUserDinero += r.dineroTotalPareja / 2; // Dividir entre 2 jugadores
-        totalSaldoUserPuntos += (r.totalPointsA - r.totalPointsB);
-      } else if(userInB) {
-        totalSaldoUserDinero -= r.dineroTotalPareja / 2; // Negativo porque perdió
-        totalSaldoUserPuntos += (r.totalPointsB - r.totalPointsA);
-      }
+let totalSaldoUserDinero = 0;
+let totalSaldoUserPuntos = 0;
+
+matchups.forEach(r=>{
+  if(currentUser){
+    const uid = currentUser.uid;
+    const userInA = r.pairA.p1Uid === uid || r.pairA.p2Uid === uid;
+    const userInB = r.pairB.p1Uid === uid || r.pairB.p2Uid === uid;
+    
+    if(userInA) {
+      totalSaldoUserDinero += r.dineroPorJugador; // ← Usar dineroPorJugador en vez de dividir
+      totalSaldoUserPuntos += (r.totalPointsA - r.totalPointsB);
+    } else if(userInB) {
+      totalSaldoUserDinero -= r.dineroPorJugador; // ← Negativo (ya viene negativo si perdió)
+      totalSaldoUserPuntos += (r.totalPointsB - r.totalPointsA);
     }
-  });
+  }
+});
 
   // renderizar tablas
   for(const r of matchups){
@@ -556,28 +619,29 @@ async function computeMatchup(pairA, pairB, prices) {
     const header = document.createElement('div');
     header.className='team-header';
     header.innerHTML = `
-      <div style="display:flex;align-items:center;gap:8px; flex-wrap:wrap;">
-        <div style="width:18px;height:18px;border-radius:50%;background:${r.pairA.color};"></div>
-        <strong>Equipo A:</strong> ${getUserName(r.pairA.p1Uid)} & ${getUserName(r.pairA.p2Uid)}
-        <div style="margin-left:10px; font-size:0.9em;">
-          Pts: ${r.totalPointsA} | Front9: ${r.front9A} | Back9: ${r.back9A}
-        </div>
-      </div>
-      <div style="display:flex;align-items:center;gap:8px; flex-wrap:wrap; margin-top:5px;">
-        <div style="width:18px;height:18px;border-radius:50%;background:${r.pairB.color};"></div>
-        <strong>Equipo B:</strong> ${getUserName(r.pairB.p1Uid)} & ${getUserName(r.pairB.p2Uid)}
-        <div style="margin-left:10px; font-size:0.9em;">
-          Pts: ${r.totalPointsB} | Front9: ${r.front9B} | Back9: ${r.back9B}
-        </div>
-      </div>
-      <div style="margin-top:5px; padding:5px; background:#f0f0f0; border-radius:5px;">
-        <strong>Dinero:</strong> 
-        Front9: $${r.dineroFront9} | 
-        Back9: $${r.dineroBack9} | 
-        General: $${r.dineroGeneral} |
-        <strong>Total Pareja: $${r.dineroTotalPareja}</strong> ($${r.dineroTotalPareja/2} por jugador)
-      </div>
-    `;
+  <div style="display:flex;align-items:center;gap:8px; flex-wrap:wrap;">
+    <div style="width:18px;height:18px;border-radius:50%;background:${r.pairA.color};"></div>
+    <strong>Equipo A:</strong> ${getUserName(r.pairA.p1Uid)} & ${getUserName(r.pairA.p2Uid)}
+    <div style="margin-left:10px; font-size:0.9em;">
+      Pts: ${r.totalPointsA} | Front9: ${r.front9A} | Back9: ${r.back9A}
+    </div>
+  </div>
+  <div style="display:flex;align-items:center;gap:8px; flex-wrap:wrap; margin-top:5px;">
+    <div style="width:18px;height:18px;border-radius:50%;background:${r.pairB.color};"></div>
+    <strong>Equipo B:</strong> ${getUserName(r.pairB.p1Uid)} & ${getUserName(r.pairB.p2Uid)}
+    <div style="margin-left:10px; font-size:0.9em;">
+      Pts: ${r.totalPointsB} | Front9: ${r.front9B} | Back9: ${r.back9B}
+    </div>
+  </div>
+  <div style="margin-top:5px; padding:5px; background:#f0f0f0; border-radius:5px;">
+    <strong>Dinero por segmento (precio completo):</strong><br>
+    Front9: $${r.dineroFront9 >= 0 ? '+' : ''}${r.dineroFront9} | 
+    Back9: $${r.dineroBack9 >= 0 ? '+' : ''}${r.dineroBack9} | 
+    General: $${r.dineroGeneral >= 0 ? '+' : ''}${r.dineroGeneral}<br>
+    <strong>Total Pareja: $${r.dineroTotalPareja >= 0 ? '+' : ''}${r.dineroTotalPareja}</strong> 
+    ($${r.dineroPorJugador >= 0 ? '+' : ''}${r.dineroPorJugador} por jugador)
+  </div>
+`;
     tableBlock.appendChild(header);
 
     const table = document.createElement('table');
@@ -661,10 +725,13 @@ async function computeMatchup(pairA, pairB, prices) {
 
   const signoDinero = totalSaldoUserDinero >= 0 ? '+' : '';
   const signoPuntos = totalSaldoUserPuntos >= 0 ? '+' : '';
-  
+
   miSaldoEl.innerHTML = `
-    <div><strong>Saldo estimado:</strong> ${signoDinero}$${totalSaldoUserDinero.toFixed(2)} MXN</div>
-    <div style="font-size:0.9em; margin-top:3px;">Puntos: ${signoPuntos}${totalSaldoUserPuntos}</div>
+    <div><strong>Saldo estimado por jugador:</strong> ${signoDinero}$${totalSaldoUserDinero.toFixed(2)} MXN</div>
+    <div style="font-size:0.9em; margin-top:3px;">
+      Puntos netos: ${signoPuntos}${totalSaldoUserPuntos} | 
+      Máximo posible: $${((prices.front9 + prices.back9 + prices.general) / 2).toFixed(2)}
+    </div>
   `;
   miSaldoEl.style.background = totalSaldoUserDinero>=0?'linear-gradient(90deg,#e6ffe6,#ddffdd)':'linear-gradient(90deg,#ffe6e6,#ffdede)';
   miSaldoEl.style.color = totalSaldoUserDinero>=0?'green':'red';
