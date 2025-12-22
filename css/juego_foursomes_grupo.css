@@ -31,4 +31,114 @@
   .saldo { font-weight:900; font-size:1.1rem; padding:8px; border-radius:8px; display:inline-block; }
   .team-header { display:flex; gap:8px; align-items:center; font-weight:900; }
   .tables-wrap { display:flex; gap:12px; flex-direction:column; }
-  @media (min-width:1000px){ .tables-grid{ display:grid; grid-template-columns:1fr 1fr; gap:12px; } }
+  /* NUEVOS ESTILOS PARA EL FORMULARIO DE 3 PRECIOS */
+.price-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 12px;
+    margin-bottom: 16px;
+}
+
+.price-input-group {
+    display: flex;
+    flex-direction: column;
+}
+
+.price-input-group label {
+    font-size: 0.9rem;
+    margin-bottom: 4px;
+    color: #555;
+}
+
+.price-input-group input {
+    font-size: 1rem;
+    padding: 10px;
+    border: 2px solid #ddd;
+    border-radius: 8px;
+    transition: border-color 0.3s;
+}
+
+.price-input-group input:focus {
+    border-color: var(--green-1);
+    outline: none;
+}
+
+/* Para mantener el formulario siempre visible */
+.form-card {
+    border: 2px solid var(--green-1);
+    background: #f9fff9;
+}
+
+.game-card {
+    border: 2px solid #007f00;
+    margin-top: 20px;
+    background: #fff;
+}
+
+/* Estilo para el botón cuando es "Actualizar" */
+button.updating {
+    background: linear-gradient(90deg, #f97316, #f59e0b);
+}
+
+/* Mejoras para la visualización de dinero */
+.money-display {
+    background: linear-gradient(90deg, #f8f9fa, #e9ecef);
+    padding: 10px;
+    border-radius: 8px;
+    margin: 8px 0;
+    border-left: 4px solid var(--green-1);
+}
+
+.money-segment {
+    display: inline-block;
+    padding: 4px 8px;
+    margin: 0 4px;
+    border-radius: 4px;
+    font-weight: bold;
+    font-size: 0.9rem;
+}
+
+.money-front9 { background: #e3f2fd; color: #1565c0; }
+.money-back9 { background: #f3e5f5; color: #7b1fa2; }
+.money-general { background: #e8f5e8; color: #2e7d32; }
+.money-total { background: #fff3e0; color: #ef6c00; }
+
+/* Para responsive design mejorado */
+@media (max-width: 768px) {
+    .price-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .col {
+        min-width: 100%;
+    }
+    
+    .row {
+        flex-direction: column;
+        gap: 8px;
+    }
+    
+    .team-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 4px;
+    }
+}
+ @media (min-width: 1000px) { 
+    .tables-grid{ 
+        display:grid; 
+        grid-template-columns:1fr 1fr; 
+        gap:12px; 
+    }
+    
+    /* Agregar esto para escritorio grande */
+    .price-grid {
+        grid-template-columns: repeat(3, 1fr);
+    }
+}
+
+@media (min-width: 768px) and (max-width: 999px) {
+    .price-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
