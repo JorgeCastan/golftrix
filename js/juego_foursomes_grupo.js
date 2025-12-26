@@ -1,4 +1,4 @@
-  function getQueryParam(n){ const u=new URL(location.href); return u.searchParams.get(n); }
+function getQueryParam(n){ const u=new URL(location.href); return u.searchParams.get(n); }
 
   let myPair = null;  // <-- global para tu usuario actual
 
@@ -195,40 +195,6 @@ async function loadUsers() {
     }
   }
 
-  async function obtenerTarjetasConScores() {
-    try {
-      const tarjetasCol = collection(db, 'tarjetas');
-      const q = query(tarjetasCol, where('juegoId','==', juegoId));
-      const snap = await getDocs(q);
-      const tarjetas = [];
-      snap.forEach(d => {
-        const data = d.data();
-        const scores = Array.isArray(data.scores) ? data.scores : [];
-        const hasAny = scores.some(s => {
-          const g = s.golpes;
-          return (typeof g === 'number' && !isNaN(g)) || (typeof g === 'string' && !isNaN(Number(g)));
-        });
-        if (hasAny) { 
-          tarjetas.push({ id: d.id, ...data }); 
-          
-          // DEBUG: Mostrar información de cada tarjeta
-          console.log(`Tarjeta encontrada: user ${data.userUid}, campo ${data.campoId}, handicap ${data.handicap}`);
-        }
-      });
-      tarjetasCache = tarjetas;
-      
-      // DEBUG: Resumen
-      console.log(`Total tarjetas encontradas: ${tarjetas.length}`);
-      console.log("Tarjetas cache:", tarjetasCache);
-      
-      return tarjetas;
-    } catch (err) {
-      console.error('Error obteniendo tarjetas', err);
-      tarjetasCache = [];
-      return [];
-    }
-  }
-
   // ---------------------- Obtener pares por hoyo y ventajas (camposGolf) ----------------------
   async function obtenerParYVentajas(campoId) {
     if (!campoId) return { pares:null, vantM:null, vantF:null };
@@ -240,41 +206,24 @@ async function loadUsers() {
       const cdata = csnap.data();
       const pares = Array.isArray(cdata.paresHoyo) ? cdata.paresHoyo : (Array.isArray(cdata.pares_hoyo)?cdata.pares_hoyo:null);
       // detect possible keys for ventajas por genero (tolerante) - CORREGIDO
-      // DEBUG: Mostrar estructura de ventajas
-      console.log("Estructura de ventajas:", cdata.ventajas);
-      console.log("Tipo de ventajas:", typeof cdata.ventajas);
-
-      // Acceder correctamente al Map ventajas
-      const ventajasMap = cdata.ventajas || {};
-
-      const vantM = 
-        Array.isArray(ventajasMap.masculino) ? ventajasMap.masculino :        // ← CORRECTO: ventajas.masculino
-        Array.isArray(ventajasMap.hombres) ? ventajasMap.hombres :
-        Array.isArray(ventajasMap.male) ? ventajasMap.male :
-        Array.isArray(cdata.ventajasM) ? cdata.ventajasM :
-        Array.isArray(cdata.ventajas_m) ? cdata.ventajas_m :
-        Array.isArray(cdata.ventajasMale) ? cdata.ventajasMale :
-        Array.isArray(cdata.advantagesMale) ? cdata.advantagesMale :
-        Array.isArray(cdata.ventajasHombre) ? cdata.ventajasHombre :
-        null;
-
-      const vantF = 
-        Array.isArray(ventajasMap.femenino) ? ventajasMap.femenino :          // ← CORRECTO: ventajas.femenino
-        Array.isArray(ventajasMap.mujeres) ? ventajasMap.mujeres :
-        Array.isArray(ventajasMap.female) ? ventajasMap.female :
-        Array.isArray(cdata.ventajasF) ? cdata.ventajasF :
-        Array.isArray(cdata.ventajas_f) ? cdata.ventajas_f :
-        Array.isArray(cdata.ventajasFemale) ? cdata.ventajasFemale :
-        Array.isArray(cdata.advantagesFemale) ? cdata.advantagesFemale :
-        Array.isArray(cdata.ventajasMujer) ? cdata.ventajasMujer :
-        null;
-
-      // DEBUG: Ver qué encontramos
-      console.log("ventajasMap:", ventajasMap);
-      console.log("ventajasMap.masculino:", ventajasMap.masculino);
-      console.log("ventajasMap.femenino:", ventajasMap.femenino);
-      console.log("Encontrado vantM:", vantM ? "Sí, longitud " + vantM.length : "No");
-      console.log("Encontrado vantF:", vantF ? "Sí, longitud " + vantF.length : "No");
+      const vantM = Array.isArray(cdata.ventajasM) ? cdata.ventajasM
+                    : Array.isArray(cdata.ventajas_m) ? cdata.ventajas_m
+                    : Array.isArray(cdata.ventajasMale) ? cdata.ventajasMale
+                    : Array.isArray(cdata.advantagesMale) ? cdata.advantagesMale
+                    : Array.isArray(cdata.ventajasHombre) ? cdata.ventajasHombre
+                    : Array.isArray(cdata.masculino) ? cdata.masculino  // ← NUEVO: clave "masculino"
+                    : Array.isArray(cdata.hombres) ? cdata.hombres      // ← NUEVO: clave "hombres"
+                    : Array.isArray(cdata.male) ? cdata.male            // ← NUEVO: clave "male"
+                    : null;
+      const vantF = Array.isArray(cdata.ventajasF) ? cdata.ventajasF
+                    : Array.isArray(cdata.ventajas_f) ? cdata.ventajas_f
+                    : Array.isArray(cdata.ventajasFemale) ? cdata.ventajasFemale
+                    : Array.isArray(cdata.advantagesFemale) ? cdata.advantagesFemale
+                    : Array.isArray(cdata.ventajasMujer) ? cdata.ventajasMujer
+                    : Array.isArray(cdata.femenino) ? cdata.femenino    // ← NUEVO: clave "femenino"
+                    : Array.isArray(cdata.mujeres) ? cdata.mujeres      // ← NUEVO: clave "mujeres"
+                    : Array.isArray(cdata.female) ? cdata.female        // ← NUEVO: clave "female"
+                    : null;
       camposCache[campoId] = { pares, vantM, vantF };
       return camposCache[campoId];
     } catch (e) {
@@ -458,8 +407,8 @@ priceGeneralInput.addEventListener('change', updatePrices);
   }
 
   // aplica ventaja: devuelve golpes ajustados (sin alterar tarjeta)
-function applyAdvantageToGolpesArray(golpesArr, userData, fieldVentajas) {
-  // userData ahora incluye: { gender, handicap (DE LA TARJETA), ... }
+  function applyAdvantageToGolpesArray(golpesArr, userData, fieldVentajas) {
+  // fieldVentajas: { vantM, vantF } arrays or null
   const result = new Array(18).fill(null);
   
   for(let i=0;i<18;i++){
@@ -471,37 +420,18 @@ function applyAdvantageToGolpesArray(golpesArr, userData, fieldVentajas) {
     
     let adj = raw;
     const gender = genderOfUser(userData);
-    const handicapTarjeta = userData.handicap || 0;  // ← HANDICAP DE LA TARJETA
+    const handicap = userData.handicap || 0;
     
     // Obtener array de ventajas según género
     const vantArr = (gender === 'M') ? fieldVentajas.vantM : fieldVentajas.vantF;
     
     if (Array.isArray(vantArr) && i < vantArr.length) {
-      const valorVentaja = Number(vantArr[i]) || 0;
+      const ventajaParaEsteHoyo = Number(vantArr[i]) || 0;
       
-      // EJEMPLO DE TU EXPLICACIÓN:
-      // - Hoyo 5: tiré 4, handicap 12, género masculino
-      // - En campo golf: ventaja masculino[4] = 9 (índice 4 = hoyo 5)
-      // - Lógica: si handicap (12) <= valorVentaja (9) → NO APLICA
-      // - Si handicap (12) > valorVentaja (9) → SÍ APLICA (resta 1)
-      
-      // IMPORTANTE: En tu ejemplo, arrays muestran números bajos (1-18)
-      // pero parecen ser HOYOS con ventaja, no valores de handicap
-      
-      // PRUEBA 1: Si el array contiene hoyos con ventaja
-      // Ejemplo: [7, 15, 3, 17, ...] → hoyos 7, 15, 3, 17 tienen ventaja
-      const hoyoNumero = i + 1;
-      if (vantArr.includes(hoyoNumero) && handicapTarjeta > 0) {
-        // Si el hoyo está en la lista Y handicap > 0 → resta 1
-        adj = raw - 1;
-        console.log(`Ventaja aplicada (hoyo ${hoyoNumero} en lista): ${userData.nombre}, handicap ${handicapTarjeta}, ${raw} → ${adj}`);
-      }
-      
-      // PRUEBA 2: Si el array contiene valores de handicap mínimo
-      else if (valorVentaja > 0 && handicapTarjeta >= valorVentaja) {
-        // Si handicap es IGUAL O MAYOR al valor → resta 1
-        adj = raw - 1;
-        console.log(`Ventaja aplicada (handicap ${handicapTarjeta} >= ${valorVentaja}): ${userData.nombre}, hoyo ${hoyoNumero}, ${raw} → ${adj}`);
+      // LÓGICA: Si el handicap del usuario es IGUAL O MAYOR a la ventaja para este hoyo
+      // se le resta 1 golpe (recibe un stroke de ventaja)
+      if (handicap >= ventajaParaEsteHoyo) {
+        adj = adj - 1; // Restar 1 golpe (ventaja)
       }
     }
     
@@ -906,4 +836,3 @@ function autoSavePairs() {
 // También al eliminar parejas
 // Modificar el evento click en renderPairsList
 // Agregar autoSavePairs() después de pairs.splice
-
