@@ -428,11 +428,17 @@ priceGeneralInput.addEventListener('change', updatePrices);
     if (Array.isArray(vantArr) && i < vantArr.length) {
       const ventajaParaEsteHoyo = Number(vantArr[i]) || 0;
       
-      // LÓGICA: Si el handicap del usuario es IGUAL O MAYOR a la ventaja para este hoyo
-      // se le resta 1 golpe (recibe un stroke de ventaja)
-      if (handicap >= ventajaParaEsteHoyo) {
-        adj = adj - 1; // Restar 1 golpe (ventaja)
+      // LÓGICA CORRECTA:
+      // Si el handicap del usuario es MENOR O IGUAL a la ventaja del hoyo,
+      // recibe 1 golpe de ventaja (stroke)
+      if (
+        ventajaParaEsteHoyo > 0 &&
+        handicap > 0 &&
+        handicap <= ventajaParaEsteHoyo
+      ) {
+        adj = adj - 1;
       }
+
     }
     
     result[i] = adj;
