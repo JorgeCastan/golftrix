@@ -270,6 +270,7 @@
 
           // OBTENER HANDICAP ACTUAL DEL USUARIO PARA GUARDARLO HISTÓRICAMENTE
           let handicapActual = 0;
+          let handicapSignedActual = "+0";
           try {
             const userRef = doc(db, "users", uid);
             const userSnap = await getDoc(userRef);
@@ -278,10 +279,15 @@
               handicapActual = (typeof userData.handicap === 'number') 
                 ? userData.handicap 
                 : (Number(userData.handicap) || 0);
+              
+              // También obtener handicapSigned si existe
+              handicapSignedActual = userData.handicapSigned || 
+                (handicapActual >= 0 ? `+${handicapActual}` : `${handicapActual}`);
             }
           } catch (e) {
             console.error("Error leyendo handicap del usuario:", e);
             handicapActual = 0;
+            handicapSignedActual = "+0";
           }
 
           // crear tarjeta
@@ -290,11 +296,13 @@
             campoId: juego.campoId || null,
             campoNombre: juego.campoNombre || null,
             userUid: uid,
-            ownerUid: uid,  // <--- CORREGIDO: usa el uid del usuario actual (dueño de la tarjeta)
+            ownerUid: uid,
             createdAt: serverTimestamp(),
             estado: 'activa',
-            salida: salidaUsuario, // <<--- NUEVO CAMPO
-            handicap: handicapActual, // <-- GUARDAR HANDICAP HISTÓRICO
+            salida: salidaUsuario,
+            handicap: handicapActual,           // <-- GUARDAR HANDICAP HISTÓRICO (número)
+            handicapSigned: handicapSignedActual, // <-- GUARDAR HANDICAP SIGNED HISTÓRICO (string)
+            lastHandicapUpdated: serverTimestamp(), // <-- GUARDAR FECHA DE ACTUALIZACIÓN DEL HANDICAP
             scores: [] // array de objetos
           };
 

@@ -334,6 +334,10 @@ async function guardarTarjeta(completarTarjeta = false) {
       if (!currentTarjeta?.createdAt) {
         updateData.createdAt = serverTimestamp();
       }
+      
+      // NOTA: NO actualizamos handicap, handicapSigned, lastHandicapUpdated aquí
+      // porque esos campos son históricos y se guardaron al crear la tarjeta
+      // handicap.js se encargará de actualizar el handicap del USUARIO (no de la tarjeta)
     }
 
     // Guardar en Firestore
@@ -367,7 +371,7 @@ async function guardarTarjeta(completarTarjeta = false) {
     
     // Mostrar mensaje apropiado
     if (completarTarjeta) {
-      alert('✅ Tarjeta guardada y COMPLETADA exitosamente!\n\nLa tarjeta ahora es de solo lectura y no se puede editar.\n\nSe ha actualizado tu handicap.');
+      alert('✅ Tarjeta guardada y COMPLETADA exitosamente!\n\nLa tarjeta ahora es de solo lectura y no se puede editar.\n\nSe ha ejecutado el cálculo de handicap para actualizar tu handicap actual.');
     } else {
       alert('Tarjeta guardada correctamente!');
     }
