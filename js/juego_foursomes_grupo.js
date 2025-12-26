@@ -205,25 +205,30 @@ async function loadUsers() {
       if (!csnap.exists()) { camposCache[campoId] = { pares:null, vantM:null, vantF:null }; return camposCache[campoId]; }
       const cdata = csnap.data();
       const pares = Array.isArray(cdata.paresHoyo) ? cdata.paresHoyo : (Array.isArray(cdata.pares_hoyo)?cdata.pares_hoyo:null);
-      // detect possible keys for ventajas por genero (tolerante) - CORREGIDO
-      const vantM = Array.isArray(cdata.ventajasM) ? cdata.ventajasM
-                    : Array.isArray(cdata.ventajas_m) ? cdata.ventajas_m
-                    : Array.isArray(cdata.ventajasMale) ? cdata.ventajasMale
-                    : Array.isArray(cdata.advantagesMale) ? cdata.advantagesMale
-                    : Array.isArray(cdata.ventajasHombre) ? cdata.ventajasHombre
-                    : Array.isArray(cdata.masculino) ? cdata.masculino  // ← NUEVO: clave "masculino"
-                    : Array.isArray(cdata.hombres) ? cdata.hombres      // ← NUEVO: clave "hombres"
-                    : Array.isArray(cdata.male) ? cdata.male            // ← NUEVO: clave "male"
-                    : null;
-      const vantF = Array.isArray(cdata.ventajasF) ? cdata.ventajasF
-                    : Array.isArray(cdata.ventajas_f) ? cdata.ventajas_f
-                    : Array.isArray(cdata.ventajasFemale) ? cdata.ventajasFemale
-                    : Array.isArray(cdata.advantagesFemale) ? cdata.advantagesFemale
-                    : Array.isArray(cdata.ventajasMujer) ? cdata.ventajasMujer
-                    : Array.isArray(cdata.femenino) ? cdata.femenino    // ← NUEVO: clave "femenino"
-                    : Array.isArray(cdata.mujeres) ? cdata.mujeres      // ← NUEVO: clave "mujeres"
-                    : Array.isArray(cdata.female) ? cdata.female        // ← NUEVO: clave "female"
-                    : null;
+      // ACCEDER CORRECTAMENTE a las ventajas dentro del Map 'ventajas'
+const ventajasMap = cdata.ventajas || {};
+
+const vantM = 
+  Array.isArray(ventajasMap.masculino) ? ventajasMap.masculino :  // ← CORRECTO: dentro de ventajas
+  Array.isArray(ventajasMap.hombres) ? ventajasMap.hombres :
+  Array.isArray(ventajasMap.male) ? ventajasMap.male :
+  Array.isArray(cdata.ventajasM) ? cdata.ventajasM :
+  Array.isArray(cdata.ventajas_m) ? cdata.ventajas_m :
+  Array.isArray(cdata.ventajasMale) ? cdata.ventajasMale :
+  Array.isArray(cdata.advantagesMale) ? cdata.advantagesMale :
+  Array.isArray(cdata.ventajasHombre) ? cdata.ventajasHombre :
+  null;
+
+const vantF = 
+  Array.isArray(ventajasMap.femenino) ? ventajasMap.femenino :    // ← CORRECTO: dentro de ventajas
+  Array.isArray(ventajasMap.mujeres) ? ventajasMap.mujeres :
+  Array.isArray(ventajasMap.female) ? ventajasMap.female :
+  Array.isArray(cdata.ventajasF) ? cdata.ventajasF :
+  Array.isArray(cdata.ventajas_f) ? cdata.ventajas_f :
+  Array.isArray(cdata.ventajasFemale) ? cdata.ventajasFemale :
+  Array.isArray(cdata.advantagesFemale) ? cdata.advantagesFemale :
+  Array.isArray(cdata.ventajasMujer) ? cdata.ventajasMujer :
+  null;
       camposCache[campoId] = { pares, vantM, vantF };
       return camposCache[campoId];
     } catch (e) {
@@ -453,10 +458,41 @@ async function computeMatchup(pairA, pairB, prices) {
   const campoId = (pA1?.campoId || pA2?.campoId || pB1?.campoId || pB2?.campoId) || null;
   const fieldInfo = await obtenerParYVentajas(campoId);
 
-  const a1Arr = pA1 ? applyAdvantageToGolpesArray(buildGolpesArrFromTarjeta(pA1), getUserObj(pairA.p1Uid), fieldInfo) : new Array(18).fill(null);
-  const a2Arr = pA2 ? applyAdvantageToGolpesArray(buildGolpesArrFromTarjeta(pA2), getUserObj(pairA.p2Uid), fieldInfo) : new Array(18).fill(null);
-  const b1Arr = pB1 ? applyAdvantageToGolpesArray(buildGolpesArrFromTarjeta(pB1), getUserObj(pairB.p1Uid), fieldInfo) : new Array(18).fill(null);
-  const b2Arr = pB2 ? applyAdvantageToGolpesArray(buildGolpesArrFromTarjeta(pB2), getUserObj(pairB.p2Uid), fieldInfo) : new Array(18).fill(null);
+  const a1Arr = pA1 ? applyAdvantageToGolpesArray(
+    buildGolpesArrFromTarjeta(pA1), 
+    {
+      ...getUserObj(pairA.p1Uid),  // género del usuario
+      handicap: pA1.handicap || 0  // ← HANDICAP DE LA TARJETA (-9), no del usuario (-6)
+    }, 
+    fieldInfo
+  ) : new Array(18).fill(null);
+
+  const a2Arr = pA2 ? applyAdvantageToGolpesArray(
+    buildGolpesArrFromTarjeta(pA2), 
+    {
+      ...getUserObj(pairA.p2Uid),
+      handicap: pA2.handicap || 0  // ← HANDICAP DE LA TARJETA
+    }, 
+    fieldInfo
+  ) : new Array(18).fill(null);
+
+  const b1Arr = pB1 ? applyAdvantageToGolpesArray(
+    buildGolpesArrFromTarjeta(pB1), 
+    {
+      ...getUserObj(pairB.p1Uid),
+      handicap: pB1.handicap || 0  // ← HANDICAP DE LA TARJETA
+    }, 
+    fieldInfo
+  ) : new Array(18).fill(null);
+
+  const b2Arr = pB2 ? applyAdvantageToGolpesArray(
+    buildGolpesArrFromTarjeta(pB2), 
+    {
+      ...getUserObj(pairB.p2Uid),
+      handicap: pB2.handicap || 0  // ← HANDICAP DE LA TARJETA
+    }, 
+    fieldInfo
+  ) : new Array(18).fill(null);
 
   const holes = [];
   let totalA = 0, totalB = 0;
