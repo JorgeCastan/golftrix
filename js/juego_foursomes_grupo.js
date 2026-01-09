@@ -505,6 +505,10 @@ async function computeMatchup(pairA, pairB, prices) {
   const scoresB = [b1Arr[h], b2Arr[h]].filter(x=>typeof x==='number');
 
   let ptsA=0, ptsB=0;
+  
+  // NUEVO: Variables para determinar ganadores
+  let lowWinner = null; // 'A', 'B', o 'tie'
+  let highWinner = null; // 'A', 'B', o 'tie'
 
   if (scoresA.length && scoresB.length) {
     const lowA = Math.min(...scoresA);
@@ -513,28 +517,35 @@ async function computeMatchup(pairA, pairB, prices) {
     const highB = Math.max(...scoresB);
 
     // LÓGICA CORREGIDA: 1 punto al ganador, -1 al perdedor
+    // MEJOR vs MEJOR (low scores)
     if (lowA < lowB) {
-      ptsA += 1;  // Pareja A gana el mejor vs mejor
-      ptsB -= 1;  // Pareja B pierde
+      ptsA += 1;
+      ptsB -= 1;
+      lowWinner = 'A';
     } else if (lowB < lowA) {
-      ptsB += 1;  // Pareja B gana el mejor vs mejor
-      ptsA -= 1;  // Pareja A pierde
+      ptsB += 1;
+      ptsA -= 1;
+      lowWinner = 'B';
+    } else {
+      lowWinner = 'tie';
     }
-    // Si empatan: 0 puntos para ambos
 
+    // PEOR vs PEOR (high scores)
     if (highA < highB) {
-      ptsA += 1;  // Pareja A gana el peor vs peor
-      ptsB -= 1;  // Pareja B pierde
+      ptsA += 1;
+      ptsB -= 1;
+      highWinner = 'A';
     } else if (highB < highA) {
-      ptsB += 1;  // Pareja B gana el peor vs peor
-      ptsA -= 1;  // Pareja A pierde
+      ptsB += 1;
+      ptsA -= 1;
+      highWinner = 'B';
+    } else {
+      highWinner = 'tie';
     }
-    // Si empatan: 0 puntos para ambos
   }
 
   totalA += ptsA;
   totalB += ptsB;
- 
     // Separar por segmentos
     if (h < 9) { // Primeros 9 hoyos (0-8)
       front9A += ptsA;
@@ -681,6 +692,10 @@ matchups.forEach(r=>{
 `;
     tableBlock.appendChild(header);
 
+    // Crear contenedor con scroll
+    const tableContainer = document.createElement('div');
+    tableContainer.className = 'table-container';
+    
     const table = document.createElement('table');
     const thead = document.createElement('thead');
     const trh = document.createElement('tr');
@@ -690,7 +705,7 @@ matchups.forEach(r=>{
 
     const tbody = document.createElement('tbody');
 
-    // 4 jugadores
+    // 4 jugadores - CON COLORES DE GANADOR/PERDEDOR
     for(let pi=0; pi<4; pi++){
       const tr = document.createElement('tr');
       const playerInfo = r.holes[0].players[pi];
@@ -707,7 +722,38 @@ matchups.forEach(r=>{
         const td = document.createElement('td');
         const hole = r.holes[h];
         const p = hole.players[pi];
+        
+        // Determinar si este jugador ganó o perdió en este hoyo
+        let cellClass = '';
+        if (typeof p.adj === 'number') {
+          if (pi < 2) { // Jugadores del equipo A
+            // Verificar si es el lowA (mejor) o highA (peor)
+            if (p.isLowA && hole.lowWinner === 'A') {
+              cellClass = 'player-cell-winner';
+            } else if (p.isLowA && hole.lowWinner === 'B') {
+              cellClass = 'player-cell-loser';
+            } else if (p.isHighA && hole.highWinner === 'A') {
+              cellClass = 'player-cell-winner';
+            } else if (p.isHighA && hole.highWinner === 'B') {
+              cellClass = 'player-cell-loser';
+            }
+          } else { // Jugadores del equipo B
+            if (p.isLowB && hole.lowWinner === 'B') {
+              cellClass = 'player-cell-winner';
+            } else if (p.isLowB && hole.lowWinner === 'A') {
+              cellClass = 'player-cell-loser';
+            } else if (p.isHighB && hole.highWinner === 'B') {
+              cellClass = 'player-cell-winner';
+            } else if (p.isHighB && hole.highWinner === 'A') {
+              cellClass = 'player-cell-loser';
+            }
+          }
+        }
+        
         td.textContent = (typeof p.adj==='number') ? p.adj : '-';
+        if (cellClass) {
+          td.className = cellClass;
+        }
         tr.appendChild(td);
         if(pi<2) pairPoints += hole.pointsA;
         else pairPoints += hole.pointsB;
@@ -721,7 +767,7 @@ matchups.forEach(r=>{
       tbody.appendChild(tr);
     }
 
-    // 🔥 Fila extra de puntaje por equipo
+    // 🔥 NUEVA FILA DE MARCADOR DIVIDIDA
     const scoreRow = document.createElement('tr');
     const labelTd = document.createElement('td');
     labelTd.className = 'nameCol';
@@ -731,20 +777,26 @@ matchups.forEach(r=>{
 
     for(let h=0; h<18; h++){
       const td = document.createElement('td');
-      td.style.background = `linear-gradient(90deg,${r.pairA.color} 50%,${r.pairB.color} 50%)`;
-      td.style.color = '#000';
-      td.style.fontWeight = 'bold';
-
+      td.className = 'score-cell';
+      
       const hole = r.holes[h];
-      let texto = '0 - 0';
-      if(hole.pointsA > hole.pointsB){
-        texto = `+${hole.pointsA} / -${hole.pointsB}`;
-        td.style.color = 'green';
-      } else if(hole.pointsB > hole.pointsA){
-        texto = `-${hole.pointsA} / +${hole.pointsB}`;
-        td.style.color = 'red';
-      }
-      td.textContent = texto;
+      
+      // Crear división superior (puntos equipo A)
+      const topDiv = document.createElement('div');
+      topDiv.className = 'score-top';
+      topDiv.style.background = r.pairA.color;
+      topDiv.style.color = '#fff';
+      topDiv.textContent = hole.pointsA > 0 ? `+${hole.pointsA}` : hole.pointsA.toString();
+      
+      // Crear división inferior (puntos equipo B)
+      const bottomDiv = document.createElement('div');
+      bottomDiv.className = 'score-bottom';
+      bottomDiv.style.background = r.pairB.color;
+      bottomDiv.style.color = '#fff';
+      bottomDiv.textContent = hole.pointsB > 0 ? `+${hole.pointsB}` : hole.pointsB.toString();
+      
+      td.appendChild(topDiv);
+      td.appendChild(bottomDiv);
       scoreRow.appendChild(td);
     }
 
@@ -755,7 +807,8 @@ matchups.forEach(r=>{
     tbody.appendChild(scoreRow);
 
     table.appendChild(tbody);
-    tableBlock.appendChild(table);
+    tableContainer.appendChild(table);
+    tableBlock.appendChild(tableContainer);
 
     matchupsContainer.appendChild(tableBlock);
   }
