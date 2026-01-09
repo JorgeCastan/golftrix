@@ -103,6 +103,155 @@ button.updating {
 .money-general { background: #e8f5e8; color: #2e7d32; }
 .money-total { background: #fff3e0; color: #ef6c00; }
 
+/* ==================== NUEVOS ESTILOS PARA TABLAS ==================== */
+
+/* Contenedor con scroll horizontal */
+.table-container {
+  width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  margin-top: 10px;
+  border-radius: 8px;
+  border: 1px solid #eee;
+}
+
+/* Ajustar tabla para muchos hoyos */
+.table-container table {
+  min-width: 800px; /* Mínimo para 18 hoyos + columnas extras */
+  margin-top: 0;
+}
+
+/* Celdas del marcador divididas */
+.score-cell {
+  position: relative;
+  padding: 0 !important;
+  height: 50px;
+}
+
+.score-top {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: bold;
+  font-size: 0.9rem;
+}
+
+.score-bottom {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: bold;
+  font-size: 0.9rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.3);
+}
+
+/* Colores para ganador/perdedor */
+.score-winner {
+  color: #00cc44 !important;
+  font-weight: 900 !important;
+}
+
+.score-loser {
+  color: #e63946 !important;
+  font-weight: 900 !important;
+}
+
+.score-tie {
+  color: #000000 !important;
+}
+
+/* Estilos para celdas de jugadores con colores de ganador */
+.player-cell-winner {
+  color: #00cc44 !important;
+  font-weight: 900 !important;
+}
+
+.player-cell-loser {
+  color: #e63946 !important;
+  font-weight: 900 !important;
+}
+
+/* Estilos para celdas de jugadores coloreadas */
+td.player-cell-winner {
+  color: #00cc44 !important;
+  font-weight: 900 !important;
+  background-color: rgba(0, 204, 68, 0.1) !important;
+}
+
+td.player-cell-loser {
+  color: #e63946 !important;
+  font-weight: 900 !important;
+  background-color: rgba(230, 57, 70, 0.1) !important;
+}
+
+/* Mejorar visibilidad de texto en marcador dividido */
+.score-top, .score-bottom {
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+}
+
+/* Ajustes responsivos */
+@media (max-width: 768px) {
+  .table-container {
+    margin-left: -12px;
+    margin-right: -12px;
+    width: calc(100% + 24px);
+    border-radius: 0;
+    border-left: none;
+    border-right: none;
+  }
+  
+  .table-container table {
+    min-width: 900px; /* Un poco más para mejor visualización */
+  }
+  
+  th, td {
+    padding: 4px;
+    font-size: 0.8rem;
+  }
+  
+  th.nameCol, td.nameCol {
+    padding-left: 6px;
+    min-width: 120px;
+  }
+  
+  /* Ajustar badges en móvil */
+  .badge {
+    width: 30px;
+    height: 30px;
+    font-size: 0.8rem;
+  }
+  
+  /* Header más compacto */
+  .team-header {
+    font-size: 0.9rem;
+  }
+}
+
+/* Para pantallas muy pequeñas */
+@media (max-width: 480px) {
+  .table-container table {
+    min-width: 950px;
+  }
+  
+  th, td {
+    padding: 3px;
+    font-size: 0.75rem;
+  }
+  
+  .score-top, .score-bottom {
+    font-size: 0.8rem;
+  }
+}
 
 /* Para responsive design mejorado */
 @media (max-width: 768px) {
