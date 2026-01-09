@@ -358,6 +358,15 @@ const missingBadge = document.getElementById('missingBadge');
 const statusLine = document.getElementById('statusLine');
 const resultMsg = document.getElementById('resultMsg');
 
+// Fuerza el scroll al inicio de la página (UX)
+function scrollToTop() {
+  window.scrollTo({
+    top: 0,
+    behavior: 'smooth'
+  });
+}
+
+
 // Generar ID único para juego
 function generateJuegoId() {
   return `juego_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
@@ -567,6 +576,7 @@ function renderCurrentCard() {
   
   // Actualizar título
   currentCardTitle.textContent = `Tarjeta ${currentCardIndex + 1} de ${maxCardsToFill}`;
+  scrollToTop();
 }
 
 // Función para adjuntar eventos a los inputs después de renderizar
@@ -826,6 +836,7 @@ prevBtn.addEventListener('click', () => {
     currentCardIndex--;
     renderCurrentCard();
     updateNavigationButtons();
+    scrollToTop(); // 🔼 subir al inicio
   }
 });
 
@@ -835,6 +846,7 @@ nextBtn.addEventListener('click', () => {
       currentCardIndex++;
       renderCurrentCard();
       updateNavigationButtons();
+      scrollToTop(); // 🔼 subir al inicio
     }
   }
 });
