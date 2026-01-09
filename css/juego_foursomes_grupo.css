@@ -1,13 +1,23 @@
 :root { --green-1:#007f00; --green-2:#00cc44; }
-  body { font-family:'Orbitron',sans-serif; padding:12px; background:#f6f6f6; color:#111; }
+  body { 
+    font-family:'Orbitron',sans-serif; 
+    padding:6px; /* REDUCIR de 12px a 6px */
+    margin:0; /* Eliminar márgenes por defecto */
+    background:#f6f6f6; 
+    color:#111; 
+    width:100vw; /* Usar todo el viewport width */
+    box-sizing:border-box;
+  }
   .card {
         background:#fff;
-        border-radius:12px;
-        padding:12px;
-        box-shadow:0 6px 18px rgba(0,0,0,0.06);
-        margin-bottom:12px;
-        width:100%;
+        border-radius:10px; /* Reducir ligeramente */
+        padding:10px; /* Reducir padding interno */
+        box-shadow:0 4px 12px rgba(0,0,0,0.06); /* Sombra más sutil */
+        margin-bottom:10px;
+        width:calc(100% - 12px); /* 100% menos el padding del body */
         box-sizing:border-box;
+        margin-left:auto;
+        margin-right:auto;
     }
 
   h1 { margin:0 0 8px 0; color:var(--green-1); }
@@ -30,7 +40,12 @@
   .result-pill { font-weight:900; padding:6px 8px; border-radius:8px; display:inline-block; min-width:56px; text-align:center; }
   .saldo { font-weight:900; font-size:1.1rem; padding:8px; border-radius:8px; display:inline-block; }
   .team-header { display:flex; gap:8px; align-items:center; font-weight:900; }
-  .tables-wrap { display:flex; gap:12px; flex-direction:column; }
+  .tables-wrap { 
+  display:flex; 
+  gap:8px; /* Reducir de 12px a 8px */
+  flex-direction:column; 
+  width:100%;
+}
   /* NUEVOS ESTILOS PARA EL FORMULARIO DE 3 PRECIOS */
 .price-grid {
     display: grid;
@@ -110,9 +125,12 @@ button.updating {
   width: 100%;
   overflow-x: auto;
   -webkit-overflow-scrolling: touch;
-  margin-top: 10px;
-  border-radius: 8px;
+  margin-top: 8px;
+  border-radius: 6px;
   border: 1px solid #eee;
+  margin-left: -6px; /* Compensar padding del card */
+  margin-right: -6px; /* Compensar padding del card */
+  width: calc(100% + 12px); /* Expandir más allá del card */
 }
 
 /* Ajustar tabla para muchos hoyos */
@@ -201,55 +219,123 @@ td.player-cell-loser {
 
 /* Ajustes responsivos */
 @media (max-width: 768px) {
+  body {
+    padding: 4px; /* Aún menos padding en móvil */
+  }
+  
+  .card {
+    padding: 8px;
+    width: calc(100% - 8px); /* Ajustar al padding reducido */
+    border-radius: 8px;
+  }
+  
   .table-container {
-    margin-left: -12px;
-    margin-right: -12px;
-    width: calc(100% + 24px);
+    margin-left: -8px; /* Compensar nuevo padding */
+    margin-right: -8px;
+    width: calc(100% + 16px);
     border-radius: 0;
     border-left: none;
     border-right: none;
   }
   
   .table-container table {
-    min-width: 900px; /* Un poco más para mejor visualización */
+    min-width: 950px; /* Un poco más para caber mejor */
   }
   
   th, td {
-    padding: 4px;
-    font-size: 0.8rem;
+    padding: 3px; /* Menos padding */
+    font-size: 0.75rem; /* Texto más pequeño */
   }
   
   th.nameCol, td.nameCol {
-    padding-left: 6px;
-    min-width: 120px;
+    padding-left: 4px;
+    min-width: 110px; /* Reducir ancho mínimo */
   }
   
   /* Ajustar badges en móvil */
   .badge {
-    width: 30px;
-    height: 30px;
-    font-size: 0.8rem;
+    width: 26px;
+    height: 26px;
+    font-size: 0.7rem;
   }
   
   /* Header más compacto */
   .team-header {
+    font-size: 0.8rem;
+    gap: 4px;
+  }
+  
+  /* Reducir tamaño de inputs y botones */
+  select, input[type=number] {
+    padding: 6px;
     font-size: 0.9rem;
+  }
+  
+  button.primary, button.ghost {
+    padding: 6px 8px;
+    font-size: 0.85rem;
   }
 }
 
 /* Para pantallas muy pequeñas */
 @media (max-width: 480px) {
+  body {
+    padding: 2px; /* Mínimo padding */
+  }
+  
+  .card {
+    padding: 6px;
+    width: calc(100% - 4px);
+    border-radius: 6px;
+  }
+  
+  .table-container {
+    margin-left: -6px;
+    margin-right: -6px;
+    width: calc(100% + 12px);
+  }
+  
   .table-container table {
-    min-width: 950px;
+    min-width: 1000px; /* Suficiente para 18 hoyos */
   }
   
   th, td {
-    padding: 3px;
-    font-size: 0.75rem;
+    padding: 2px;
+    font-size: 0.7rem;
+  }
+  
+  th.nameCol, td.nameCol {
+    padding-left: 3px;
+    min-width: 100px;
   }
   
   .score-top, .score-bottom {
+    font-size: 0.7rem;
+    height: 22px; /* Reducir altura */
+  }
+  
+  .score-cell {
+    height: 44px; /* Reducir altura total */
+  }
+  
+  h1 {
+    font-size: 1.2rem;
+    margin-bottom: 6px;
+  }
+  
+  /* Ajustar grid de precios */
+  .price-grid {
+    gap: 6px;
+    margin-bottom: 10px;
+  }
+  
+  .price-input-group label {
     font-size: 0.8rem;
+  }
+  
+  .price-input-group input {
+    padding: 6px;
+    font-size: 0.9rem;
   }
 }
 
@@ -291,4 +377,54 @@ td.player-cell-loser {
     .price-grid {
         grid-template-columns: repeat(2, 1fr);
     }
+}
+
+/* Para pantallas grandes - usar máximo ancho */
+@media (min-width: 1200px) {
+  body {
+    max-width: 1400px; /* Máximo ancho para no estirarse demasiado */
+    margin: 0 auto; /* Centrar en pantallas grandes */
+    padding: 10px;
+  }
+  
+  .card {
+    padding: 15px;
+  }
+  
+  .table-container {
+    margin-left: -10px;
+    margin-right: -10px;
+    width: calc(100% + 20px);
+  }
+  
+  .table-container table {
+    min-width: 1100px; /* Más espacio para mejor lectura */
+  }
+  
+  th, td {
+    padding: 8px;
+    font-size: 0.95rem;
+  }
+  
+  /* Mejor visualización en desktop */
+  .score-top, .score-bottom {
+    font-size: 1rem;
+    height: 28px;
+  }
+  
+  .score-cell {
+    height: 56px;
+  }
+}
+
+/* Para monitores muy grandes */
+@media (min-width: 1600px) {
+  body {
+    max-width: 1600px;
+    padding: 15px;
+  }
+  
+  .card {
+    padding: 20px;
+  }
 }
