@@ -498,3 +498,49 @@ tbody tr:last-child {
     padding: 20px;
   }
 }
+/* ===============================
+   AJUSTES PARA MÓVIL (Saldo estimado)
+=============================== */
+@media (max-width: 768px) {
+  /* Mover el saldo al contenedor principal del juego */
+  #gameMeta {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  
+  #gameMeta > div:first-child {
+    order: 2; /* El título del juego va después */
+  }
+  
+  #miSaldo {
+    order: 1; /* El saldo va primero */
+    width: 100% !important;
+    margin: 0 auto 15px auto !important;
+    text-align: center;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+  }
+  
+  /* Contenedor principal para separar saldo de título */
+  .game-header-container {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+  }
+  
+  /* Asegurar que la tabla de juego tenga su propio espacio */
+  .table-container {
+    overflow-x: auto;
+    margin-top: 10px;
+  }
+  
+  /* Ajustar tamaño de fuente para móvil */
+  #miSaldo div {
+    font-size: 0.95rem;
+  }
+  
+  #miSaldo div:last-child {
+    font-size: 0.85rem;
+  }
+}
