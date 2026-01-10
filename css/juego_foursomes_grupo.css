@@ -122,10 +122,44 @@ button.updating {
 /* Mejoras para la visualización de dinero */
 .money-display {
     background: linear-gradient(90deg, #f8f9fa, #e9ecef);
-    padding: 10px;
+    padding: 12px;
     border-radius: 8px;
     margin: 8px 0;
     border-left: 4px solid var(--green-1);
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+}
+
+/* ========== NUEVO: Estilos específicos para el saldo ========== */
+#miSaldo {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    transition: all 0.3s ease;
+}
+
+/* Para pantallas pequeñas (ya existe pero mejorarlo) */
+@media (max-width: 767px) {
+    .game-card {
+        display: flex;
+        flex-direction: column;
+    }
+
+    #miSaldo {
+        order: -1;
+        width: 100%;
+        box-sizing: border-box;
+        margin-bottom: 12px;
+        padding: 12px;
+        border-radius: 10px;
+    }
+
+    #gameMeta {
+        order: 0;
+        width: 100%;
+        padding: 10px;
+        border-radius: 8px;
+        font-size: 0.85rem;
+    }
 }
 
 .money-segment {
@@ -408,54 +442,24 @@ tbody tr:last-child {
         align-items: flex-start;
         gap: 4px;
     }
-   /* ==================== REUBICAR SALDO EN MÓVIL ==================== */
-  /* Contenedor padre del juego */
-  #gameArea {
+    /* ==================== FIX SALDO EN MÓVIL ==================== */
+  .game-card {
     display: flex;
     flex-direction: column;
-    gap: 12px;
   }
 
-  /* Saldo - moverlo al inicio del contenedor del juego */
+  /* Saldo arriba */
   #miSaldo {
-    order: -1; /* Lo pone primero */
+    order: -1;
     width: 100%;
     box-sizing: border-box;
-    margin: 0 0 12px 0 !important; /* Margen inferior solo */
-    padding: 12px !important;
-    border-radius: 10px;
-    font-size: 1rem;
-    text-align: center;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    margin-bottom: 10px;
   }
 
-  /* Metadatos del juego */
+  /* Meta del juego debajo del saldo */
   #gameMeta {
     order: 0;
-    font-size: 0.9rem;
-    padding: 8px;
-    background: #f9f9f9;
-    border-radius: 8px;
-    margin-bottom: 8px;
   }
-
-  /* Asegurar que las tablas se muestren bien */
-  .tables-wrap {
-    order: 1;
-  }
-
-  /* Ajustar contenedores de tarjetas */
-  .card.game-card {
-    width: 100%;
-    margin: 0;
-  }
-
-  /* Asegurar que los matchups tengan buen espaciado */
-  #matchupsContainer > .card {
-    margin-top: 8px;
-  }
-
-
 
 
 
@@ -470,6 +474,65 @@ tbody tr:last-child {
     /* Agregar esto para escritorio grande */
     .price-grid {
         grid-template-columns: repeat(3, 1fr);
+    }
+    
+    /* ========== NUEVO: FIX PARA ORDEN EN ESCRITORIO ========== */
+    .game-card {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+    }
+
+    /* Saldo arriba en escritorio también */
+    #miSaldo {
+        order: -1;
+        width: 100%;
+        box-sizing: border-box;
+        margin-bottom: 0;
+        padding: 15px;
+        border-radius: 10px;
+        background: #f8f9fa;
+        border: 2px solid #e9ecef;
+    }
+
+    /* Meta del juego debajo del saldo en escritorio */
+    #gameMeta {
+        order: 0;
+        width: 100%;
+        padding: 12px;
+        background: #fff;
+        border-radius: 8px;
+        border: 1px solid #dee2e6;
+        font-size: 0.95rem;
+    }
+}
+@media (min-width: 768px) and (max-width: 999px) {
+    .price-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+    
+    /* ========== FIX PARA TABLET TAMBIÉN ========== */
+    .game-card {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+    }
+
+    #miSaldo {
+        order: -1;
+        width: 100%;
+        box-sizing: border-box;
+        margin-bottom: 8px;
+        padding: 12px;
+        border-radius: 8px;
+    }
+
+    #gameMeta {
+        order: 0;
+        width: 100%;
+        padding: 10px;
+        border-radius: 8px;
+        font-size: 0.9rem;
     }
 }
 
