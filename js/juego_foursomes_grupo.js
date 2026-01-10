@@ -785,9 +785,10 @@ matchups.forEach(r=>{
     // 🔥 NUEVA FILA DE MARCADOR DIVIDIDA
     const scoreRow = document.createElement('tr');
     const labelTd = document.createElement('td');
-    labelTd.className = 'nameCol';
-    labelTd.style.fontWeight = 'bold';
+    labelTd.className = 'nameCol player-name-gradient';
+    labelTd.style.fontWeight = '900';
     labelTd.textContent = 'Marcador';
+
     scoreRow.appendChild(labelTd);
 
     for(let h=0; h<18; h++){
