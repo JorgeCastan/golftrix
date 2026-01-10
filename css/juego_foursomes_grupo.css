@@ -408,6 +408,27 @@ tbody tr:last-child {
         align-items: flex-start;
         gap: 4px;
     }
+    /* ==================== FIX SALDO EN MÓVIL ==================== */
+  .game-card {
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* Saldo arriba */
+  #miSaldo {
+    order: -1;
+    width: 100%;
+    box-sizing: border-box;
+    margin-bottom: 10px;
+  }
+
+  /* Meta del juego debajo del saldo */
+  #gameMeta {
+    order: 0;
+  }
+
+
+
 }
  @media (min-width: 1000px) { 
     .tables-grid{ 
