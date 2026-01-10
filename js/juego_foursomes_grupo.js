@@ -830,18 +830,59 @@ matchups.forEach(r=>{
   }
 
   const signoDinero = totalSaldoUserDinero >= 0 ? '+' : '';
-  const signoPuntos = totalSaldoUserPuntos >= 0 ? '+' : '';
+const signoPuntos = totalSaldoUserPuntos >= 0 ? '+' : '';
 
-  miSaldoEl.innerHTML = `
-    <div><strong>Saldo estimado por jugador:</strong> ${signoDinero}$${totalSaldoUserDinero.toFixed(2)} MXN</div>
-    <div style="font-size:0.9em; margin-top:3px;">
-      Puntos netos: ${signoPuntos}${totalSaldoUserPuntos} | 
-      Máximo posible: $${((prices.front9 + prices.back9 + prices.general) / 2).toFixed(2)}
+// Limpiar cualquier saldo existente
+const existingSaldoContainer = document.querySelector('.saldo-container-mobile');
+if (existingSaldoContainer) {
+    existingSaldoContainer.remove();
+}
+
+// Crear nuevo contenedor para el saldo
+const saldoContainer = document.createElement('div');
+saldoContainer.className = 'saldo-container-mobile';
+saldoContainer.id = 'miSaldoContainer';
+saldoContainer.style.width = '100%';
+saldoContainer.style.maxWidth = '600px';
+saldoContainer.style.margin = '0 auto 20px auto';
+
+// Crear contenido del saldo
+const saldoContent = document.createElement('div');
+saldoContent.id = 'miSaldo';
+saldoContent.innerHTML = `
+    <div style="padding: 12px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">
+        <div style="font-weight: 700; font-size: 1.1rem; margin-bottom: 5px;">
+            <strong>Saldo estimado por jugador:</strong> 
+            <span style="font-weight: 800; ${totalSaldoUserDinero>=0?'color:#059669':'color:#dc2626'}">
+                ${signoDinero}$${Math.abs(totalSaldoUserDinero).toFixed(2)} MXN
+            </span>
+        </div>
+        <div style="font-size: 0.9rem; color: #4b5563;">
+            Puntos netos: ${signoPuntos}${Math.abs(totalSaldoUserPuntos)} | 
+            Máximo posible: $${((prices.front9 + prices.back9 + prices.general) / 2).toFixed(2)}
+        </div>
     </div>
-  `;
-  miSaldoEl.style.background = totalSaldoUserDinero>=0?'linear-gradient(90deg,#e6ffe6,#ddffdd)':'linear-gradient(90deg,#ffe6e6,#ffdede)';
-  miSaldoEl.style.color = totalSaldoUserDinero>=0?'green':'red';
-  miSaldoEl.style.padding='10px';
+`;
+
+// Aplicar gradiente de fondo según positivo/negativo
+saldoContent.firstElementChild.style.background = totalSaldoUserDinero >= 0 
+    ? 'linear-gradient(135deg, #d1fae5 0%, #ecfdf5 100%)' 
+    : 'linear-gradient(135deg, #fee2e2 0%, #fef2f2 100%)';
+saldoContent.firstElementChild.style.borderLeft = totalSaldoUserDinero >= 0 
+    ? '4px solid #10b981' 
+    : '4px solid #ef4444';
+
+saldoContainer.appendChild(saldoContent);
+
+// Mover el saldo a la posición correcta
+// Si estamos en móvil, ponerlo antes del área de juego
+if (window.innerWidth <= 768) {
+    // Insertar antes del matchupsContainer
+    matchupsContainer.parentNode.insertBefore(saldoContainer, matchupsContainer);
+} else {
+    // En desktop, mantener en gameMeta (opcional)
+    gameMeta.appendChild(saldoContainer);
+}
 }
 
 
