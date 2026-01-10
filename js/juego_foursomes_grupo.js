@@ -264,9 +264,17 @@ const vantF =
   }
 
   function getUserName(uid){
-   const u = allUsers.find(x=>x.id===uid);
-    return u ? u.nombre : uid;
+    const u = allUsers.find(x=>x.id===uid);
+    if(!u || !u.nombre) return uid;
+
+    // Separar nombre completo
+    const parts = u.nombre.trim().split(/\s+/);
+    const name = parts[0];
+    const lastInitial = parts.length > 1 ? parts[1][0].toUpperCase() : '';
+
+    return lastInitial ? `${name} ${lastInitial}.` : name;
   }
+
 
   function getMyPair() {
     if (!currentUser || !pairs || pairs.length === 0) return null;
@@ -711,10 +719,17 @@ matchups.forEach(r=>{
       const playerInfo = r.holes[0].players[pi];
       const nameTd = document.createElement('td');
       nameTd.className='nameCol';
-      nameTd.innerHTML = `<div style="display:flex;align-items:center;gap:8px;">
-        <div class="badge" style="background:${playerInfo.teamColor};border-color:transparent;color:#fff;">${playerInfo.initials}</div>
-        <div style="font-weight:800">${playerInfo.name}</div>
-      </div>`;
+      nameTd.innerHTML = `
+        <div style="display:flex;flex-direction:column;align-items:center;gap:4px;">
+          <div class="badge" style="background:${playerInfo.teamColor};border-color:transparent;color:#fff;">
+            ${playerInfo.initials}
+          </div>
+          <div class="player-name-gradient">
+            ${getUserName(playerInfo.uid)}
+          </div>
+        </div>
+      `;
+
       tr.appendChild(nameTd);
 
       let pairPoints = 0;
