@@ -30,9 +30,33 @@
   .pairs-list{ display:flex; gap:8px; flex-wrap:wrap; margin-top:8px; }
   .pair-pill{ padding:8px 10px; border-radius:10px; display:flex; gap:8px; align-items:center; color:#fff; font-weight:800; }
   .badge { width:36px; height:36px; border-radius:50%; display:inline-flex; align-items:center; justify-content:center; background:#000; color:#fff; font-weight:800; border:3px solid transparent; }
+  .nameCol .player-name-gradient {
+    max-width: 72px;
+  }
+
   table { width:100%; border-collapse:collapse; margin-top:8px; }
-  th,td { padding:6px; border:1px solid #eee; text-align:center; font-size:0.9rem; }
-  th.nameCol, td.nameCol { text-align:left; padding-left:10px; }
+  th, td { 
+    padding:6px; 
+    border:1px solid #cfe8cf;
+    text-align:center; 
+    font-size:0.9rem; 
+  }
+
+  th {
+    font-weight:900;
+    background: linear-gradient(90deg, var(--green-1), var(--green-2));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  th.nameCol,
+  td.nameCol {
+    text-align: center;
+    padding: 4px 6px;
+    white-space: nowrap;
+    width: 1%;
+  }
   .hole-empty { background:#fafafa; color:#999; }
   .score-less { color:green; font-weight:800; }
   .score-more { color:red; font-weight:800; }
@@ -227,6 +251,19 @@ td.player-cell-loser {
   -webkit-text-fill-color: transparent;
   background-clip: text;
 }
+
+table {
+  border: 2px solid var(--green-1);
+}
+
+thead tr {
+  border-bottom: 2px solid var(--green-1);
+}
+
+tbody tr:last-child {
+  border-top: 2px solid var(--green-1);
+}
+
 
 
 /* Ajustes responsivos */
