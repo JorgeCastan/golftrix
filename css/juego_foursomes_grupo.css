@@ -408,24 +408,54 @@ tbody tr:last-child {
         align-items: flex-start;
         gap: 4px;
     }
-    /* ==================== FIX SALDO EN MÓVIL ==================== */
-  .game-card {
+   /* ==================== REUBICAR SALDO EN MÓVIL ==================== */
+  /* Contenedor padre del juego */
+  #gameArea {
     display: flex;
     flex-direction: column;
+    gap: 12px;
   }
 
-  /* Saldo arriba */
+  /* Saldo - moverlo al inicio del contenedor del juego */
   #miSaldo {
-    order: -1;
+    order: -1; /* Lo pone primero */
     width: 100%;
     box-sizing: border-box;
-    margin-bottom: 10px;
+    margin: 0 0 12px 0 !important; /* Margen inferior solo */
+    padding: 12px !important;
+    border-radius: 10px;
+    font-size: 1rem;
+    text-align: center;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
   }
 
-  /* Meta del juego debajo del saldo */
+  /* Metadatos del juego */
   #gameMeta {
     order: 0;
+    font-size: 0.9rem;
+    padding: 8px;
+    background: #f9f9f9;
+    border-radius: 8px;
+    margin-bottom: 8px;
   }
+
+  /* Asegurar que las tablas se muestren bien */
+  .tables-wrap {
+    order: 1;
+  }
+
+  /* Ajustar contenedores de tarjetas */
+  .card.game-card {
+    width: 100%;
+    margin: 0;
+  }
+
+  /* Asegurar que los matchups tengan buen espaciado */
+  #matchupsContainer > .card {
+    margin-top: 8px;
+  }
+
+
 
 
 
