@@ -351,9 +351,23 @@ startGameBtn.addEventListener("click", async () => {
     
     // Actualizar metadatos
     gameMeta.innerHTML = `
-      <div>Juego ${juegoId}</div>
-      <div>Precios: Front9: $${prices.front9} | Back9: $${prices.back9} | General: $${prices.general}</div>
-      <div>Parejas: ${pairs.length}</div>
+      <div style="font-weight: 700; color: var(--green-1); margin-bottom: 8px; font-size: 1.1rem;">
+        Juego ID: ${juegoId}
+      </div>
+      <div style="display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 8px;">
+        <span style="background: #e3f2fd; padding: 4px 10px; border-radius: 6px; font-size: 0.9rem;">
+          Parejas: <strong>${pairs.length}</strong>
+        </span>
+        <span style="background: #e8f5e8; padding: 4px 10px; border-radius: 6px; font-size: 0.9rem;">
+          Front9: $${prices.front9}
+        </span>
+        <span style="background: #f3e5f5; padding: 4px 10px; border-radius: 6px; font-size: 0.9rem;">
+          Back9: $${prices.back9}
+        </span>
+        <span style="background: #fff3e0; padding: 4px 10px; border-radius: 6px; font-size: 0.9rem;">
+          General: $${prices.general}
+        </span>
+      </div>
     `;
 
     await computeAndRenderAllMatchups(prices, myPair);
@@ -509,69 +523,116 @@ async function computeMatchup(pairA, pairB, prices) {
   let back9A = 0, back9B = 0;
 
   for (let h = 0; h < 18; h++) {
-  const scoresA = [a1Arr[h], a2Arr[h]].filter(x=>typeof x==='number');
-  const scoresB = [b1Arr[h], b2Arr[h]].filter(x=>typeof x==='number');
+    // DECLARACIÓN ÚNICA de scoresA y scoresB
+    const scoresA = [a1Arr[h], a2Arr[h]].filter(x=>typeof x==='number');
+    const scoresB = [b1Arr[h], b2Arr[h]].filter(x=>typeof x==='number');
 
-  let ptsA=0, ptsB=0;
-  
-  // NUEVO: Variables para determinar ganadores
-  let lowWinner = null; // 'A', 'B', o 'tie'
-  let highWinner = null; // 'A', 'B', o 'tie'
+    // Calcular low y high ANTES de usarlos en múltiples lugares
+    const lowA = scoresA.length ? Math.min(...scoresA) : null;
+    const highA = scoresA.length ? Math.max(...scoresA) : null;
+    const lowB = scoresB.length ? Math.min(...scoresB) : null;
+    const highB = scoresB.length ? Math.max(...scoresB) : null;
 
-  if (scoresA.length && scoresB.length) {
-    const lowA = Math.min(...scoresA);
-    const highA = Math.max(...scoresA);
-    const lowB = Math.min(...scoresB);
-    const highB = Math.max(...scoresB);
+    let ptsA=0, ptsB=0;
+    let lowWinner = null;
+    let highWinner = null;
 
-    // LÓGICA CORREGIDA: 1 punto al ganador, -1 al perdedor
-    // MEJOR vs MEJOR (low scores)
-    if (lowA < lowB) {
-      ptsA += 1;
-      ptsB -= 1;
-      lowWinner = 'A';
-    } else if (lowB < lowA) {
-      ptsB += 1;
-      ptsA -= 1;
-      lowWinner = 'B';
-    } else {
-      lowWinner = 'tie';
+    if (scoresA.length && scoresB.length && lowA !== null && highA !== null && lowB !== null && highB !== null) {
+      // LÓGICA CORREGIDA: 1 punto al ganador, -1 al perdedor
+      // MEJOR vs MEJOR (low scores)
+      if (lowA < lowB) {
+        ptsA += 1;
+        ptsB -= 1;
+        lowWinner = 'A';
+      } else if (lowB < lowA) {
+        ptsB += 1;
+        ptsA -= 1;
+        lowWinner = 'B';
+      } else {
+        lowWinner = 'tie';
+      }
+
+      // PEOR vs PEOR (high scores)
+      if (highA < highB) {
+        ptsA += 1;
+        ptsB -= 1;
+        highWinner = 'A';
+      } else if (highB < highA) {
+        ptsB += 1;
+        ptsA -= 1;
+        highWinner = 'B';
+      } else {
+        highWinner = 'tie';
+      }
     }
 
-    // PEOR vs PEOR (high scores)
-    if (highA < highB) {
-      ptsA += 1;
-      ptsB -= 1;
-      highWinner = 'A';
-    } else if (highB < highA) {
-      ptsB += 1;
-      ptsA -= 1;
-      highWinner = 'B';
-    } else {
-      highWinner = 'tie';
-    }
-  }
-
-  totalA += ptsA;
-  totalB += ptsB;
+    totalA += ptsA;
+    totalB += ptsB;
+    
     // Separar por segmentos
-    if (h < 9) { // Primeros 9 hoyos (0-8)
+    if (h < 9) {
       front9A += ptsA;
       front9B += ptsB;
-    } else { // Segundos 9 hoyos (9-17)
+    } else {
       back9A += ptsA;
       back9B += ptsB;
+    }
+    
+    let lowAIndex = -1, highAIndex = -1, lowBIndex = -1, highBIndex = -1;
+    
+    if (scoresA.length && lowA !== null && highA !== null) {
+      lowAIndex = a1Arr[h] === lowA ? 0 : 1;
+      highAIndex = a1Arr[h] === highA ? 0 : 1;
+    }
+    
+    if (scoresB.length && lowB !== null && highB !== null) {
+      lowBIndex = b1Arr[h] === lowB ? 2 : 3;
+      highBIndex = b1Arr[h] === highB ? 2 : 3;
     }
 
     holes.push({
       players:[
-        { uid: pairA.p1Uid, name:getUserName(pairA.p1Uid), initials:getUserObj(pairA.p1Uid).initials, adj: a1Arr[h], teamColor: pairA.color },
-        { uid: pairA.p2Uid, name:getUserName(pairA.p2Uid), initials:getUserObj(pairA.p2Uid).initials, adj: a2Arr[h], teamColor: pairA.color },
-        { uid: pairB.p1Uid, name:getUserName(pairB.p1Uid), initials:getUserObj(pairB.p1Uid).initials, adj: b1Arr[h], teamColor: pairB.color },
-        { uid: pairB.p2Uid, name:getUserName(pairB.p2Uid), initials:getUserObj(pairB.p2Uid).initials, adj: b2Arr[h], teamColor: pairB.color },
+        { 
+          uid: pairA.p1Uid, 
+          name:getUserName(pairA.p1Uid), 
+          initials:getUserObj(pairA.p1Uid).initials, 
+          adj: a1Arr[h], 
+          teamColor: pairA.color,
+          isLowA: 0 === lowAIndex,
+          isHighA: 0 === highAIndex
+        },
+        { 
+          uid: pairA.p2Uid, 
+          name:getUserName(pairA.p2Uid), 
+          initials:getUserObj(pairA.p2Uid).initials, 
+          adj: a2Arr[h], 
+          teamColor: pairA.color,
+          isLowA: 1 === lowAIndex,
+          isHighA: 1 === highAIndex
+        },
+        { 
+          uid: pairB.p1Uid, 
+          name:getUserName(pairB.p1Uid), 
+          initials:getUserObj(pairB.p1Uid).initials, 
+          adj: b1Arr[h], 
+          teamColor: pairB.color,
+          isLowB: 2 === lowBIndex,
+          isHighB: 2 === highBIndex
+        },
+        { 
+          uid: pairB.p2Uid, 
+          name:getUserName(pairB.p2Uid), 
+          initials:getUserObj(pairB.p2Uid).initials, 
+          adj: b2Arr[h], 
+          teamColor: pairB.color,
+          isLowB: 3 === lowBIndex,
+          isHighB: 3 === highBIndex
+        },
       ],
       pointsA: ptsA,
-      pointsB: ptsB
+      pointsB: ptsB,
+      lowWinner: lowWinner,
+      highWinner: highWinner
     });
   }
 
@@ -679,23 +740,30 @@ matchups.forEach(r=>{
     <div style="width:18px;height:18px;border-radius:50%;background:${r.pairA.color};"></div>
     <strong>Equipo A:</strong> ${getUserName(r.pairA.p1Uid)} & ${getUserName(r.pairA.p2Uid)}
     <div style="margin-left:10px; font-size:0.9em;">
-      Pts: ${r.totalPointsA} | Front9: ${r.front9A} | Back9: ${r.back9A}
+      Pts: <span style="color:${r.totalPointsA > r.totalPointsB ? 'green' : (r.totalPointsA < r.totalPointsB ? 'red' : 'black')}; font-weight:900">${r.totalPointsA}</span> | 
+      Front9: <span style="color:${r.front9A > r.front9B ? 'green' : (r.front9A < r.front9B ? 'red' : 'black')}; font-weight:900">${r.front9A}</span> | 
+      Back9: <span style="color:${r.back9A > r.back9B ? 'green' : (r.back9A < r.back9B ? 'red' : 'black')}; font-weight:900">${r.back9A}</span>
     </div>
   </div>
   <div style="display:flex;align-items:center;gap:8px; flex-wrap:wrap; margin-top:5px;">
     <div style="width:18px;height:18px;border-radius:50%;background:${r.pairB.color};"></div>
     <strong>Equipo B:</strong> ${getUserName(r.pairB.p1Uid)} & ${getUserName(r.pairB.p2Uid)}
     <div style="margin-left:10px; font-size:0.9em;">
-      Pts: ${r.totalPointsB} | Front9: ${r.front9B} | Back9: ${r.back9B}
+      Pts: <span style="color:${r.totalPointsB > r.totalPointsA ? 'green' : (r.totalPointsB < r.totalPointsA ? 'red' : 'black')}; font-weight:900">${r.totalPointsB}</span> | 
+      Front9: <span style="color:${r.front9B > r.front9A ? 'green' : (r.front9B < r.front9A ? 'red' : 'black')}; font-weight:900">${r.front9B}</span> | 
+      Back9: <span style="color:${r.back9B > r.back9A ? 'green' : (r.back9B < r.back9A ? 'red' : 'black')}; font-weight:900">${r.back9B}</span>
     </div>
   </div>
-  <div style="margin-top:5px; padding:5px; background:#f0f0f0; border-radius:5px;">
-    <strong>Dinero por segmento (precio completo):</strong><br>
-    Front9: $${r.dineroFront9 >= 0 ? '+' : ''}${r.dineroFront9} | 
-    Back9: $${r.dineroBack9 >= 0 ? '+' : ''}${r.dineroBack9} | 
-    General: $${r.dineroGeneral >= 0 ? '+' : ''}${r.dineroGeneral}<br>
-    <strong>Total Pareja: $${r.dineroTotalPareja >= 0 ? '+' : ''}${r.dineroTotalPareja}</strong> 
-    ($${r.dineroPorJugador >= 0 ? '+' : ''}${r.dineroPorJugador} por jugador)
+  <div style="margin-top:8px; padding:8px; background:#f8f9fa; border-radius:6px; border:1px solid #dee2e6;">
+    <strong style="display:block; margin-bottom:5px;">Dinero por segmento (precio completo):</strong>
+    <div style="display:flex; flex-wrap:wrap; gap:10px; font-size:0.9em;">
+      <span>Front9: <span style="color:${r.dineroFront9 > 0 ? 'green' : (r.dineroFront9 < 0 ? 'red' : 'black')}; font-weight:900">$${r.dineroFront9 >= 0 ? '+' : ''}${r.dineroFront9}</span></span>
+      <span>Back9: <span style="color:${r.dineroBack9 > 0 ? 'green' : (r.dineroBack9 < 0 ? 'red' : 'black')}; font-weight:900">$${r.dineroBack9 >= 0 ? '+' : ''}${r.dineroBack9}</span></span>
+      <span>General: <span style="color:${r.dineroGeneral > 0 ? 'green' : (r.dineroGeneral < 0 ? 'red' : 'black')}; font-weight:900">$${r.dineroGeneral >= 0 ? '+' : ''}${r.dineroGeneral}</span></span>
+    </div>
+    <div style="margin-top:6px; padding-top:6px; border-top:1px solid #dee2e6;">
+      <strong>Total Pareja: <span style="color:${r.dineroTotalPareja > 0 ? 'green' : (r.dineroTotalPareja < 0 ? 'red' : 'black')}">$${r.dineroTotalPareja >= 0 ? '+' : ''}${r.dineroTotalPareja}</span></strong>
+    </div>
   </div>
 `;
     tableBlock.appendChild(header);
@@ -738,37 +806,48 @@ matchups.forEach(r=>{
         const hole = r.holes[h];
         const p = hole.players[pi];
         
-        // Determinar si este jugador ganó o perdió en este hoyo
-        let cellClass = '';
+        // Determinar color según resultado del duelo
+        let color = 'black'; // Por defecto (empate o sin datos)
+        
         if (typeof p.adj === 'number') {
           if (pi < 2) { // Jugadores del equipo A
-            // Verificar si es el lowA (mejor) o highA (peor)
-            if (p.isLowA && hole.lowWinner === 'A') {
-              cellClass = 'player-cell-winner';
-            } else if (p.isLowA && hole.lowWinner === 'B') {
-              cellClass = 'player-cell-loser';
-            } else if (p.isHighA && hole.highWinner === 'A') {
-              cellClass = 'player-cell-winner';
-            } else if (p.isHighA && hole.highWinner === 'B') {
-              cellClass = 'player-cell-loser';
+            if (p.isLowA) {
+              // Es el low (mejor) del equipo A
+              if (hole.lowWinner === 'A') {
+                color = 'green'; // Ganó el duelo low
+              } else if (hole.lowWinner === 'B') {
+                color = 'red'; // Perdió el duelo low
+              }
+            } else if (p.isHighA) {
+              // Es el high (peor) del equipo A
+              if (hole.highWinner === 'A') {
+                color = 'green'; // Ganó el duelo high
+              } else if (hole.highWinner === 'B') {
+                color = 'red'; // Perdió el duelo high
+              }
             }
-          } else { // Jugadores del equipo B
-            if (p.isLowB && hole.lowWinner === 'B') {
-              cellClass = 'player-cell-winner';
-            } else if (p.isLowB && hole.lowWinner === 'A') {
-              cellClass = 'player-cell-loser';
-            } else if (p.isHighB && hole.highWinner === 'B') {
-              cellClass = 'player-cell-winner';
-            } else if (p.isHighB && hole.highWinner === 'A') {
-              cellClass = 'player-cell-loser';
+          } else { // Jugadores del equipo B (pi = 2 o 3)
+            if (p.isLowB) {
+              // Es el low (mejor) del equipo B
+              if (hole.lowWinner === 'B') {
+                color = 'green'; // Ganó el duelo low
+              } else if (hole.lowWinner === 'A') {
+                color = 'red'; // Perdió el duelo low
+              }
+            } else if (p.isHighB) {
+              // Es el high (peor) del equipo B
+              if (hole.highWinner === 'B') {
+                color = 'green'; // Ganó el duelo high
+              } else if (hole.highWinner === 'A') {
+                color = 'red'; // Perdió el duelo high
+              }
             }
           }
         }
         
         td.textContent = (typeof p.adj==='number') ? p.adj : '-';
-        if (cellClass) {
-          td.className = cellClass;
-        }
+        td.style.color = color;
+        td.style.fontWeight = '900';
         tr.appendChild(td);
         if(pi<2) pairPoints += hole.pointsA;
         else pairPoints += hole.pointsB;
@@ -832,13 +911,22 @@ matchups.forEach(r=>{
   const signoDinero = totalSaldoUserDinero >= 0 ? '+' : '';
   const signoPuntos = totalSaldoUserPuntos >= 0 ? '+' : '';
 
+  const textoSaldo = totalSaldoUserDinero >= 0 ? 'Tiene a favor' : 'Debe';
+  const signo = totalSaldoUserDinero >= 0 ? '+' : '';
+  const valorAbsoluto = Math.abs(totalSaldoUserDinero).toFixed(2);
+  
   miSaldoEl.innerHTML = `
-    <div><strong>Saldo estimado por jugador:</strong> ${signoDinero}$${totalSaldoUserDinero.toFixed(2)} MXN</div>
-    <div style="font-size:0.9em; margin-top:3px;">
-      Puntos netos: ${signoPuntos}${totalSaldoUserPuntos} | 
-      Máximo posible: $${((prices.front9 + prices.back9 + prices.general) / 2).toFixed(2)}
+    <div style="font-size: 1.4rem; font-weight: 900; margin-bottom: 5px;">
+      ${signo}$${valorAbsoluto} MXN
+    </div>
+    <div style="font-size: 0.9rem; opacity: 0.8;">
+      ${textoSaldo}
     </div>
   `;
+  miSaldoEl.style.background = totalSaldoUserDinero>=0?'linear-gradient(90deg,#e6ffe6,#b3ffb3)':'linear-gradient(90deg,#ffe6e6,#ffb3b3)';
+  miSaldoEl.style.color = totalSaldoUserDinero>=0?'#007f00':'#cc0000';
+  miSaldoEl.style.padding='15px';
+  miSaldoEl.style.border = totalSaldoUserDinero>=0?'2px solid #007f00':'2px solid #cc0000';
   miSaldoEl.style.background = totalSaldoUserDinero>=0?'linear-gradient(90deg,#e6ffe6,#ddffdd)':'linear-gradient(90deg,#ffe6e6,#ffdede)';
   miSaldoEl.style.color = totalSaldoUserDinero>=0?'green':'red';
   miSaldoEl.style.padding='10px';
@@ -879,11 +967,25 @@ matchups.forEach(r=>{
           startGameBtn.textContent = 'Actualizar Juego';
           
           // Actualizar metadatos
-          gameMeta.innerHTML = `
-            <div>Juego ${juegoId}</div>
-            <div>Precios: Front9: $${prices.front9} | Back9: $${prices.back9} | General: $${prices.general}</div>
-            <div>Parejas: ${pairs.length}</div>
-          `;
+    gameMeta.innerHTML = `
+      <div style="font-weight: 700; color: var(--green-1); margin-bottom: 8px; font-size: 1.1rem;">
+        Juego ID: ${juegoId}
+      </div>
+      <div style="display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 8px;">
+        <span style="background: #e3f2fd; padding: 4px 10px; border-radius: 6px; font-size: 0.9rem;">
+          Parejas: <strong>${pairs.length}</strong>
+        </span>
+        <span style="background: #e8f5e8; padding: 4px 10px; border-radius: 6px; font-size: 0.9rem;">
+          Front9: $${prices.front9}
+        </span>
+        <span style="background: #f3e5f5; padding: 4px 10px; border-radius: 6px; font-size: 0.9rem;">
+          Back9: $${prices.back9}
+        </span>
+        <span style="background: #fff3e0; padding: 4px 10px; border-radius: 6px; font-size: 0.9rem;">
+          General: $${prices.general}
+        </span>
+      </div>
+    `;
           
           if (myPair) {
             await computeAndRenderAllMatchups(prices, myPair);
