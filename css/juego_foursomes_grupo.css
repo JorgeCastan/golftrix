@@ -114,6 +114,46 @@
     background: #fff;
 }
 
+/* ==================== LAYOUT VERTICAL FIJO ==================== */
+.game-card {
+    border: 2px solid #007f00;
+    margin-top: 20px;
+    background: #fff;
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+}
+
+/* Saldo arriba - ocupa toda la fila */
+#miSaldo {
+    order: -1;
+    width: 100%;
+    box-sizing: border-box;
+    margin-bottom: 12px;
+    padding: 15px;
+    border-radius: 10px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    font-size: 1.2rem;
+    font-weight: 900;
+    min-height: 70px;
+}
+
+/* Meta del juego debajo - ocupa toda la fila */
+#gameMeta {
+    order: 0;
+    width: 100%;
+    padding: 12px;
+    background: #fff;
+    border-radius: 8px;
+    border: 1px solid #dee2e6;
+    font-size: 0.95rem;
+    margin-bottom: 15px;
+}
+
 /* Estilo para el botón cuando es "Actualizar" */
 button.updating {
     background: linear-gradient(90deg, #f97316, #f59e0b);
@@ -250,6 +290,24 @@ button.updating {
 .player-cell-winner {
   color: #00cc44 !important;
   font-weight: 900 !important;
+}
+
+/* ========== NUEVOS ESTILOS PARA COLORES DE GOLPES ========== */
+.golpe-verde {
+  color: #007f00 !important;
+  font-weight: 900 !important;
+  background-color: rgba(0, 128, 0, 0.1) !important;
+}
+
+.golpe-rojo {
+  color: #cc0000 !important;
+  font-weight: 900 !important;
+  background-color: rgba(204, 0, 0, 0.1) !important;
+}
+
+.golpe-negro {
+  color: #000000 !important;
+  font-weight: 700 !important;
 }
 
 .player-cell-loser {
@@ -463,77 +521,6 @@ tbody tr:last-child {
 
 
 
-}
- @media (min-width: 1000px) { 
-    .tables-grid{ 
-        display:grid; 
-        grid-template-columns:1fr 1fr; 
-        gap:12px; 
-    }
-    
-    /* Agregar esto para escritorio grande */
-    .price-grid {
-        grid-template-columns: repeat(3, 1fr);
-    }
-    
-    /* ========== NUEVO: FIX PARA ORDEN EN ESCRITORIO ========== */
-    .game-card {
-        display: flex;
-        flex-direction: column;
-        gap: 12px;
-    }
-
-    /* Saldo arriba en escritorio también */
-    #miSaldo {
-        order: -1;
-        width: 100%;
-        box-sizing: border-box;
-        margin-bottom: 0;
-        padding: 15px;
-        border-radius: 10px;
-        background: #f8f9fa;
-        border: 2px solid #e9ecef;
-    }
-
-    /* Meta del juego debajo del saldo en escritorio */
-    #gameMeta {
-        order: 0;
-        width: 100%;
-        padding: 12px;
-        background: #fff;
-        border-radius: 8px;
-        border: 1px solid #dee2e6;
-        font-size: 0.95rem;
-    }
-}
-@media (min-width: 768px) and (max-width: 999px) {
-    .price-grid {
-        grid-template-columns: repeat(2, 1fr);
-    }
-    
-    /* ========== FIX PARA TABLET TAMBIÉN ========== */
-    .game-card {
-        display: flex;
-        flex-direction: column;
-        gap: 10px;
-    }
-
-    #miSaldo {
-        order: -1;
-        width: 100%;
-        box-sizing: border-box;
-        margin-bottom: 8px;
-        padding: 12px;
-        border-radius: 8px;
-    }
-
-    #gameMeta {
-        order: 0;
-        width: 100%;
-        padding: 10px;
-        border-radius: 8px;
-        font-size: 0.9rem;
-    }
 }
 
 @media (min-width: 768px) and (max-width: 999px) {
