@@ -350,13 +350,23 @@ startGameBtn.addEventListener("click", async () => {
     startGameBtn.textContent = 'Actualizar Juego';
     
     // Actualizar metadatos
-        gameMeta.innerHTML = `
-      <div class="game-meta-title">Juego ID: ${juegoId}</div>
-      <div class="game-meta-chips">
-        <span class="game-meta-chip chip-parejas">Parejas: <strong>${pairs.length}</strong></span>
-        <span class="game-meta-chip chip-front9">Front9: $${prices.front9}</span>
-        <span class="game-meta-chip chip-back9">Back9: $${prices.back9}</span>
-        <span class="game-meta-chip chip-general">General: $${prices.general}</span>
+    gameMeta.innerHTML = `
+      <div style="font-weight: 700; color: var(--green-1); margin-bottom: 8px; font-size: 1.1rem;">
+        Juego ID: ${juegoId}
+      </div>
+      <div style="display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 8px;">
+        <span style="background: #e3f2fd; padding: 4px 10px; border-radius: 6px; font-size: 0.9rem;">
+          Parejas: <strong>${pairs.length}</strong>
+        </span>
+        <span style="background: #e8f5e8; padding: 4px 10px; border-radius: 6px; font-size: 0.9rem;">
+          Front9: $${prices.front9}
+        </span>
+        <span style="background: #f3e5f5; padding: 4px 10px; border-radius: 6px; font-size: 0.9rem;">
+          Back9: $${prices.back9}
+        </span>
+        <span style="background: #fff3e0; padding: 4px 10px; border-radius: 6px; font-size: 0.9rem;">
+          General: $${prices.general}
+        </span>
       </div>
     `;
 
@@ -725,62 +735,34 @@ matchups.forEach(r=>{
 
     const header = document.createElement('div');
     header.className='team-header';
-    // Determinar clases CSS para colores
-    const ptsAColor = r.totalPointsA > r.totalPointsB ? 'stat-positivo' : 
-                     r.totalPointsA < r.totalPointsB ? 'stat-negativo' : 'stat-neutro';
-    const ptsBColor = r.totalPointsB > r.totalPointsA ? 'stat-positivo' : 
-                     r.totalPointsB < r.totalPointsA ? 'stat-negativo' : 'stat-neutro';
-    
-    const front9AColor = r.front9A > r.front9B ? 'stat-positivo' : 
-                        r.front9A < r.front9B ? 'stat-negativo' : 'stat-neutro';
-    const front9BColor = r.front9B > r.front9A ? 'stat-positivo' : 
-                        r.front9B < r.front9A ? 'stat-negativo' : 'stat-neutro';
-    
-    const back9AColor = r.back9A > r.back9B ? 'stat-positivo' : 
-                       r.back9A < r.back9B ? 'stat-negativo' : 'stat-neutro';
-    const back9BColor = r.back9B > r.back9A ? 'stat-positivo' : 
-                       r.back9B < r.back9A ? 'stat-negativo' : 'stat-neutro';
-    
-    // Dinero - clases para colores
-    const dineroFront9Color = r.dineroFront9 > 0 ? 'money-positivo' : 
-                             r.dineroFront9 < 0 ? 'money-negativo' : 'money-neutro';
-    const dineroBack9Color = r.dineroBack9 > 0 ? 'money-positivo' : 
-                            r.dineroBack9 < 0 ? 'money-negativo' : 'money-neutro';
-    const dineroGeneralColor = r.dineroGeneral > 0 ? 'money-positivo' : 
-                              r.dineroGeneral < 0 ? 'money-negativo' : 'money-neutro';
-    const dineroTotalColor = r.dineroTotalPareja > 0 ? 'money-positivo' : 
-                            r.dineroTotalPareja < 0 ? 'money-negativo' : 'money-neutro';
-    
     header.innerHTML = `
-  <div class="matchup-header">
-    <div class="team-line">
-      <div class="team-color-dot" style="background:${r.pairA.color};"></div>
-      <span class="team-name">Equipo A:</span> ${getUserName(r.pairA.p1Uid)} & ${getUserName(r.pairA.p2Uid)}
-      <div class="team-stats">
-        Pts: <span class="stat-number ${ptsAColor}">${r.totalPointsA}</span> | 
-        Front9: <span class="stat-number ${front9AColor}">${r.front9A}</span> | 
-        Back9: <span class="stat-number ${back9AColor}">${r.back9A}</span>
-      </div>
+  <div style="display:flex;align-items:center;gap:8px; flex-wrap:wrap;">
+    <div style="width:18px;height:18px;border-radius:50%;background:${r.pairA.color};"></div>
+    <strong>Equipo A:</strong> ${getUserName(r.pairA.p1Uid)} & ${getUserName(r.pairA.p2Uid)}
+    <div style="margin-left:10px; font-size:0.9em;">
+      Pts: <span style="color:${r.totalPointsA > r.totalPointsB ? 'green' : (r.totalPointsA < r.totalPointsB ? 'red' : 'black')}; font-weight:900">${r.totalPointsA}</span> | 
+      Front9: <span style="color:${r.front9A > r.front9B ? 'green' : (r.front9A < r.front9B ? 'red' : 'black')}; font-weight:900">${r.front9A}</span> | 
+      Back9: <span style="color:${r.back9A > r.back9B ? 'green' : (r.back9A < r.back9B ? 'red' : 'black')}; font-weight:900">${r.back9A}</span>
     </div>
-    <div class="team-line">
-      <div class="team-color-dot" style="background:${r.pairB.color};"></div>
-      <span class="team-name">Equipo B:</span> ${getUserName(r.pairB.p1Uid)} & ${getUserName(r.pairB.p2Uid)}
-      <div class="team-stats">
-        Pts: <span class="stat-number ${ptsBColor}">${r.totalPointsB}</span> | 
-        Front9: <span class="stat-number ${front9BColor}">${r.front9B}</span> | 
-        Back9: <span class="stat-number ${back9BColor}">${r.back9B}</span>
-      </div>
+  </div>
+  <div style="display:flex;align-items:center;gap:8px; flex-wrap:wrap; margin-top:5px;">
+    <div style="width:18px;height:18px;border-radius:50%;background:${r.pairB.color};"></div>
+    <strong>Equipo B:</strong> ${getUserName(r.pairB.p1Uid)} & ${getUserName(r.pairB.p2Uid)}
+    <div style="margin-left:10px; font-size:0.9em;">
+      Pts: <span style="color:${r.totalPointsB > r.totalPointsA ? 'green' : (r.totalPointsB < r.totalPointsA ? 'red' : 'black')}; font-weight:900">${r.totalPointsB}</span> | 
+      Front9: <span style="color:${r.front9B > r.front9A ? 'green' : (r.front9B < r.front9A ? 'red' : 'black')}; font-weight:900">${r.front9B}</span> | 
+      Back9: <span style="color:${r.back9B > r.back9A ? 'green' : (r.back9B < r.back9A ? 'red' : 'black')}; font-weight:900">${r.back9B}</span>
     </div>
-    <div class="money-section">
-      <span class="money-title">Dinero por segmento (precio completo):</span>
-      <div class="money-items">
-        <span class="money-item">Front9: <span class="${dineroFront9Color}">$${r.dineroFront9 >= 0 ? '+' : ''}${r.dineroFront9}</span></span>
-        <span class="money-item">Back9: <span class="${dineroBack9Color}">$${r.dineroBack9 >= 0 ? '+' : ''}${r.dineroBack9}</span></span>
-        <span class="money-item">General: <span class="${dineroGeneralColor}">$${r.dineroGeneral >= 0 ? '+' : ''}${r.dineroGeneral}</span></span>
-      </div>
-      <div class="money-total">
-        Total Pareja: <span class="${dineroTotalColor}">$${r.dineroTotalPareja >= 0 ? '+' : ''}${r.dineroTotalPareja}</span>
-      </div>
+  </div>
+  <div style="margin-top:8px; padding:8px; background:#f8f9fa; border-radius:6px; border:1px solid #dee2e6;">
+    <strong style="display:block; margin-bottom:5px;">Dinero por segmento (precio completo):</strong>
+    <div style="display:flex; flex-wrap:wrap; gap:10px; font-size:0.9em;">
+      <span>Front9: <span style="color:${r.dineroFront9 > 0 ? 'green' : (r.dineroFront9 < 0 ? 'red' : 'black')}; font-weight:900">$${r.dineroFront9 >= 0 ? '+' : ''}${r.dineroFront9}</span></span>
+      <span>Back9: <span style="color:${r.dineroBack9 > 0 ? 'green' : (r.dineroBack9 < 0 ? 'red' : 'black')}; font-weight:900">$${r.dineroBack9 >= 0 ? '+' : ''}${r.dineroBack9}</span></span>
+      <span>General: <span style="color:${r.dineroGeneral > 0 ? 'green' : (r.dineroGeneral < 0 ? 'red' : 'black')}; font-weight:900">$${r.dineroGeneral >= 0 ? '+' : ''}${r.dineroGeneral}</span></span>
+    </div>
+    <div style="margin-top:6px; padding-top:6px; border-top:1px solid #dee2e6;">
+      <strong>Total Pareja: <span style="color:${r.dineroTotalPareja > 0 ? 'green' : (r.dineroTotalPareja < 0 ? 'red' : 'black')}">$${r.dineroTotalPareja >= 0 ? '+' : ''}${r.dineroTotalPareja}</span></strong>
     </div>
   </div>
 `;
@@ -864,16 +846,8 @@ matchups.forEach(r=>{
         }
         
         td.textContent = (typeof p.adj==='number') ? p.adj : '-';
-        
-        // Usar clases CSS en vez de estilos inline
-        if (color === 'green') {
-          td.classList.add('golpe-verde');
-        } else if (color === 'red') {
-          td.classList.add('golpe-rojo');
-        } else {
-          td.classList.add('golpe-negro');
-        }
-        
+        td.style.color = color;
+        td.style.fontWeight = '900';
         tr.appendChild(td);
         if(pi<2) pairPoints += hole.pointsA;
         else pairPoints += hole.pointsB;
@@ -941,20 +915,21 @@ matchups.forEach(r=>{
   const signo = totalSaldoUserDinero >= 0 ? '+' : '';
   const valorAbsoluto = Math.abs(totalSaldoUserDinero).toFixed(2);
   
-  // Limpiar clases anteriores
-  miSaldoEl.className = 'saldo-container';
-  
-  // Agregar clase según sea positivo o negativo
-  if (totalSaldoUserDinero >= 0) {
-    miSaldoEl.classList.add('saldo-positivo');
-  } else {
-    miSaldoEl.classList.add('saldo-negativo');
-  }
-  
   miSaldoEl.innerHTML = `
-    <div class="saldo-monto">${signo}$${valorAbsoluto} MXN</div>
-    <div class="saldo-texto">${textoSaldo}</div>
+    <div style="font-size: 1.4rem; font-weight: 900; margin-bottom: 5px;">
+      ${signo}$${valorAbsoluto} MXN
+    </div>
+    <div style="font-size: 0.9rem; opacity: 0.8;">
+      ${textoSaldo}
+    </div>
   `;
+  miSaldoEl.style.background = totalSaldoUserDinero>=0?'linear-gradient(90deg,#e6ffe6,#b3ffb3)':'linear-gradient(90deg,#ffe6e6,#ffb3b3)';
+  miSaldoEl.style.color = totalSaldoUserDinero>=0?'#007f00':'#cc0000';
+  miSaldoEl.style.padding='15px';
+  miSaldoEl.style.border = totalSaldoUserDinero>=0?'2px solid #007f00':'2px solid #cc0000';
+  miSaldoEl.style.background = totalSaldoUserDinero>=0?'linear-gradient(90deg,#e6ffe6,#ddffdd)':'linear-gradient(90deg,#ffe6e6,#ffdede)';
+  miSaldoEl.style.color = totalSaldoUserDinero>=0?'green':'red';
+  miSaldoEl.style.padding='10px';
 }
 
 
@@ -992,13 +967,23 @@ matchups.forEach(r=>{
           startGameBtn.textContent = 'Actualizar Juego';
           
           // Actualizar metadatos
-        gameMeta.innerHTML = `
-      <div class="game-meta-title">Juego ID: ${juegoId}</div>
-      <div class="game-meta-chips">
-        <span class="game-meta-chip chip-parejas">Parejas: <strong>${pairs.length}</strong></span>
-        <span class="game-meta-chip chip-front9">Front9: $${prices.front9}</span>
-        <span class="game-meta-chip chip-back9">Back9: $${prices.back9}</span>
-        <span class="game-meta-chip chip-general">General: $${prices.general}</span>
+    gameMeta.innerHTML = `
+      <div style="font-weight: 700; color: var(--green-1); margin-bottom: 8px; font-size: 1.1rem;">
+        Juego ID: ${juegoId}
+      </div>
+      <div style="display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 8px;">
+        <span style="background: #e3f2fd; padding: 4px 10px; border-radius: 6px; font-size: 0.9rem;">
+          Parejas: <strong>${pairs.length}</strong>
+        </span>
+        <span style="background: #e8f5e8; padding: 4px 10px; border-radius: 6px; font-size: 0.9rem;">
+          Front9: $${prices.front9}
+        </span>
+        <span style="background: #f3e5f5; padding: 4px 10px; border-radius: 6px; font-size: 0.9rem;">
+          Back9: $${prices.back9}
+        </span>
+        <span style="background: #fff3e0; padding: 4px 10px; border-radius: 6px; font-size: 0.9rem;">
+          General: $${prices.general}
+        </span>
       </div>
     `;
           
