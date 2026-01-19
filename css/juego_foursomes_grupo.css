@@ -124,160 +124,6 @@
     width: 100%;
 }
 
-/* ==================== ESTILOS PARA EL SALDO ==================== */
-.saldo-container {
-    width: 100%;
-    box-sizing: border-box;
-    margin-bottom: 12px;
-    padding: 15px;
-    border-radius: 10px;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    text-align: center;
-    font-family: 'Orbitron', sans-serif;
-    min-height: 70px;
-    order: -1;
-}
-
-.saldo-positivo {
-    background: linear-gradient(90deg, #e6ffe6, #b3ffb3);
-    color: #007f00;
-    border: 2px solid #007f00;
-}
-
-.saldo-negativo {
-    background: linear-gradient(90deg, #ffe6e6, #ffb3b3);
-    color: #cc0000;
-    border: 2px solid #cc0000;
-}
-
-.saldo-monto {
-    font-size: 1.4rem;
-    font-weight: 900;
-    margin-bottom: 5px;
-}
-
-.saldo-texto {
-    font-size: 0.9rem;
-    opacity: 0.8;
-    font-weight: 700;
-}
-
-/* ==================== ESTILOS PARA GAME META ==================== */
-.game-meta-container {
-    width: 100%;
-    padding: 12px;
-    background: #fff;
-    border-radius: 8px;
-    border: 1px solid #dee2e6;
-    font-size: 0.95rem;
-    margin-bottom: 15px;
-    order: 0;
-}
-
-.game-meta-title {
-    font-weight: 700;
-    color: var(--green-1);
-    margin-bottom: 8px;
-    font-size: 1.1rem;
-}
-
-.game-meta-chips {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 8px;
-    margin-bottom: 8px;
-}
-
-.game-meta-chip {
-    padding: 4px 10px;
-    border-radius: 6px;
-    font-size: 0.9rem;
-    font-weight: 600;
-}
-
-.chip-parejas { background: #e3f2fd; color: #1565c0; }
-.chip-front9 { background: #e8f5e8; color: #2e7d32; }
-.chip-back9 { background: #f3e5f5; color: #7b1fa2; }
-.chip-general { background: #fff3e0; color: #ef6c00; }
-
-/* ==================== ESTILOS PARA LOS HEADERS DE MATCHUP ==================== */
-.matchup-header {
-    width: 100%;
-    margin-bottom: 12px;
-}
-
-.team-line {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    flex-wrap: wrap;
-    margin-bottom: 5px;
-}
-
-.team-color-dot {
-    width: 18px;
-    height: 18px;
-    border-radius: 50%;
-}
-
-.team-name {
-    font-weight: 700;
-    color: #333;
-}
-
-.team-stats {
-    margin-left: 10px;
-    font-size: 0.9em;
-}
-
-.stat-number {
-    font-weight: 900;
-}
-
-.stat-positivo { color: #007f00; }
-.stat-negativo { color: #cc0000; }
-.stat-neutro { color: #000000; }
-
-.money-section {
-    margin-top: 8px;
-    padding: 8px;
-    background: #f8f9fa;
-    border-radius: 6px;
-    border: 1px solid #dee2e6;
-}
-
-.money-title {
-    display: block;
-    margin-bottom: 5px;
-    font-weight: 700;
-    color: #333;
-}
-
-.money-items {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 10px;
-    font-size: 0.9em;
-}
-
-.money-item {
-    font-weight: 600;
-}
-
-.money-positivo { color: #007f00; font-weight: 900; }
-.money-negativo { color: #cc0000; font-weight: 900; }
-.money-neutro { color: #000000; font-weight: 700; }
-
-.money-total {
-    margin-top: 6px;
-    padding-top: 6px;
-    border-top: 1px solid #dee2e6;
-    font-weight: 700;
-}
-
 /* Saldo arriba - ocupa toda la fila */
 #miSaldo {
     order: -1;
@@ -462,24 +308,6 @@ button.updating {
 .golpe-negro {
   color: #000000 !important;
   font-weight: 700 !important;
-}
-
-/* ========== ESTILOS PARA CELDAS DE GOLPES EN TABLA ========== */
-td.golpe-verde {
-    color: #007f00 !important;
-    font-weight: 900 !important;
-    background-color: rgba(0, 128, 0, 0.1) !important;
-}
-
-td.golpe-rojo {
-    color: #cc0000 !important;
-    font-weight: 900 !important;
-    background-color: rgba(204, 0, 0, 0.1) !important;
-}
-
-td.golpe-negro {
-    color: #000000 !important;
-    font-weight: 700 !important;
 }
 
 .player-cell-loser {
@@ -672,43 +500,27 @@ tbody tr:last-child {
         align-items: flex-start;
         gap: 4px;
     }
-    
-    /* ==================== AJUSTES PARA EL CONTENEDOR DEL JUEGO ==================== */
-    .game-card {
-        display: flex;
-        flex-direction: column;
-        padding: 8px;
-    }
-    
-    .game-meta-container {
-        padding: 10px;
-        font-size: 0.85rem;
-    }
-    
-    .game-meta-chips {
-        gap: 6px;
-    }
-    
-    .game-meta-chip {
-        padding: 3px 8px;
-        font-size: 0.8rem;
-    }
-    
-    .team-line {
-        flex-direction: column;
-        align-items: flex-start;
-        gap: 4px;
-    }
-    
-    .team-stats {
-        margin-left: 0;
-        font-size: 0.85rem;
-    }
-    
-    .money-items {
-        flex-direction: column;
-        gap: 5px;
-    }
+    /* ==================== FIX SALDO EN MÓVIL ==================== */
+  .game-card {
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* Saldo arriba */
+  #miSaldo {
+    order: -1;
+    width: 100%;
+    box-sizing: border-box;
+    margin-bottom: 10px;
+  }
+
+  /* Meta del juego debajo del saldo */
+  #gameMeta {
+    order: 0;
+  }
+
+
+
 }
 
 @media (min-width: 768px) and (max-width: 999px) {
@@ -766,3 +578,4 @@ tbody tr:last-child {
     padding: 20px;
   }
 }
+
