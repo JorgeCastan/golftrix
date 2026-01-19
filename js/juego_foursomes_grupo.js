@@ -283,6 +283,21 @@ const vantF =
     ) || null;
   }
 
+  function renderMiSaldo(monto) {
+  miSaldoEl.classList.remove('saldo-positivo', 'saldo-negativo');
+
+  const esPositivo = monto >= 0;
+  miSaldoEl.classList.add(esPositivo ? 'saldo-positivo' : 'saldo-negativo');
+
+  miSaldoEl.innerHTML = `
+    <div class="saldo-label">Saldo</div>
+    <div class="saldo-cantidad">
+      $${monto}
+    </div>
+  `;
+}
+
+
 
 
   addPairBtn.addEventListener('click', ()=>{
@@ -351,24 +366,24 @@ startGameBtn.addEventListener("click", async () => {
     
     // Actualizar metadatos
     gameMeta.innerHTML = `
-      <div style="font-weight: 700; color: var(--green-1); margin-bottom: 8px; font-size: 1.1rem;">
-        Juego ID: ${juegoId}
-      </div>
-      <div style="display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 8px;">
-        <span style="background: #e3f2fd; padding: 4px 10px; border-radius: 6px; font-size: 0.9rem;">
+      <div class="game-id">Juego ID: ${juegoId}</div>
+
+      <div class="game-meta-grid">
+        <span class="meta-pill meta-pairs">
           Parejas: <strong>${pairs.length}</strong>
         </span>
-        <span style="background: #e8f5e8; padding: 4px 10px; border-radius: 6px; font-size: 0.9rem;">
+        <span class="meta-pill meta-front">
           Front9: $${prices.front9}
         </span>
-        <span style="background: #f3e5f5; padding: 4px 10px; border-radius: 6px; font-size: 0.9rem;">
+        <span class="meta-pill meta-back">
           Back9: $${prices.back9}
         </span>
-        <span style="background: #fff3e0; padding: 4px 10px; border-radius: 6px; font-size: 0.9rem;">
+        <span class="meta-pill meta-general">
           General: $${prices.general}
         </span>
       </div>
     `;
+
 
     await computeAndRenderAllMatchups(prices, myPair);
 
@@ -968,24 +983,24 @@ matchups.forEach(r=>{
           
           // Actualizar metadatos
     gameMeta.innerHTML = `
-      <div style="font-weight: 700; color: var(--green-1); margin-bottom: 8px; font-size: 1.1rem;">
-        Juego ID: ${juegoId}
-      </div>
-      <div style="display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 8px;">
-        <span style="background: #e3f2fd; padding: 4px 10px; border-radius: 6px; font-size: 0.9rem;">
+      <div class="game-id">Juego ID: ${juegoId}</div>
+
+      <div class="game-meta-grid">
+        <span class="meta-pill meta-pairs">
           Parejas: <strong>${pairs.length}</strong>
         </span>
-        <span style="background: #e8f5e8; padding: 4px 10px; border-radius: 6px; font-size: 0.9rem;">
+        <span class="meta-pill meta-front">
           Front9: $${prices.front9}
         </span>
-        <span style="background: #f3e5f5; padding: 4px 10px; border-radius: 6px; font-size: 0.9rem;">
+        <span class="meta-pill meta-back">
           Back9: $${prices.back9}
         </span>
-        <span style="background: #fff3e0; padding: 4px 10px; border-radius: 6px; font-size: 0.9rem;">
+        <span class="meta-pill meta-general">
           General: $${prices.general}
         </span>
       </div>
     `;
+
           
           if (myPair) {
             await computeAndRenderAllMatchups(prices, myPair);
