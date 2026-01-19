@@ -126,9 +126,7 @@
 
 /* Saldo arriba - ocupa toda la fila */
 #miSaldo {
-    order: -1;
     width: 100%;
-    box-sizing: border-box;
     margin-bottom: 12px;
     padding: 15px;
     border-radius: 10px;
@@ -137,14 +135,10 @@
     align-items: center;
     justify-content: center;
     text-align: center;
-    font-size: 1.2rem;
     font-weight: 900;
-    min-height: 70px;
 }
 
-/* Meta del juego debajo - ocupa toda la fila */
 #gameMeta {
-    order: 0;
     width: 100%;
     padding: 12px;
     background: #fff;
@@ -153,6 +147,7 @@
     font-size: 0.95rem;
     margin-bottom: 15px;
 }
+
 
 /* Estilo para el botón cuando es "Actualizar" */
 button.updating {
@@ -176,6 +171,59 @@ button.updating {
     width: 100%;
     transition: all 0.3s ease;
 }
+
+/* ===== SALDO POSITIVO / NEGATIVO ===== */
+.saldo-positivo {
+    color: #007f00;
+    background: rgba(0, 127, 0, 0.08);
+    border: 2px solid #007f00;
+}
+
+.saldo-negativo {
+    color: #cc0000;
+    background: rgba(204, 0, 0, 0.08);
+    border: 2px solid #cc0000;
+}
+
+.saldo-cantidad {
+    font-size: 1.4rem;
+    font-weight: 900;
+}
+
+.saldo-label {
+    font-size: 0.9rem;
+    opacity: 0.85;
+}
+
+/* ===== GAME META ===== */
+.game-id {
+    font-weight: 900;
+    color: var(--green-1);
+    margin-bottom: 8px;
+    font-size: 1.1rem;
+    text-align: center;
+}
+
+.game-meta-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    justify-content: center;
+}
+
+.meta-pill {
+    padding: 4px 10px;
+    border-radius: 6px;
+    font-size: 0.9rem;
+    font-weight: 700;
+}
+
+.meta-pairs { background: #e3f2fd; }
+.meta-front { background: #e8f5e8; }
+.meta-back { background: #f3e5f5; }
+.meta-general { background: #fff3e0; }
+
+
 
 /* Para pantallas pequeñas (ya existe pero mejorarlo) */
 @media (max-width: 767px) {
