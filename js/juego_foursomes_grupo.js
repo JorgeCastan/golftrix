@@ -284,18 +284,25 @@ const vantF =
   }
 
   function renderMiSaldo(monto) {
-  miSaldoEl.classList.remove('saldo-positivo', 'saldo-negativo');
-
-  const esPositivo = monto >= 0;
-  miSaldoEl.classList.add(esPositivo ? 'saldo-positivo' : 'saldo-negativo');
-
-  miSaldoEl.innerHTML = `
-    <div class="saldo-label">Saldo</div>
-    <div class="saldo-cantidad">
-      $${monto}
-    </div>
-  `;
-}
+    miSaldoEl.classList.remove('saldo-positivo', 'saldo-negativo');
+    
+    const esPositivo = monto >= 0;
+    miSaldoEl.classList.add(esPositivo ? 'saldo-positivo' : 'saldo-negativo');
+    
+    // Limpiar estilos inline que causan problemas
+    miSaldoEl.removeAttribute('style');
+    
+    // Formatear para mostrar con signo y 2 decimales
+    const signo = esPositivo ? '+' : '';
+    const valorAbsoluto = Math.abs(monto).toFixed(2);
+    
+    miSaldoEl.innerHTML = `
+      <div class="saldo-label">Saldo</div>
+      <div class="saldo-cantidad">
+        ${signo}$${valorAbsoluto} MXN
+      </div>
+    `;
+  }
 
 
 
@@ -386,6 +393,11 @@ startGameBtn.addEventListener("click", async () => {
 
 
     await computeAndRenderAllMatchups(prices, myPair);
+    // Asegurar que el saldo se renderice correctamente
+if (currentUser) {
+  const totalSaldoUserDinero = 0; // Inicializar en 0 al comenzar
+  renderMiSaldo(totalSaldoUserDinero);
+}
 
   } catch (err) {
     console.error("Error al iniciar/actualizar juego:", err);
@@ -410,6 +422,12 @@ async function updatePrices() {
     // Recalcular y renderizar
     if (pairs.length > 0) {
       await computeAndRenderAllMatchups(prices, myPair);
+      // Asegurar que el saldo se renderice al cargar
+if (currentUser) {
+  // Calcular saldo inicial si es necesario
+  const totalSaldoUserDinero = 0;
+  renderMiSaldo(totalSaldoUserDinero);
+}
     }
 
     console.log("Precios actualizados en tiempo real");
@@ -923,28 +941,9 @@ matchups.forEach(r=>{
     matchupsContainer.appendChild(tableBlock);
   }
 
-  const signoDinero = totalSaldoUserDinero >= 0 ? '+' : '';
-  const signoPuntos = totalSaldoUserPuntos >= 0 ? '+' : '';
+  // Usar la función renderMiSaldo en lugar de manipular directamente el innerHTML
+  renderMiSaldo(totalSaldoUserDinero);
 
-  const textoSaldo = totalSaldoUserDinero >= 0 ? 'Tiene a favor' : 'Debe';
-  const signo = totalSaldoUserDinero >= 0 ? '+' : '';
-  const valorAbsoluto = Math.abs(totalSaldoUserDinero).toFixed(2);
-  
-  miSaldoEl.innerHTML = `
-    <div style="font-size: 1.4rem; font-weight: 900; margin-bottom: 5px;">
-      ${signo}$${valorAbsoluto} MXN
-    </div>
-    <div style="font-size: 0.9rem; opacity: 0.8;">
-      ${textoSaldo}
-    </div>
-  `;
-  miSaldoEl.style.background = totalSaldoUserDinero>=0?'linear-gradient(90deg,#e6ffe6,#b3ffb3)':'linear-gradient(90deg,#ffe6e6,#ffb3b3)';
-  miSaldoEl.style.color = totalSaldoUserDinero>=0?'#007f00':'#cc0000';
-  miSaldoEl.style.padding='15px';
-  miSaldoEl.style.border = totalSaldoUserDinero>=0?'2px solid #007f00':'2px solid #cc0000';
-  miSaldoEl.style.background = totalSaldoUserDinero>=0?'linear-gradient(90deg,#e6ffe6,#ddffdd)':'linear-gradient(90deg,#ffe6e6,#ffdede)';
-  miSaldoEl.style.color = totalSaldoUserDinero>=0?'green':'red';
-  miSaldoEl.style.padding='10px';
 }
 
 
