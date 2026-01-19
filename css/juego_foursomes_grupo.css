@@ -627,3 +627,57 @@ tbody tr:last-child {
   }
 }
 
+/* ==================== LAYOUT CORREGIDO PARA GAME AREA ==================== */
+#gameArea.card {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+#gameMeta {
+  order: 1;
+  width: 100%;
+  padding: 12px;
+  background: #fff;
+  border-radius: 8px;
+  border: 1px solid #dee2e6;
+  font-size: 0.95rem;
+  margin-bottom: 0;
+}
+
+#miSaldo {
+  order: 2;
+  width: 100%;
+  padding: 15px;
+  border-radius: 10px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  font-weight: 900;
+  margin: 0;
+}
+
+/* Eliminar reglas conflictivas para #miSaldo y #gameMeta */
+#gameMeta, #miSaldo {
+  flex: 0 0 auto;
+  display: block;
+}
+
+/* Asegurar que en móvil también se vean en columnas */
+@media (max-width: 768px) {
+  #gameArea.card {
+    gap: 10px;
+  }
+  
+  #gameMeta {
+    padding: 10px;
+    font-size: 0.85rem;
+  }
+  
+  #miSaldo {
+    padding: 12px;
+  }
+}
+
