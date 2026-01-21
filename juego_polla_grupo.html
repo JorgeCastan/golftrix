@@ -233,7 +233,7 @@
   import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
   import {
       doc, getDoc, setDoc, updateDoc, serverTimestamp,
-      collection, query, where, getDocs
+      collection, query, where, getDocs, arrayUnion
   } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
 
@@ -586,6 +586,124 @@ try {
     - Saldo final: ${saldo}`);
 }
 
+async function guardarSaldosEnColeccion(juegoId, standings, pricePerPlayer, modo = 'polla') {
+  if (!currentUser) {
+    console.log('No hay usuario autenticado, no se guardan saldos');
+    return;
+  }
+
+  const n = standings.length;
+  if (n === 0 || !pricePerPlayer) {
+    console.log('No hay standings o precio, no se guardan saldos');
+    return;
+  }
+
+  try {
+    // 1. Calcular ganadores y premios
+    const bestAdjusted = standings[0].adjusted;
+    const winners = standings.filter(s => s.adjusted === bestAdjusted);
+    const numWinners = winners.length;
+    const totalPot = pricePerPlayer * n;
+    const prizePerWinner = totalPot / numWinners;
+
+    // 2. Referencia al documento de saldos para este juego
+    const saldoRef = doc(db, 'saldos', juegoId);
+
+    // 3. Crear objeto con saldos de todos los jugadores
+    const saldosPorJugador = {};
+    const fechaActualizacion = serverTimestamp();
+
+    standings.forEach(s => {
+      const isWinner = winners.some(w => w.userUid === s.userUid);
+      const saldo = isWinner ? (prizePerWinner - pricePerPlayer) : -pricePerPlayer;
+
+      saldosPorJugador[s.userUid] = {
+        [`modosJuego.${modo}.saldo`]: saldo,
+        [`modosJuego.${modo}.fechaActualizacion`]: fechaActualizacion,
+        [`modosJuego.${modo}.precioParticipacion`]: pricePerPlayer,
+        [`modosJuego.${modo}.posicion`]: s.pos,
+        [`modosJuego.${modo}.totalJugadores`]: n,
+        [`modosJuego.${modo}.esGanador`]: isWinner
+      };
+    });
+
+    // 4. Preparar datos para guardar
+    const saldoData = {
+      juegoId: juegoId,
+      modoJuego: modo,
+      fechaActualizacion: fechaActualizacion,
+      precioPorJugador: pricePerPlayer,
+      totalJugadores: n,
+      totalRecaudado: totalPot
+    };
+
+    // 5. Guardar usando setDoc con merge: true para crear o actualizar
+    await setDoc(saldoRef, saldoData, { merge: true });
+
+    // 6. Para cada jugador, actualizar su información en el mismo documento
+    // Usamos updateDoc con campos dinámicos
+    const updatePromises = Object.entries(saldosPorJugador).map(([userId, userData]) => {
+      return updateDoc(saldoRef, userData);
+    });
+
+    await Promise.all(updatePromises);
+    console.log('Saldos guardados exitosamente en colección saldos');
+
+  } catch (error) {
+    console.error('Error guardando saldos:', error);
+    // Fallback: intentar método alternativo si el primero falla
+    try {
+      await guardarSaldosAlternativo(juegoId, standings, pricePerPlayer, modo);
+    } catch (fallbackError) {
+      console.error('Fallback también falló:', fallbackError);
+    }
+  }
+}
+
+// Método alternativo si el principal falla
+async function guardarSaldosAlternativo(juegoId, standings, pricePerPlayer, modo = 'polla') {
+  try {
+    const saldoRef = doc(db, 'saldos', juegoId);
+    const bestAdjusted = standings[0].adjusted;
+    const winners = standings.filter(s => s.adjusted === bestAdjusted);
+    const numWinners = winners.length;
+    const totalPot = pricePerPlayer * n;
+    const prizePerWinner = totalPot / numWinners;
+
+    // Crear estructura completa desde cero
+    const saldoData = {
+      juegoId: juegoId,
+      modoJuego: modo,
+      fechaActualizacion: serverTimestamp(),
+      precioPorJugador: pricePerPlayer,
+      totalJugadores: standings.length,
+      totalRecaudado: totalPot,
+      jugadores: {}
+    };
+
+    standings.forEach(s => {
+      const isWinner = winners.some(w => w.userUid === s.userUid);
+      const saldo = isWinner ? (prizePerWinner - pricePerPlayer) : -pricePerPlayer;
+
+      saldoData.jugadores[s.userUid] = {
+        saldo: saldo,
+        fechaActualizacion: new Date().toISOString(),
+        precioParticipacion: pricePerPlayer,
+        posicion: s.pos,
+        nombre: s.nombre,
+        total: s.total,
+        adjusted: s.adjusted,
+        esGanador: isWinner
+      };
+    });
+
+    await setDoc(saldoRef, saldoData);
+    console.log('Saldos guardados con método alternativo');
+  } catch (error) {
+    console.error('Error en método alternativo:', error);
+  }
+}
+
 
   async function guardarPollaState(pricePerPlayer, standingsSummary) {
     try {
@@ -627,6 +745,9 @@ try {
 
       renderTable(standings);
       calcularYMostrarSaldo(standings, price);
+
+      // Guardar en la colección de saldos
+      await guardarSaldosEnColeccion(juegoId, standings, price, 'polla');
 
       await guardarPollaState(price, summaryForSave);
 
