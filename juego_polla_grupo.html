@@ -606,57 +606,81 @@ async function guardarSaldosEnColeccion(juegoId, standings, pricePerPlayer, modo
     const totalPot = pricePerPlayer * n;
     const prizePerWinner = totalPot / numWinners;
 
-    // 2. Referencia al documento de saldos para este juego
-    const saldoRef = doc(db, 'saldos', juegoId);
-
-    // 3. Crear objeto con saldos de todos los jugadores
-    const saldosPorJugador = {};
-    const fechaActualizacion = serverTimestamp();
-
-    standings.forEach(s => {
+    // 2. Para cada jugador, guardar su saldo individualmente
+    const promises = standings.map(async (s) => {
       const isWinner = winners.some(w => w.userUid === s.userUid);
       const saldo = isWinner ? (prizePerWinner - pricePerPlayer) : -pricePerPlayer;
-
-      saldosPorJugador[s.userUid] = {
-        [`modosJuego.${modo}.saldo`]: saldo,
-        [`modosJuego.${modo}.fechaActualizacion`]: fechaActualizacion,
-        [`modosJuego.${modo}.precioParticipacion`]: pricePerPlayer,
-        [`modosJuego.${modo}.posicion`]: s.pos,
-        [`modosJuego.${modo}.totalJugadores`]: n,
-        [`modosJuego.${modo}.esGanador`]: isWinner
+      
+      // Crear referencia al documento de saldo específico
+      // Documento ID = juegoId + "_" + userUid para tener un documento por jugador por juego
+      const saldoDocId = `${juegoId}_${s.userUid}`;
+      const saldoRef = doc(db, 'saldos', saldoDocId);
+      
+      const saldoData = {
+        juego_id: juegoId,
+        usuario_id: s.userUid,
+        tipo_juego: modo,
+        saldo: saldo,
+        fecha_actualizacion: serverTimestamp(),
+        nombre_jugador: s.nombre || '',
+        posicion: s.pos,
+        es_ganador: isWinner,
+        precio_participacion: pricePerPlayer,
+        total_jugadores: n
       };
+      
+      // Guardar o actualizar el documento
+      await setDoc(saldoRef, saldoData, { merge: true });
+      console.log(`Saldo guardado para usuario ${s.userUid} en juego ${juegoId}: ${saldo}`);
     });
 
-    // 4. Preparar datos para guardar
-    const saldoData = {
-      juegoId: juegoId,
-      modoJuego: modo,
-      fechaActualizacion: fechaActualizacion,
-      precioPorJugador: pricePerPlayer,
-      totalJugadores: n,
-      totalRecaudado: totalPot
-    };
-
-    // 5. Guardar usando setDoc con merge: true para crear o actualizar
-    await setDoc(saldoRef, saldoData, { merge: true });
-
-    // 6. Para cada jugador, actualizar su información en el mismo documento
-    // Usamos updateDoc con campos dinámicos
-    const updatePromises = Object.entries(saldosPorJugador).map(([userId, userData]) => {
-      return updateDoc(saldoRef, userData);
-    });
-
-    await Promise.all(updatePromises);
-    console.log('Saldos guardados exitosamente en colección saldos');
+    // Ejecutar todas las promesas en paralelo
+    await Promise.all(promises);
+    console.log('Todos los saldos guardados exitosamente');
 
   } catch (error) {
     console.error('Error guardando saldos:', error);
-    // Fallback: intentar método alternativo si el primero falla
+    // Intentar método más simple como fallback
     try {
-      await guardarSaldosAlternativo(juegoId, standings, pricePerPlayer, modo);
+      await guardarSaldosSimple(juegoId, standings, pricePerPlayer, modo);
     } catch (fallbackError) {
       console.error('Fallback también falló:', fallbackError);
     }
+  }
+}
+
+// Método alternativo más simple
+async function guardarSaldosSimple(juegoId, standings, pricePerPlayer, modo = 'polla') {
+  try {
+    const bestAdjusted = standings[0].adjusted;
+    const winners = standings.filter(s => s.adjusted === bestAdjusted);
+    const numWinners = winners.length;
+    const totalPot = pricePerPlayer * standings.length;
+    const prizePerWinner = totalPot / numWinners;
+
+    // Para cada jugador, crear documento individual
+    for (const s of standings) {
+      const isWinner = winners.some(w => w.userUid === s.userUid);
+      const saldo = isWinner ? (prizePerWinner - pricePerPlayer) : -pricePerPlayer;
+      
+      // Crear un documento por cada jugador
+      const saldoDocId = `${juegoId}_${s.userUid}`;
+      const saldoRef = doc(db, 'saldos', saldoDocId);
+      
+      const saldoData = {
+        juego_id: juegoId,
+        usuario_id: s.userUid, // Aquí guardamos el ID del documento de usuario
+        tipo_juego: modo,
+        saldo: saldo,
+        fecha_actualizacion: serverTimestamp()
+      };
+      
+      // Solo guardamos los campos esenciales
+      await setDoc(saldoRef, saldoData, { merge: true });
+    }
+    console.log('Saldos guardados con método simple');
+  } catch (error) {
+    console.error('Error en método simple:', error);
   }
 }
 
