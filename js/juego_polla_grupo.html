@@ -1,0 +1,813 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Polla Grupo — Golftrix</title>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@700&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --green-1: #007f00;
+    --green-2: #00cc44;
+  }
+  .grad-text {
+    background: linear-gradient(90deg, var(--green-1), var(--green-2));
+    background-clip: text;
+    -webkit-background-clip: text;
+    color: transparent;
+    -webkit-text-fill-color: transparent;
+  }
+
+  body { font-family: 'Orbitron',sans-serif; margin:0; padding:18px; background:#f6f6f6; color:#111; }
+  .card { background:white; border-radius:12px; padding:12px; box-shadow:0 6px 18px rgba(0,0,0,0.08); margin-bottom:12px; }
+  h1 { margin:0 0 8px 0; color:var(--green-1); }
+  .row { display:flex; gap:12px; align-items:center; flex-wrap:wrap; }
+  .col { flex:1; min-width:220px; }
+  label { display:block; font-weight:700; margin-bottom:6px; color:#333; }
+  input[type="number"] { width:150px; padding:8px; border-radius:8px; border:1px solid #ddd; font-weight:700; }
+  button.primary { background: linear-gradient(90deg,var(--green-1),var(--green-2)); color:#fff; border:0; padding:8px 12px; border-radius:10px; cursor:pointer; font-weight:800; }
+  button.ghost { background:transparent; border:1px solid #ddd; padding:8px 10px; border-radius:8px; cursor:pointer; }
+
+  .status { font-size:0.95rem; color:#333; }
+  .small { font-size:0.9rem; color:#666; }
+
+  /* tabla */
+  table { width:100%; border-collapse:collapse; font-size:0.9rem; }
+  th, td { padding:6px 8px; border-bottom:1px solid #eee; text-align:center; vertical-align:middle; }
+  th.left, td.left { text-align:left; }
+  th.sticky { 
+    position: sticky; 
+    top:0; 
+    background:white; 
+    z-index:2; 
+  }
+  /* avatar iniciales */
+  .avatar {
+  width:40px; height:40px; border-radius:50%;
+  background:#000; color:#fff; display:inline-flex; align-items:center; justify-content:center;
+  font-weight:800; border:4px solid transparent; box-sizing:content-box;
+  position:relative;
+  overflow:hidden;
+}
+
+.avatar::before {
+  content: "";
+  position:absolute; inset:-4px; border-radius:50%;
+  background: linear-gradient(90deg,var(--green-1),var(--green-2));
+  z-index:-1;
+}
+
+
+  /* cell colors: amarillo, verde, rojo */
+  .hole-below { background: #fff7c2; } /* amarillo */
+  .hole-par { background: #dff9d6; } /* verde claro */
+  .hole-over { background: #ffdede; } /* rojo claro */
+
+  .hole-empty { background: #fafafa; color:#999; }
+
+  #resultsTable {
+    margin-left: 0 !important;
+    padding-left: 0 !important;
+  }
+
+  #resultsTable th:first-child,
+  #resultsTable td:first-child {
+    padding-left: 4px !important; /* mínimo para que no se pegue feo al borde */
+  }
+
+
+  /* responsive */
+  @media (max-width:1000px) {
+    .small-holes { display:none; } /* hide per-hole columns if small */
+  }
+
+  @media (max-width:900px) {
+    table { font-size:0.75rem; }
+    th, td { padding:4px 6px; }
+    .avatar { width:30px; height:30px; font-size:0.7rem; }
+    #tableCard { overflow-x:auto; }
+    .small-holes { display:none; } /* ya existente */
+  }
+
+  /* Ajustes específicos SOLO para celular */
+  @media (max-width: 768px) {
+    body { padding: 4px; overflow-x: hidden; } /* <--- evita scroll global */
+
+    .card {
+        background:white; 
+        border-radius:12px; 
+        padding:12px 12px 12px 0; 
+        margin-bottom: 6px;
+        overflow-x: hidden; /* <--- evita scroll horizontal en el card */
+    }
+
+    h1 {
+      font-size: 1.2rem; /* más pequeño */
+      text-align: center;
+      margin-bottom: 6px;
+    }
+
+    #metaStatus, #pollaInfo {
+      display: none !important; /* ocultar estos campos en móvil */
+    }
+
+    /* Centrar precio y jugadores */
+    #priceSection {
+      text-align: center;
+      width: 100%;
+    }
+    #priceSection label { font-size: 0.9rem; }
+    #priceSection input { width: 100%; max-width: 180px; }
+
+    /* Botones en la misma fila centrados */
+    #buttonsSection {
+      display: flex;
+      justify-content: center;
+      gap: 8px;
+      margin-top: 8px;
+    }
+
+    /* Saldo debajo centrado */
+    #miSaldo {
+      text-align: center;
+      margin-top: 8px;
+      font-size: 0.95rem;
+    }
+
+    /* Encabezado de tabla en celular */
+    #tableHeader {
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+    }
+    #tableHeader div {
+      font-size: 0.9rem;
+      margin-bottom: 2px;
+    }
+
+    /* Tabla más compacta */
+    table { font-size: 0.65rem; transform: scale(0.9); transform-origin: top center; }
+    th, td { padding: 2px 3px; }
+    .avatar { width: 22px; height: 22px; font-size: 0.55rem; margin-right: 3px; }
+    #resultsTable span.grad-text { font-size: 0.7rem; }
+  }
+
+
+
+
+  .controls { display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
+
+  .totals { font-weight:800; }
+</style>
+</head>
+<body>
+  <div class="card">
+    <h1>Polla - Modo Grupo</h1>
+    <div class="row" style="align-items:center;">
+      <div class="col">
+        <div id="metaStatus" class="status">Cargando...</div>
+        <div id="pollaInfo" class="small" style="margin-top:6px;"></div>
+      </div>
+
+      <div style="width:100%; text-align:center;">
+      <div id="priceSection">
+        <label for="priceInput">Precio por jugador (MXN)</label>
+        <input type="number" id="priceInput" min="1" step="1" />
+      </div>
+      <div id="buttonsSection">
+        <button id="createBtn" class="primary">Crear Polla</button>
+        <button id="refreshBtn" class="ghost">Refrescar</button>
+      </div>
+      <div id="miSaldo" class="small" style="font-weight:800;"></div>
+    </div>
+    </div>
+  </div>
+
+  <div id="tableCard" class="card" style="overflow:auto; padding-left:0; padding-right:0;">
+    <div id="tableHeader" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+      <div style="font-weight:800;">Participantes / Resultados</div>
+      <div class="small" id="lastUpdated"></div>
+    </div>
+    <div style="overflow-x:auto; margin:0; padding:0;">
+    <table id="resultsTable" style="margin:0;">
+
+        <thead>
+          <tr>
+            <th class="sticky left"><span class="grad-text">Pos</span></th>
+            <th class="sticky left"><span class="grad-text">Jugador</span></th>
+            <th class="sticky"><span class="grad-text">Hoyo 1</span></th>
+            <th class="sticky"><span class="grad-text">Hoyo 2</span></th>
+            <th class="sticky"><span class="grad-text">Hoyo 3</span></th>
+            <th class="sticky"><span class="grad-text">Hoyo 4</span></th>
+            <th class="sticky"><span class="grad-text">Hoyo 5</span></th>
+            <th class="sticky"><span class="grad-text">Hoyo 6</span></th>
+            <th class="sticky"><span class="grad-text">Hoyo 7</span></th>
+            <th class="sticky"><span class="grad-text">Hoyo 8</span></th>
+            <th class="sticky"><span class="grad-text">Hoyo 9</span></th>
+            <th class="sticky"><span class="grad-text">Hoyo 10</span></th>
+            <th class="sticky"><span class="grad-text">Hoyo 11</span></th>
+            <th class="sticky"><span class="grad-text">Hoyo 12</span></th>
+            <th class="sticky"><span class="grad-text">Hoyo 13</span></th>
+            <th class="sticky"><span class="grad-text">Hoyo 14</span></th>
+            <th class="sticky"><span class="grad-text">Hoyo 15</span></th>
+            <th class="sticky"><span class="grad-text">Hoyo 16</span></th>
+            <th class="sticky"><span class="grad-text">Hoyo 17</span></th>
+            <th class="sticky"><span class="grad-text">Hoyo 18</span></th>
+            <th class="sticky"><span class="grad-text">Total</span></th>
+            <th class="sticky"><span class="grad-text">Total c/ Handicap</span></th>
+          </tr>
+        </thead>
+        <tbody id="resultsBody">
+          <!-- filas generadas dinámicamente -->
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+<script>
+  function getQueryParam(n){ const u=new URL(location.href); return u.searchParams.get(n); }
+</script>
+
+<script type="module">
+  import { app, db, auth } from './firebase-config.js';
+  import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+  import {
+      doc, getDoc, setDoc, updateDoc, serverTimestamp,
+      collection, query, where, getDocs, arrayUnion
+  } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+
+  const juegoId = getQueryParam('juegoId') || getQueryParam('id');
+  const metaStatus = document.getElementById('metaStatus');
+  const pollaInfo = document.getElementById('pollaInfo');
+  const priceInput = document.getElementById('priceInput');
+  const createBtn = document.getElementById('createBtn');
+  const refreshBtn = document.getElementById('refreshBtn');
+  const miSaldoEl = document.getElementById('miSaldo');
+  const resultsBody = document.getElementById('resultsBody');
+  const lastUpdatedEl = document.getElementById('lastUpdated');
+
+  if (!juegoId) {
+    metaStatus.textContent = 'Falta el parámetro juegoId en la URL';
+    console.error('juego_polla_grupo: falta juegoId en la URL');
+    throw new Error('Falta juegoId');
+  }
+
+  const authInst = auth;
+  let currentUser = null;
+  const pollaRef = doc(db, 'juego_polla_grupo', juegoId);
+
+  async function obtenerParPorHoyo(campoId) {
+    if (!campoId) return null;
+    try {
+      const cref = doc(db, 'camposGolf', campoId);
+      const csnap = await getDoc(cref);
+      if (!csnap.exists()) return null;
+      const cdata = csnap.data();
+      return Array.isArray(cdata.paresHoyo) ? cdata.paresHoyo : null;
+    } catch (e) {
+      console.error('Error leyendo campo', e);
+      return null;
+    }
+  }
+
+  async function ensurePolla() {
+    try {
+      const snap = await getDoc(pollaRef);
+      if (!snap.exists()) {
+        metaStatus.textContent = 'Polla no creada. Define precio y haz clic Crear Polla.';
+        pollaInfo.textContent = '';
+        resultsBody.innerHTML = '';
+        lastUpdatedEl.textContent = '';
+        return null;
+      } else {
+        const data = snap.data();
+        metaStatus.textContent = `Polla cargada para juego ${juegoId}`;
+        priceInput.value = data.pricePerPlayer || '';
+        pollaInfo.textContent = `Precio: ${data.pricePerPlayer || '-'} — Jugadores actuales: ${data.numPlayers || 0}`;
+        lastUpdatedEl.textContent = data.updatedAt ? (new Date(data.updatedAt.seconds * 1000)).toLocaleString('es-MX') : '';
+        return data;
+      }
+    } catch (err) {
+      console.error('Error en ensurePolla', err);
+      metaStatus.textContent = 'Error verificando polla';
+      return null;
+    }
+  }
+
+  async function createPolla(price) {
+    try {
+      const payload = {
+        juegoId,
+        pricePerPlayer: Number(price),
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
+        numPlayers: 0,
+        standings: []
+      };
+      await setDoc(pollaRef, payload);
+      metaStatus.textContent = 'Polla creada';
+      console.log('Polla creada:', payload);
+      return payload;
+    } catch (err) {
+      console.error('Error creando polla', err);
+      alert('Error creando polla. Revisa consola.');
+      throw err;
+    }
+  }
+
+  async function obtenerTarjetasConScores() {
+    try {
+      const tarjetasCol = collection(db, 'tarjetas');
+      const q = query(tarjetasCol, where('juegoId','==', juegoId));
+      const snap = await getDocs(q);
+      const tarjetas = [];
+      snap.forEach(d => {
+        const data = d.data();
+        const scores = Array.isArray(data.scores) ? data.scores : [];
+        // si scores contienen golpes como string, intentar parsear
+        const hasAny = scores.some(s => {
+          const g = s.golpes;
+          return (typeof g === 'number' && !isNaN(g)) || (typeof g === 'string' && !isNaN(Number(g)));
+        });
+        if (hasAny) {
+          tarjetas.push({ id: d.id, ...data });
+        }
+      });
+      return tarjetas;
+    } catch (err) {
+      console.error('Error obteniendo tarjetas', err);
+      return [];
+    }
+  }
+
+  async function calcularStandings(tarjetas) {
+    const campoCache = {};
+    const userCache = {};
+    const standings = await Promise.all(tarjetas.map(async (t) => {
+      let userInfo = { nombre: t.userUid || 'desconocido', handicap: 0 };
+try {
+  // 1. OBTENER HANDICAP EXCLUSIVAMENTE DE LA TARJETA (HISTÓRICO)
+  // Verificar diferentes posibles nombres de campo donde podría estar el handicap
+  const handicapDeTarjeta = t.handicap ?? t.playerHandicap ?? t.handicapJugador ?? t.handicapDelJugador;
+  
+  if (handicapDeTarjeta !== undefined && handicapDeTarjeta !== null) {
+    // handicap guardado en la tarjeta al momento de creación
+    userInfo.handicap = (typeof handicapDeTarjeta === 'number') 
+      ? handicapDeTarjeta 
+      : (Number(handicapDeTarjeta) || 0);
+  } else {
+    // Si NO hay handicap en la tarjeta, usar 0 y mostrar advertencia
+    console.warn(`Tarjeta ${t.id} no tiene handicap histórico guardado. Usando 0.`);
+    userInfo.handicap = 0;
+  }
+  
+  // 2. OBTENER NOMBRE DEL USUARIO (SOLO PARA MOSTRAR, NO PARA HANDICAP)
+  if (t.userUid && !userCache[t.userUid]) {
+    const uref = doc(db, 'users', t.userUid);
+    const usnap = await getDoc(uref);
+    userCache[t.userUid] = usnap.exists() ? usnap.data() : null;
+  }
+  
+  if (userCache[t.userUid]) {
+    const ud = userCache[t.userUid];
+    const first = ud.name ?? ud.nombre ?? ud.firstName ?? ud.firstname ?? '';
+    const last  = ud.lastName ?? ud.apellido ?? ud.lastname ?? ud.apellidoPaterno ?? '';
+    const fullName = [first, last].filter(Boolean).join(' ').trim();
+    userInfo.nombre = fullName || t.userUid;
+    
+    // NOTA: NO USAMOS EL HANDICAP DEL USUARIO ACTUAL NUNCA
+    // El handicap ya fue establecido arriba desde la tarjeta
+    
+    // Compactar nombre solo si estamos en móvil
+    if (window.innerWidth <= 768) {
+      const parts = (userInfo.nombre || '').split(' ');
+      if (parts.length >= 3) {
+        // Ej: Jorge Castan Soto -> Jorge C. S.
+        userInfo.nombre = `${parts[0]} ${parts[1][0]}. ${parts[2][0]}.`;
+      } else if (parts.length === 2) {
+        userInfo.nombre = `${parts[0]} ${parts[1][0]}.`;
+      }
+    }
+  }
+} catch (e) {
+  console.warn('No se pudo cargar usuario', t.userUid, e);
+  // Si hay error cargando usuario, el handicap YA ESTÁ ESTABLECIDO desde la tarjeta
+}
+
+      // obtener pares
+      let pares = null;
+      try {
+        const campoId = t.campoId || null;
+        if (campoId) {
+          if (!campoCache[campoId]) {
+            campoCache[campoId] = await obtenerParPorHoyo(campoId);
+          }
+          pares = campoCache[campoId];
+        }
+      } catch (e){
+        console.warn('Error cargando par por hoyo', e);
+      }
+
+      // construir array de 18 con golpes (null si falta). tolerar golpes como strings
+      const golpesArr = new Array(18).fill(null);
+      const scoresArr = Array.isArray(t.scores) ? t.scores : [];
+      scoresArr.forEach(s => {
+        const hoyo = Number(s.hoyo);
+        const golpesRaw = s.golpes;
+        const golpes = (typeof golpesRaw === 'number') ? golpesRaw : (typeof golpesRaw === 'string' ? (isNaN(Number(golpesRaw)) ? null : Number(golpesRaw)) : null);
+        if (!isNaN(hoyo) && hoyo >= 1 && hoyo <= 18 && typeof golpes === 'number') {
+          golpesArr[hoyo - 1] = golpes;
+        }
+      });
+
+      const total = golpesArr.reduce((acc,g) => (typeof g === 'number' ? acc + g : acc), 0);
+      const adjusted = total - (userInfo.handicap || 0);
+
+      const nombreParts = (userInfo.nombre || '').split(' ').filter(Boolean);
+      let initials = nombreParts.length ? (nombreParts[0][0] + (nombreParts[1]?.[0] || '')).toUpperCase() : (t.userUid || '').slice(0,2).toUpperCase();
+
+      return {
+        tarjetaId: t.id,
+        userUid: t.userUid,
+        nombre: userInfo.nombre,
+        initials,
+        handicap: userInfo.handicap || 0,
+        golpesArr,
+        paresArr: pares,
+        total,
+        adjusted
+      };
+    }));
+
+    standings.sort((a,b) => {
+      if (a.adjusted !== b.adjusted) return a.adjusted - b.adjusted;
+      return a.total - b.total;
+    });
+
+    for (let i=0;i<standings.length;i++){
+      standings[i].pos = i+1;
+    }
+
+    const summaryForSave = standings.map(s => ({
+      tarjetaId: s.tarjetaId,
+      userUid: s.userUid,
+      nombre: s.nombre,
+      initials: s.initials,
+      handicap: s.handicap,
+      total: s.total,
+      adjusted: s.adjusted,
+      golpesArr: s.golpesArr
+    }));
+
+    return { standings, summaryForSave };
+  }
+
+  function renderTable(standings) {
+    resultsBody.innerHTML = '';
+    if (!standings || standings.length === 0) {
+      resultsBody.innerHTML = `<tr><td colspan="23" class="small">No hay tarjetas con hoyos registradas aún.</td></tr>`;
+      return;
+    }
+
+    standings.forEach(s => {
+      const tr = document.createElement('tr');
+
+      const tdPos = document.createElement('td');
+      tdPos.textContent = s.pos;
+      tdPos.className = 'left';
+      tr.appendChild(tdPos);
+
+      const tdUser = document.createElement('td');
+      tdUser.className = 'left';
+      const avatar = document.createElement('span');
+      avatar.className = 'avatar';
+      avatar.textContent = s.initials;
+      avatar.title = s.nombre;
+      const nameSpan = document.createElement('span');
+      nameSpan.className = 'grad-text';
+      nameSpan.style.marginLeft = '8px';
+      nameSpan.textContent = s.nombre || s.userUid;
+      tdUser.appendChild(avatar);
+      tdUser.appendChild(nameSpan);
+      tr.appendChild(tdUser);
+
+      for (let i=0;i<18;i++){
+        const td = document.createElement('td');
+        const golpes = s.golpesArr[i];
+        const par = Array.isArray(s.paresArr) ? s.paresArr[i] : null;
+        if (typeof golpes === 'number') {
+          if (typeof par === 'number') {
+            if (golpes < par) td.className = 'hole-below';
+            else if (golpes === par) td.className = 'hole-par';
+            else td.className = 'hole-over';
+          }
+          td.textContent = golpes;
+        } else {
+          td.className = 'hole-empty';
+          td.textContent = '-';
+        }
+        tr.appendChild(td);
+      }
+
+      const tdTotal = document.createElement('td');
+      tdTotal.className = 'totals';
+      tdTotal.textContent = s.total;
+      tr.appendChild(tdTotal);
+
+      const tdAdj = document.createElement('td');
+      tdAdj.className = 'totals';
+      tdAdj.textContent = s.adjusted;
+      tr.appendChild(tdAdj);
+
+      resultsBody.appendChild(tr);
+    });
+  }
+
+ function calcularYMostrarSaldo(standings, pricePerPlayer) {
+  miSaldoEl.textContent = '';
+  miSaldoEl.style.color = '';
+  if (!currentUser) return;
+  const uid = currentUser.uid;
+  const n = standings.length;
+  if (n === 0 || !pricePerPlayer) return;
+
+  // 1. Identificar ganadores (puede haber empates)
+  const bestAdjusted = standings[0].adjusted;
+  const winners = standings.filter(s => s.adjusted === bestAdjusted);
+  const numWinners = winners.length;
+  
+  // 2. Encontrar al usuario actual en standings
+  const userStanding = standings.find(s => s.userUid === uid);
+  
+  if (!userStanding) {
+    miSaldoEl.textContent = `No estás participando en las tarjetas con hoyos. Saldo: -${pricePerPlayer} (no participas)`;
+    miSaldoEl.style.color = 'red';
+    miSaldoEl.style.fontWeight = '800';
+    return;
+  }
+
+  // 3. Calcular dinero total en juego
+  const totalPot = pricePerPlayer * n;
+  
+  // 4. Calcular pago por ganador (equitativo entre empates)
+  const prizePerWinner = totalPot / numWinners;
+  
+  // 5. Calcular saldo del usuario actual
+  let saldo;
+  const isWinner = winners.some(w => w.userUid === uid);
+  
+  if (isWinner) {
+    // Usuario es ganador (puede ser uno de varios empatados)
+    saldo = prizePerWinner - pricePerPlayer; // Gana prizePerWinner, pero pagó pricePerPlayer
+  } else {
+    // Usuario es perdedor
+    saldo = -pricePerPlayer; // Solo pierde su apuesta
+  }
+
+  // 6. Mostrar saldo con información de empates si aplica
+  let infoExtra = '';
+  if (numWinners > 1) {
+    infoExtra = ` (${numWinners} empatados)`;
+  }
+  
+  miSaldoEl.textContent = `Saldo actual: ${saldo >= 0 ? '+' : ''}${saldo}${infoExtra}`;
+  miSaldoEl.style.color = saldo >= 0 ? 'green' : 'red';
+  miSaldoEl.style.fontWeight = '800';
+  
+  // 7. (Opcional) Log para debugging
+  console.log(`Cálculo de saldo: 
+    - Jugadores: ${n}
+    - Precio por jugador: ${pricePerPlayer}
+    - Bote total: ${totalPot}
+    - Ganadores: ${numWinners}
+    - Premio por ganador: ${prizePerWinner}
+    - Usuario es ganador: ${isWinner}
+    - Saldo final: ${saldo}`);
+}
+
+async function guardarSaldosEnColeccion(juegoId, standings, pricePerPlayer, modo = 'polla') {
+  if (!currentUser) {
+    console.log('No hay usuario autenticado, no se guardan saldos');
+    return;
+  }
+
+  const n = standings.length;
+  if (n === 0 || !pricePerPlayer) {
+    console.log('No hay standings o precio, no se guardan saldos');
+    return;
+  }
+
+  try {
+    // 1. Calcular ganadores y premios
+    const bestAdjusted = standings[0].adjusted;
+    const winners = standings.filter(s => s.adjusted === bestAdjusted);
+    const numWinners = winners.length;
+    const totalPot = pricePerPlayer * n;
+    const prizePerWinner = totalPot / numWinners;
+
+    // 2. Referencia al documento de saldos para este juego
+    const saldoRef = doc(db, 'saldos', juegoId);
+
+    // 3. Crear objeto con saldos de todos los jugadores
+    const saldosPorJugador = {};
+    const fechaActualizacion = serverTimestamp();
+
+    standings.forEach(s => {
+      const isWinner = winners.some(w => w.userUid === s.userUid);
+      const saldo = isWinner ? (prizePerWinner - pricePerPlayer) : -pricePerPlayer;
+
+      saldosPorJugador[s.userUid] = {
+        [`modosJuego.${modo}.saldo`]: saldo,
+        [`modosJuego.${modo}.fechaActualizacion`]: fechaActualizacion,
+        [`modosJuego.${modo}.precioParticipacion`]: pricePerPlayer,
+        [`modosJuego.${modo}.posicion`]: s.pos,
+        [`modosJuego.${modo}.totalJugadores`]: n,
+        [`modosJuego.${modo}.esGanador`]: isWinner
+      };
+    });
+
+    // 4. Preparar datos para guardar
+    const saldoData = {
+      juegoId: juegoId,
+      modoJuego: modo,
+      fechaActualizacion: fechaActualizacion,
+      precioPorJugador: pricePerPlayer,
+      totalJugadores: n,
+      totalRecaudado: totalPot
+    };
+
+    // 5. Guardar usando setDoc con merge: true para crear o actualizar
+    await setDoc(saldoRef, saldoData, { merge: true });
+
+    // 6. Para cada jugador, actualizar su información en el mismo documento
+    // Usamos updateDoc con campos dinámicos
+    const updatePromises = Object.entries(saldosPorJugador).map(([userId, userData]) => {
+      return updateDoc(saldoRef, userData);
+    });
+
+    await Promise.all(updatePromises);
+    console.log('Saldos guardados exitosamente en colección saldos');
+
+  } catch (error) {
+    console.error('Error guardando saldos:', error);
+    // Fallback: intentar método alternativo si el primero falla
+    try {
+      await guardarSaldosAlternativo(juegoId, standings, pricePerPlayer, modo);
+    } catch (fallbackError) {
+      console.error('Fallback también falló:', fallbackError);
+    }
+  }
+}
+
+// Método alternativo si el principal falla
+async function guardarSaldosAlternativo(juegoId, standings, pricePerPlayer, modo = 'polla') {
+  try {
+    const saldoRef = doc(db, 'saldos', juegoId);
+    const bestAdjusted = standings[0].adjusted;
+    const winners = standings.filter(s => s.adjusted === bestAdjusted);
+    const numWinners = winners.length;
+    const totalPot = pricePerPlayer * n;
+    const prizePerWinner = totalPot / numWinners;
+
+    // Crear estructura completa desde cero
+    const saldoData = {
+      juegoId: juegoId,
+      modoJuego: modo,
+      fechaActualizacion: serverTimestamp(),
+      precioPorJugador: pricePerPlayer,
+      totalJugadores: standings.length,
+      totalRecaudado: totalPot,
+      jugadores: {}
+    };
+
+    standings.forEach(s => {
+      const isWinner = winners.some(w => w.userUid === s.userUid);
+      const saldo = isWinner ? (prizePerWinner - pricePerPlayer) : -pricePerPlayer;
+
+      saldoData.jugadores[s.userUid] = {
+        saldo: saldo,
+        fechaActualizacion: new Date().toISOString(),
+        precioParticipacion: pricePerPlayer,
+        posicion: s.pos,
+        nombre: s.nombre,
+        total: s.total,
+        adjusted: s.adjusted,
+        esGanador: isWinner
+      };
+    });
+
+    await setDoc(saldoRef, saldoData);
+    console.log('Saldos guardados con método alternativo');
+  } catch (error) {
+    console.error('Error en método alternativo:', error);
+  }
+}
+
+
+  async function guardarPollaState(pricePerPlayer, standingsSummary) {
+    try {
+      await updateDoc(pollaRef, {
+        pricePerPlayer: Number(pricePerPlayer),
+        numPlayers: standingsSummary.length,
+        standings: standingsSummary,
+        updatedAt: serverTimestamp()
+      });
+    } catch (err) {
+      try {
+        await setDoc(pollaRef, {
+          juegoId,
+          pricePerPlayer: Number(pricePerPlayer),
+          numPlayers: standingsSummary.length,
+          standings: standingsSummary,
+          updatedAt: serverTimestamp()
+        }, { merge: true });
+      } catch (e) {
+        console.error('Error guardando juego_polla', e);
+      }
+    }
+  }
+
+  async function refreshAll() {
+    try {
+      const pollaData = await ensurePolla();
+      const price = pollaData?.pricePerPlayer ? Number(pollaData.pricePerPlayer) : (Number(priceInput.value) || null);
+
+      const tarjetas = await obtenerTarjetasConScores();
+      if (!tarjetas || tarjetas.length === 0) {
+        renderTable([]);
+        calcularYMostrarSaldo([], price);
+        if (pollaData) await guardarPollaState(price, []);
+        return;
+      }
+
+      const { standings, summaryForSave } = await calcularStandings(tarjetas);
+
+      renderTable(standings);
+      calcularYMostrarSaldo(standings, price);
+
+      // Guardar en la colección de saldos
+      await guardarSaldosEnColeccion(juegoId, standings, price, 'polla');
+
+      await guardarPollaState(price, summaryForSave);
+
+      pollaInfo.textContent = `Precio: ${price || '-'} — Jugadores actuales: ${standings.length}`;
+      lastUpdatedEl.textContent = (new Date()).toLocaleString('es-MX');
+      metaStatus.textContent = `Polla cargada y actualizada (Juego ${juegoId})`;
+
+    } catch (err) {
+      console.error('Error en refreshAll', err);
+      metaStatus.textContent = 'Error actualizando datos';
+    }
+  }
+
+  // EVENTOS: añadir logs para debugging
+  createBtn.addEventListener('click', async () => {
+    if (!currentUser) {
+      alert('Debes iniciar sesión antes de crear la polla.');
+      return;
+    }
+
+    const price = Number(priceInput.value);
+    if (!price || price <= 0) {
+      alert('Ingresa un precio válido (mayor que 0).');
+      return;
+    }
+
+    try {
+      console.log('Crear polla: comprobando existencia...');
+      const snap = await getDoc(pollaRef);
+      if (snap.exists()) {
+        if (!confirm('Ya existe una polla para este juego. ¿Deseas reescribir el precio?')) return;
+        await updateDoc(pollaRef, { pricePerPlayer: price, updatedAt: serverTimestamp() });
+        console.log('Precio actualizado en juego_polla_grupo');
+        await refreshAll();
+        return;
+      }
+      await createPolla(price);
+      await refreshAll();
+    } catch (err) {
+      console.error(err);
+      alert('Error creando/actualizando polla. Revisa consola.');
+    }
+  });
+
+
+  refreshBtn.addEventListener('click', () => refreshAll());
+
+  onAuthStateChanged(authInst, async (user) => {
+    currentUser = user;
+    if (!user) {
+      metaStatus.textContent = 'Debes iniciar sesión para ver/participar en la polla.';
+      await ensurePolla();
+      await refreshAll();
+      return;
+    }
+    await ensurePolla();
+    await refreshAll();
+  });
+
+</script>
+
+</body>
+</html>
