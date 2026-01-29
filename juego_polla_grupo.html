@@ -233,7 +233,7 @@
   import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
   import {
       doc, getDoc, setDoc, updateDoc, serverTimestamp,
-      collection, query, where, getDocs, arrayUnion
+      collection, query, where, getDocs
   } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
 
@@ -586,148 +586,6 @@ try {
     - Saldo final: ${saldo}`);
 }
 
-async function guardarSaldosEnColeccion(juegoId, standings, pricePerPlayer, modo = 'polla') {
-  if (!currentUser) {
-    console.log('No hay usuario autenticado, no se guardan saldos');
-    return;
-  }
-
-  const n = standings.length;
-  if (n === 0 || !pricePerPlayer) {
-    console.log('No hay standings o precio, no se guardan saldos');
-    return;
-  }
-
-  try {
-    // 1. Calcular ganadores y premios
-    const bestAdjusted = standings[0].adjusted;
-    const winners = standings.filter(s => s.adjusted === bestAdjusted);
-    const numWinners = winners.length;
-    const totalPot = pricePerPlayer * n;
-    const prizePerWinner = totalPot / numWinners;
-
-    // 2. Para cada jugador, guardar su saldo individualmente
-    const promises = standings.map(async (s) => {
-      const isWinner = winners.some(w => w.userUid === s.userUid);
-      const saldo = isWinner ? (prizePerWinner - pricePerPlayer) : -pricePerPlayer;
-      
-      // Crear referencia al documento de saldo específico
-      // Documento ID = juegoId + "_" + userUid para tener un documento por jugador por juego
-      const saldoDocId = `${juegoId}_${s.userUid}`;
-      const saldoRef = doc(db, 'saldos', saldoDocId);
-      
-      const saldoData = {
-        juego_id: juegoId,
-        usuario_id: s.userUid,
-        tipo_juego: modo,
-        saldo: saldo,
-        fecha_actualizacion: serverTimestamp(),
-        nombre_jugador: s.nombre || '',
-        posicion: s.pos,
-        es_ganador: isWinner,
-        precio_participacion: pricePerPlayer,
-        total_jugadores: n
-      };
-      
-      // Guardar o actualizar el documento
-      await setDoc(saldoRef, saldoData, { merge: true });
-      console.log(`Saldo guardado para usuario ${s.userUid} en juego ${juegoId}: ${saldo}`);
-    });
-
-    // Ejecutar todas las promesas en paralelo
-    await Promise.all(promises);
-    console.log('Todos los saldos guardados exitosamente');
-
-  } catch (error) {
-    console.error('Error guardando saldos:', error);
-    // Intentar método más simple como fallback
-    try {
-      await guardarSaldosSimple(juegoId, standings, pricePerPlayer, modo);
-    } catch (fallbackError) {
-      console.error('Fallback también falló:', fallbackError);
-    }
-  }
-}
-
-// Método alternativo más simple
-async function guardarSaldosSimple(juegoId, standings, pricePerPlayer, modo = 'polla') {
-  try {
-    const bestAdjusted = standings[0].adjusted;
-    const winners = standings.filter(s => s.adjusted === bestAdjusted);
-    const numWinners = winners.length;
-    const totalPot = pricePerPlayer * standings.length;
-    const prizePerWinner = totalPot / numWinners;
-
-    // Para cada jugador, crear documento individual
-    for (const s of standings) {
-      const isWinner = winners.some(w => w.userUid === s.userUid);
-      const saldo = isWinner ? (prizePerWinner - pricePerPlayer) : -pricePerPlayer;
-      
-      // Crear un documento por cada jugador
-      const saldoDocId = `${juegoId}_${s.userUid}`;
-      const saldoRef = doc(db, 'saldos', saldoDocId);
-      
-      const saldoData = {
-        juego_id: juegoId,
-        usuario_id: s.userUid, // Aquí guardamos el ID del documento de usuario
-        tipo_juego: modo,
-        saldo: saldo,
-        fecha_actualizacion: serverTimestamp()
-      };
-      
-      // Solo guardamos los campos esenciales
-      await setDoc(saldoRef, saldoData, { merge: true });
-    }
-    console.log('Saldos guardados con método simple');
-  } catch (error) {
-    console.error('Error en método simple:', error);
-  }
-}
-
-// Método alternativo si el principal falla
-async function guardarSaldosAlternativo(juegoId, standings, pricePerPlayer, modo = 'polla') {
-  try {
-    const saldoRef = doc(db, 'saldos', juegoId);
-    const bestAdjusted = standings[0].adjusted;
-    const winners = standings.filter(s => s.adjusted === bestAdjusted);
-    const numWinners = winners.length;
-    const totalPot = pricePerPlayer * n;
-    const prizePerWinner = totalPot / numWinners;
-
-    // Crear estructura completa desde cero
-    const saldoData = {
-      juegoId: juegoId,
-      modoJuego: modo,
-      fechaActualizacion: serverTimestamp(),
-      precioPorJugador: pricePerPlayer,
-      totalJugadores: standings.length,
-      totalRecaudado: totalPot,
-      jugadores: {}
-    };
-
-    standings.forEach(s => {
-      const isWinner = winners.some(w => w.userUid === s.userUid);
-      const saldo = isWinner ? (prizePerWinner - pricePerPlayer) : -pricePerPlayer;
-
-      saldoData.jugadores[s.userUid] = {
-        saldo: saldo,
-        fechaActualizacion: new Date().toISOString(),
-        precioParticipacion: pricePerPlayer,
-        posicion: s.pos,
-        nombre: s.nombre,
-        total: s.total,
-        adjusted: s.adjusted,
-        esGanador: isWinner
-      };
-    });
-
-    await setDoc(saldoRef, saldoData);
-    console.log('Saldos guardados con método alternativo');
-  } catch (error) {
-    console.error('Error en método alternativo:', error);
-  }
-}
-
 
   async function guardarPollaState(pricePerPlayer, standingsSummary) {
     try {
@@ -769,9 +627,6 @@ async function guardarSaldosAlternativo(juegoId, standings, pricePerPlayer, modo
 
       renderTable(standings);
       calcularYMostrarSaldo(standings, price);
-
-      // Guardar en la colección de saldos
-      await guardarSaldosEnColeccion(juegoId, standings, price, 'polla');
 
       await guardarPollaState(price, summaryForSave);
 
