@@ -292,8 +292,8 @@ const vantF =
     // Limpiar estilos inline que causan problemas
     miSaldoEl.removeAttribute('style');
     
-    // Formatear para mostrar con signo y 2 decimales
-    const signo = esPositivo ? '+' : '';
+    // Formatear para mostrar con signo correcto y 2 decimales
+    const signo = esPositivo ? '+' : '-';
     const valorAbsoluto = Math.abs(monto).toFixed(2);
     
     miSaldoEl.innerHTML = `
@@ -303,6 +303,7 @@ const vantF =
       </div>
     `;
   }
+
 
 
 
